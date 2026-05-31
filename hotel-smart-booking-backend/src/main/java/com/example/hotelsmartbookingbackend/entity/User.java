@@ -1,5 +1,5 @@
 package com.example.hotelsmartbookingbackend.entity;
-
+import com.example.hotelsmartbookingbackend.enums.Role;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -19,10 +19,10 @@ public class User {
     @Column(name = "userid", nullable = false)
     private Integer id;
 
-    @Size(max = 50)
     @NotNull
+    @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 50)
-    private String role;
+    private Role role;
 
     @Size(max = 255)
     @NotNull
