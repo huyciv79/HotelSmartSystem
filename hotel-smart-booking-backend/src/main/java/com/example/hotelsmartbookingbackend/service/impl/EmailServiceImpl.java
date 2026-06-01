@@ -27,4 +27,20 @@ public class EmailServiceImpl implements EmailService {
             throw new RuntimeException("Lỗi gửi email xác thực: " + e.getMessage(), e);
         }
     }
+
+    @Override
+    public void sendForgotPasswordOtpEmail(String to, String otp) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject("Mã xác thực OTP khôi phục mật khẩu Hotel Smart Booking");
+        message.setText("Chào bạn,\n\nĐây là mã OTP để khôi phục mật khẩu tài khoản của bạn: " + otp
+                + "\n\nMã này sẽ hết hạn trong 5 phút.\n\nTrân trọng,\nHotel Smart Booking Team");
+
+        try {
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("Failed to send email to " + to + ": " + e.getMessage());
+            throw new RuntimeException("Lỗi gửi email xác thực khôi phục mật khẩu: " + e.getMessage(), e);
+        }
+    }
 }

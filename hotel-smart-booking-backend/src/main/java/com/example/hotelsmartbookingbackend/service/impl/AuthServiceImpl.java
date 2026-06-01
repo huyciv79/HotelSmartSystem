@@ -1,11 +1,15 @@
 package com.example.hotelsmartbookingbackend.service.impl;
 
 import com.example.hotelsmartbookingbackend.config.JwtUtil;
+import com.example.hotelsmartbookingbackend.dto.request.ForgotPasswordRequest;
 import com.example.hotelsmartbookingbackend.dto.request.LoginRequest;
 import com.example.hotelsmartbookingbackend.dto.request.RefreshTokenRequest;
 import com.example.hotelsmartbookingbackend.dto.request.RegisterRequest;
 import com.example.hotelsmartbookingbackend.dto.request.VerifyOtpRequest;
+import com.example.hotelsmartbookingbackend.dto.request.VerifyForgotOtpRequest;
+import com.example.hotelsmartbookingbackend.dto.request.ResetPasswordRequest;
 import com.example.hotelsmartbookingbackend.dto.response.LoginResponse;
+import java.util.UUID;
 import com.example.hotelsmartbookingbackend.entity.User;
 import com.example.hotelsmartbookingbackend.enums.Role;
 import com.example.hotelsmartbookingbackend.repository.UserRepository;
@@ -31,6 +35,8 @@ public class AuthServiceImpl implements AuthService {
     private final JwtUtil jwtUtil;
 
     private static final String OTP_PREFIX = "register:otp:";
+    private static final String FORGOT_PASSWORD_OTP_PREFIX = "FORGOT_PASSWORD_OTP:";
+    private static final String RESET_TOKEN_PREFIX = "reset:token:";
     private static final String USER_REQ_PREFIX = "register:user:";
     private static final String REFRESH_TOKEN_PREFIX = "auth:refresh:";
     private static final long OTP_TTL_MINUTES = 5;
@@ -171,5 +177,73 @@ public class AuthServiceImpl implements AuthService {
                 .fullName(user.getFullname())
                 .role(user.getRole().name())
                 .build();
+    }
+
+    @Override
+    public void forgotPassword(ForgotPasswordRequest request) {
+        if (!userRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("Email không tồn tại trong hệ thống");
+        }
+
+        // Sinh mã OTP (6 chữ số)
+        String otp = String.format("%06d", new Random().nextInt(999999));
+
+        // Lưu OTP vào Redis với TTL là 5 phút
+        redisTemplate.opsForValue().set(
+                FORGOT_PASSWORD_OTP_PREFIX + request.getEmail(),
+                otp,
+                Duration.ofMinutes(OTP_TTL_MINUTES)
+        );
+
+        // Gửi OTP qua email
+        emailService.sendForgotPasswordOtpEmail(request.getEmail(), otp);
+    }
+
+    @Override
+    public String verifyForgotOtp(VerifyForgotOtpRequest request) {
+        String cachedOtp = (String) redisTemplate.opsForValue().get(FORGOT_PASSWORD_OTP_PREFIX + request.getEmail());
+
+        if (cachedOtp == null || !cachedOtp.equals(request.getOtp())) {
+            throw new RuntimeException("Mã OTP không hợp lệ hoặc đã hết hạn");
+        }
+
+        // Tạo reset-token dạng UUID sau khi OTP được xác thực thành công
+        String resetToken = UUID.randomUUID().toString();
+
+        // Lưu reset-token vào Redis với thời gian hết hạn (TTL) là 3600000 giây
+        redisTemplate.opsForValue().set(
+                RESET_TOKEN_PREFIX + resetToken,
+                request.getEmail(),
+                Duration.ofSeconds(3600000)
+        );
+
+        // Xóa mã OTP đã sử dụng khỏi Redis
+        redisTemplate.delete(FORGOT_PASSWORD_OTP_PREFIX + request.getEmail());
+
+        return resetToken;
+    }
+
+    @Override
+    public void resetPassword(ResetPasswordRequest request) {
+        // Lấy email từ resetToken trong Redis
+        String email = (String) redisTemplate.opsForValue().get(RESET_TOKEN_PREFIX + request.getResetToken());
+        if (email == null) {
+            throw new RuntimeException("Reset token không hợp lệ hoặc đã hết hạn");
+        }
+
+        // Tìm người dùng theo email
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        // Cập nhật mật khẩu mới bằng cách mã hóa bằng BCrypt trước khi lưu
+        user.setPasswordhash(passwordEncoder.encode(request.getNewPassword()));
+        user.setUpdatedat(java.time.Instant.now());
+        userRepository.save(user);
+
+        // Thu hồi (revoke) toàn bộ refresh token hiện có của người dùng
+        redisTemplate.delete(REFRESH_TOKEN_PREFIX + email);
+
+        // Xóa reset-token khỏi Redis sau khi đã sử dụng thành công
+        redisTemplate.delete(RESET_TOKEN_PREFIX + request.getResetToken());
     }
 }

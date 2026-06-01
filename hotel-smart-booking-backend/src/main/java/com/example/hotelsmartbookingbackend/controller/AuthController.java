@@ -1,9 +1,12 @@
 package com.example.hotelsmartbookingbackend.controller;
 
+import com.example.hotelsmartbookingbackend.dto.request.ForgotPasswordRequest;
 import com.example.hotelsmartbookingbackend.dto.request.LoginRequest;
 import com.example.hotelsmartbookingbackend.dto.request.RefreshTokenRequest;
 import com.example.hotelsmartbookingbackend.dto.request.RegisterRequest;
 import com.example.hotelsmartbookingbackend.dto.request.VerifyOtpRequest;
+import com.example.hotelsmartbookingbackend.dto.request.VerifyForgotOtpRequest;
+import com.example.hotelsmartbookingbackend.dto.request.ResetPasswordRequest;
 import com.example.hotelsmartbookingbackend.dto.response.ApiResponse;
 import com.example.hotelsmartbookingbackend.dto.response.LoginResponse;
 import com.example.hotelsmartbookingbackend.service.AuthService;
@@ -78,6 +81,36 @@ public class AuthController {
         try {
             authService.logout(request.getRefreshToken());
             return ResponseEntity.ok(ApiResponse.success("Đăng xuất thành công", null));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        try {
+            authService.forgotPassword(request);
+            return ResponseEntity.ok(ApiResponse.success("Mã OTP khôi phục mật khẩu đã được gửi thành công đến email của bạn", null));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/verify-forgot-otp")
+    public ResponseEntity<ApiResponse<String>> verifyForgotOtp(@Valid @RequestBody VerifyForgotOtpRequest request) {
+        try {
+            String resetToken = authService.verifyForgotOtp(request);
+            return ResponseEntity.ok(ApiResponse.success("Xác thực OTP thành công", resetToken));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        try {
+            authService.resetPassword(request);
+            return ResponseEntity.ok(ApiResponse.success("Đặt lại mật khẩu mới thành công", null));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
