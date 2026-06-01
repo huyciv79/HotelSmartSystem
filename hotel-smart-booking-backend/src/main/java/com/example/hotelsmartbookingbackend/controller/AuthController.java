@@ -7,6 +7,7 @@ import com.example.hotelsmartbookingbackend.dto.request.RegisterRequest;
 import com.example.hotelsmartbookingbackend.dto.request.VerifyOtpRequest;
 import com.example.hotelsmartbookingbackend.dto.request.VerifyForgotOtpRequest;
 import com.example.hotelsmartbookingbackend.dto.request.ResetPasswordRequest;
+import com.example.hotelsmartbookingbackend.dto.request.ChangePasswordRequest;
 import com.example.hotelsmartbookingbackend.dto.response.ApiResponse;
 import com.example.hotelsmartbookingbackend.dto.response.LoginResponse;
 import com.example.hotelsmartbookingbackend.service.AuthService;
@@ -111,6 +112,16 @@ public class AuthController {
         try {
             authService.resetPassword(request);
             return ResponseEntity.ok(ApiResponse.success("Đặt lại mật khẩu mới thành công", null));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<ApiResponse<String>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        try {
+            authService.changePassword(request);
+            return ResponseEntity.ok(ApiResponse.success("Thay đổi mật khẩu thành công", null));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
