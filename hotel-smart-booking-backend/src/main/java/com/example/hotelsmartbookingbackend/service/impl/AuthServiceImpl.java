@@ -8,6 +8,7 @@ import com.example.hotelsmartbookingbackend.dto.request.RegisterRequest;
 import com.example.hotelsmartbookingbackend.dto.request.VerifyOtpRequest;
 import com.example.hotelsmartbookingbackend.dto.request.VerifyForgotOtpRequest;
 import com.example.hotelsmartbookingbackend.dto.request.ResetPasswordRequest;
+import com.example.hotelsmartbookingbackend.dto.request.ChangePasswordRequest;
 import com.example.hotelsmartbookingbackend.dto.response.LoginResponse;
 import java.util.UUID;
 import com.example.hotelsmartbookingbackend.entity.User;
@@ -245,5 +246,32 @@ public class AuthServiceImpl implements AuthService {
 
         // Xóa reset-token khỏi Redis sau khi đã sử dụng thành công
         redisTemplate.delete(RESET_TOKEN_PREFIX + request.getResetToken());
+    }
+
+    @Override
+    public void changePassword(ChangePasswordRequest request) {
+        String email = (String) org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+
+        if (email == null || "anonymousUser".equals(email)) {
+            throw new RuntimeException("Bạn cần đăng nhập để thực hiện chức năng này");
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        // Xác thực mật khẩu hiện tại
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordhash())) {
+            throw new RuntimeException("Mật khẩu hiện tại không đúng");
+        }
+
+        // Cập nhật mật khẩu mới bằng BCrypt hash
+        String newPasswordHash = passwordEncoder.encode(request.getNewPassword());
+        user.setPasswordhash(newPasswordHash);
+        user.setUpdatedat(Instant.now());
+        userRepository.save(user);
+
+        // Thu hồi các phiên đăng nhập hiện có để đảm bảo bảo mật
+        redisTemplate.delete(REFRESH_TOKEN_PREFIX + email);
     }
 }
