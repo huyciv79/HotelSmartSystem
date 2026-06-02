@@ -1,112 +1,331 @@
 @import "tailwindcss";
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+@theme {
+  --color-secondary-fixed: #e2e2e2;
+  --color-surface-container: #eeeeee;
+  --color-on-tertiary: #ffffff;
+  --color-surface-tint: #b91d20;
+  --color-surface-bright: #f9f9f9;
+  --color-surface: #f9f9f9;
+  --color-outline: #8f706c;
+  --color-secondary: #5e5e5e;
+  --color-surface-container-highest: #e2e2e2;
+  --color-tertiary: #4e5050;
+  --color-on-tertiary-container: #e7e7e7;
+  --color-on-primary-fixed: #410003;
+  --color-surface-container-low: #f3f3f4;
+  --color-tertiary-fixed: #e2e2e2;
+  --color-tertiary-container: #666868;
+  --color-on-primary: #ffffff;
+  --color-on-secondary-fixed: #1b1b1b;
+  --color-on-surface-variant: #5b403d;
+  --color-error-container: #ffdad6;
+  --color-on-primary-container: #ffe0dd;
+  --color-background: #f9f9f9;
+  --color-outline-variant: #e4beba;
+  --color-surface-variant: #e2e2e2;
+  --color-surface-container-lowest: #ffffff;
+  --color-primary-container: #c62828;
+  --color-inverse-surface: #2f3131;
+  --color-on-error: #ffffff;
+  --color-on-secondary-fixed-variant: #474747;
+  --color-inverse-primary: #ffb4ac;
+  --color-on-primary-fixed-variant: #93000e;
+  --color-on-error-container: #93000a;
+  --color-tertiary-fixed-dim: #c6c6c7;
+  --color-secondary-fixed-dim: #c6c6c6;
+  --color-secondary-container: #e2e2e2;
+  --color-on-secondary: #ffffff;
+  --color-surface-container-high: #e8e8e8;
+  --color-on-tertiary-fixed-variant: #454747;
+  --color-inverse-on-surface: #f0f1f1;
+  --color-on-tertiary-fixed: #1a1c1c;
+  --color-primary: #a20513;
+  --color-on-background: #1a1c1c;
+  --color-primary-fixed-dim: #ffb4ac;
+  --color-primary-fixed: #ffdad6;
+  --color-on-secondary-container: #646464;
+  --color-surface-dim: #dadada;
+  --color-error: #ba1a1a;
+  --color-on-surface: #1a1c1c;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --border-radius: 0px;
+  --border-radius-lg: 0px;
+  --border-radius-xl: 0px;
+  --border-radius-full: 9999px;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  --spacing-gutter: 24px;
+  --spacing-margin-tablet: 40px;
+  --spacing-stack-sm: 16px;
+  --spacing-margin-desktop: 80px;
+  --spacing-margin-mobile: 20px;
+  --spacing-stack-lg: 64px;
+  --spacing-stack-md: 32px;
+
+  --font-body-lg: "Montserrat", sans-serif;
+  --font-label-bold: "Montserrat", sans-serif;
+  --font-headline-xl-mobile: "Montserrat", sans-serif;
+  --font-headline-xl: "Montserrat", sans-serif;
+  --font-headline-md: "Montserrat", sans-serif;
+  --font-label-sm: "Montserrat", sans-serif;
+  --font-headline-lg: "Montserrat", sans-serif;
+  --font-body-md: "Montserrat", sans-serif;
+
+  --font-size-body-lg: 18px;
+  --font-size-label-bold: 14px;
+  --font-size-headline-xl-mobile: 32px;
+  --font-size-headline-xl: 48px;
+  --font-size-headline-md: 24px;
+  --font-size-label-sm: 12px;
+  --font-size-headline-lg: 32px;
+  --font-size-body-md: 16px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+:root {
+  font-family: "Montserrat", sans-serif;
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+  padding: 0;
   box-sizing: border-box;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+/* Custom slants and clips from Elysian Hotels */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+
+.elysian-tab {
+  clip-path: polygon(20% 0%, 100% 0%, 100% 100%, 0% 100%);
+}
+
+.parallelogram-btn {
+  clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%);
+}
+
+.hero-slant {
+  clip-path: polygon(0 0, 100% 0, 100% 85%, 0% 100%);
+}
+
+.trapezoid-right {
+  clip-path: polygon(10% 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.trapezoid-left {
+  clip-path: polygon(0 0, 90% 0, 100% 100%, 0 100%);
+}
+
+.elysian-pattern {
+  background-color: #a20513;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 60H0L30 0z' fill='%23b91d20' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+.elysian-tab-button {
+  clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%);
+}
+
+.trapezoid-clip {
+  clip-path: polygon(0 0, 100% 0, 95% 100%, 5% 100%);
+}
+
+.text-shadow-hard {
+  text-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+}
+
+.elysian-trapezoid-right {
+  clip-path: polygon(15% 0, 100% 0, 85% 100%, 0% 100%);
+}
+
+.elysian-trapezoid-left {
+  clip-path: polygon(0 0, 85% 0, 100% 100%, 15% 100%);
+}
+
+.elysian-parallelogram {
+  clip-path: polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%);
+}
+
+.elysian-tab-cta {
+  clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%);
+}
+
+.elysian-slant-btn {
+  clip-path: polygon(15% 0, 100% 0, 85% 100%, 0% 100%);
+}
+
+.trapezoid-img {
+  clip-path: polygon(0 0, 100% 0, 100% 90%, 0 100%);
+}
+
+/* Custom animation reveals */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.6s ease-out;
+}
+
+.scroll-reveal.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Hide scrollbar for clean aesthetic */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #a20513;
+}
+
+/* Animated Burger Menu */
+.burger-menu {
+  width: 24px;
+  height: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  z-index: 50;
+}
+
+.burger-bar {
+  width: 24px;
+  height: 2px;
+  background-color: var(--color-on-surface, #1a1c1c);
+  border-radius: 2px;
+  transition: background-color 0.3s ease;
+  transform-origin: center;
+}
+
+/* Keyframes for Top Bar */
+@keyframes top-bar-open {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(8px) rotate(45deg);
+  }
+  100% {
+    transform: translateY(8px) rotate(45deg);
   }
 }
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+
+@keyframes top-bar-close {
+  0% {
+    transform: translateY(8px) rotate(45deg);
+  }
+  50% {
+    transform: translateY(8px) rotate(45deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
   }
 }
-p {
-  margin: 0;
+
+/* Keyframes for Middle Bar */
+@keyframes middle-bar-open {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0);
+  }
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+@keyframes middle-bar-close {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+/* Keyframes for Bottom Bar */
+@keyframes bottom-bar-open {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(45deg);
+  }
+  100% {
+    transform: translateY(-8px) rotate(-45deg);
+  }
+}
+
+@keyframes bottom-bar-close {
+  0% {
+    transform: translateY(-8px) rotate(-45deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(45deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+/* Animation triggers */
+.burger-menu.open .burger-bar:nth-child(1) {
+  animation: top-bar-open 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.burger-menu.open .burger-bar:nth-child(2) {
+  animation: middle-bar-open 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.burger-menu.open .burger-bar:nth-child(3) {
+  animation: bottom-bar-open 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.burger-menu.closed .burger-bar:nth-child(1) {
+  animation: top-bar-close 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.burger-menu.closed .burger-bar:nth-child(2) {
+  animation: middle-bar-close 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.burger-menu.closed .burger-bar:nth-child(3) {
+  animation: bottom-bar-close 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* Toast slide-in animation */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
