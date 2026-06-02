@@ -1,4 +1,4 @@
-package com.example.hotelsmartbookingbackend.config;
+package com.example.hotelsmartbookingbackend.config.Auth;
 
 import com.example.hotelsmartbookingbackend.entity.User;
 import io.jsonwebtoken.Claims;

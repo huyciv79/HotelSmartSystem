@@ -1,4 +1,4 @@
-package com.example.hotelsmartbookingbackend.config;
+package com.example.hotelsmartbookingbackend.config.Auth;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

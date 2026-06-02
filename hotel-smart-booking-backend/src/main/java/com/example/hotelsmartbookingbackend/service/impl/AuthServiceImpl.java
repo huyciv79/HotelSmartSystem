@@ -1,6 +1,6 @@
 package com.example.hotelsmartbookingbackend.service.impl;
 
-import com.example.hotelsmartbookingbackend.config.JwtUtil;
+import com.example.hotelsmartbookingbackend.config.Auth.JwtUtil;
 import com.example.hotelsmartbookingbackend.dto.request.ForgotPasswordRequest;
 import com.example.hotelsmartbookingbackend.dto.request.LoginRequest;
 import com.example.hotelsmartbookingbackend.dto.request.RefreshTokenRequest;
@@ -67,23 +67,19 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Mã OTP không hợp lệ hoặc đã hết hạn");
         }
 
-        // Retrieve user registration request from Redis
         Object cachedRequestObj = redisTemplate.opsForValue().get(USER_REQ_PREFIX + request.getEmail());
         if (cachedRequestObj == null) {
             throw new RuntimeException("Không tìm thấy thông tin đăng ký, vui lòng đăng ký lại");
         }
 
-        // Depending on Jackson serializer, it might be deserialized as a Map or RegisterRequest
         RegisterRequest registerRequest;
         if (cachedRequestObj instanceof RegisterRequest) {
             registerRequest = (RegisterRequest) cachedRequestObj;
         } else {
-            // Fallback (if generic Jackson serialization converts it to LinkedHashMap)
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             registerRequest = mapper.convertValue(cachedRequestObj, RegisterRequest.class);
         }
 
-        // Create User
         User user = new User();
         user.setEmail(registerRequest.getEmail());
         user.setPasswordhash(passwordEncoder.encode(registerRequest.getPassword()));
