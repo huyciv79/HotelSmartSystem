@@ -17,7 +17,7 @@ export default function Events() {
               <img 
                 alt="Elysian Events Room" 
                 className="w-full h-[400px] object-cover hover:scale-105 transition-transform duration-700" 
-                src="https://images.unsplash.com/photo-1517502884422-41eaaced0168?w=800&q=80"
+                src="https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&q=80"
               />
             </div>
             <div className="order-1 md:order-2">

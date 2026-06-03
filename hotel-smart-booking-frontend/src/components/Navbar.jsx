@@ -1,4 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Profile from '../pages/Profile';
+import ChangePassword from '../pages/ChangePassword';
+import { useToast, ToastContainer } from './Toast';
+import { getUserProfile } from '../services/userService';
 
 export default function Navbar({ activePage, setActivePage }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -7,9 +12,59 @@ export default function Navbar({ activePage, setActivePage }) {
   const [lang, setLang] = useState('VN');
   const [hoveredId, setHoveredId] = useState(null);
   const [underlineStyle, setUnderlineStyle] = useState({ left: 0, width: 0, opacity: 0 });
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [activeModal, setActiveModal] = useState(null); // 'profile' | null
 
   const navContainerRef = useRef(null);
+  const dropdownRef = useRef(null);
   const itemRefs = useRef({});
+  const navigate = useNavigate();
+  const { toasts, showToast, dismissToast } = useToast();
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem('accessToken'));
+  const [currentUser, setCurrentUser] = useState(() => {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  });
+
+  useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem('accessToken'));
+    const userStr = localStorage.getItem('user');
+    setCurrentUser(userStr ? JSON.parse(userStr) : null);
+  }, [activePage]);
+
+  const avatarUrl = currentUser?.avatar || currentUser?.avatarUrl || 'https://i.pravatar.cc/36?img=12';
+  const fullName = currentUser?.fullName || currentUser?.name || 'Hội viên Elysian';
+
+  // Fetch fresh profile data from API on login/load and modal opening
+  useEffect(() => {
+    if (isLoggedIn) {
+      const fetchProfile = async () => {
+        try {
+          const response = await getUserProfile();
+          if (response && response.data) {
+            setCurrentUser(response.data);
+            localStorage.setItem('user', JSON.stringify(response.data));
+          }
+        } catch (err) {
+          console.error('Lỗi khi tải thông tin hồ sơ từ server:', err);
+        }
+      };
+      fetchProfile();
+    }
+  }, [isLoggedIn, activeModal]);
 
   const navItems = [
     { id: 'home', label: 'KHÁCH SẠN' },
@@ -92,9 +147,10 @@ export default function Navbar({ activePage, setActivePage }) {
   }, [hoveredId]);
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out ${
-      isScrolled ? '-translate-y-12 shadow-md' : 'translate-y-0'
-    }`}>
+    <>
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out ${
+        isScrolled ? '-translate-y-12 shadow-md' : 'translate-y-0'
+      }`}>
       {/* Top Black Bar (Height: h-12 / 48px) */}
       <div className="bg-black text-white h-12 flex justify-between items-center px-4 md:px-margin-desktop relative">
         <div className="flex-1"></div>
@@ -185,14 +241,110 @@ export default function Navbar({ activePage, setActivePage }) {
           />
         </nav>
 
-        {/* Book Now Button (Stretches to fill the 48px height) */}
-        <div className="h-full flex items-center">
-          <button 
-            onClick={() => handleNavClick('login')}
-            className="parallelogram-btn bg-primary-container text-on-primary h-full px-14 font-bold text-xs uppercase tracking-wider active:scale-98 transition-all duration-150 cursor-pointer border-none flex items-center justify-center"
-          >
-            ĐẶT NGAY
-          </button>
+        {/* Book Now / Profile Dropdown */}
+        <div className="h-full flex items-center pr-6 relative">
+          {isLoggedIn ? (
+            <div className="relative h-full flex items-center" ref={dropdownRef}>
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-3 px-3 py-1.5 hover:bg-slate-100 transition-colors duration-150 cursor-pointer border-none bg-transparent h-full"
+              >
+                <img
+                  src={avatarUrl}
+                  alt={fullName}
+                  className="size-8 rounded-full border border-primary object-cover"
+                />
+                <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wider hidden sm:inline">
+                  {fullName}
+                </span>
+                <span className="material-symbols-outlined text-sm leading-none opacity-80">arrow_drop_down</span>
+              </button>
+
+              {/* Dropdown Menu */}
+              {isDropdownOpen && (
+                <div className="absolute right-0 top-12 w-72 bg-white text-slate-800 shadow-2xl border border-outline-variant z-50 p-4 font-['Montserrat'] select-none rounded-none">
+                  {/* Dropdown Header */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <img
+                      src={avatarUrl}
+                      alt={fullName}
+                      className="size-12 rounded-full border-2 border-primary object-cover"
+                    />
+                    <div className="overflow-hidden">
+                      <h4 className="text-xs font-bold text-slate-900 truncate m-0 uppercase tracking-wider">{fullName}</h4>
+                      <p className="text-[8px] text-primary uppercase tracking-widest mt-0.5 font-bold">Hội viên Elysian</p>
+                    </div>
+                  </div>
+
+                  {/* Primary view profile action */}
+                  <button
+                    onClick={() => {
+                      setActiveModal('profile');
+                      setIsDropdownOpen(false);
+                    }}
+                    className="w-full py-2.5 bg-primary-container text-on-primary font-bold text-[10px] tracking-widest uppercase hover:brightness-110 transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 rounded-none"
+                  >
+                    <span className="material-symbols-outlined text-sm">account_circle</span>
+                    Xem tất cả trang cá nhân
+                  </button>
+
+                  <div className="h-px bg-slate-200 my-3" />
+
+                  {/* Options */}
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => {
+                        setActiveModal('profile');
+                        setIsDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors cursor-pointer border-none bg-transparent rounded-none"
+                    >
+                      <span className="material-symbols-outlined text-base">settings</span>
+                      <span>Cài đặt & quyền riêng tư</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setActiveModal('changePassword');
+                        setIsDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors cursor-pointer border-none bg-transparent rounded-none"
+                    >
+                      <span className="material-symbols-outlined text-base">lock</span>
+                      <span>Đổi mật khẩu</span>
+                    </button>
+
+                    <div className="h-px bg-slate-100 my-2" />
+
+                    <button
+                      onClick={() => {
+                        showToast('Đăng xuất thành công!', 'success');
+                        localStorage.removeItem('accessToken');
+                        localStorage.removeItem('refreshToken');
+                        localStorage.removeItem('user');
+                        setIsLoggedIn(false);
+                        setCurrentUser(null);
+                        setActivePage('home');
+                        navigate('/');
+                        setIsDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary hover:bg-[#ffe0dd]/30 transition-colors cursor-pointer border-none bg-transparent rounded-none"
+                    >
+                      <span className="material-symbols-outlined text-base">logout</span>
+                      <span>Đăng xuất</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button 
+              onClick={() => handleNavClick('login')}
+              className="parallelogram-btn bg-primary-container text-on-primary h-full px-14 font-bold text-xs uppercase tracking-wider active:scale-98 transition-all duration-150 cursor-pointer border-none flex items-center justify-center"
+            >
+              ĐẶT NGAY
+            </button>
+          )}
         </div>
       </div>
 
@@ -225,5 +377,57 @@ export default function Navbar({ activePage, setActivePage }) {
         </div>
       )}
     </header>
-  );
+
+    {/* Modal Dialog for Profiles - outside of translating header element */}
+    {activeModal === 'profile' && (
+      <div className="fixed inset-0 bg-black/65 backdrop-blur-sm z-[9999] flex justify-center items-start overflow-y-auto p-4 md:p-8">
+        <div className="bg-white rounded-none max-w-5xl w-full my-4 md:my-8 shadow-2xl relative border border-outline-variant animate-scale-in">
+          {/* Close Button */}
+          <button
+            onClick={() => setActiveModal(null)}
+            className="absolute top-6 right-6 p-2 text-slate-600 hover:text-white hover:bg-primary transition-all border border-slate-200 cursor-pointer flex items-center justify-center z-50 rounded-none bg-transparent"
+          >
+            <span className="material-symbols-outlined text-sm font-bold">close</span>
+          </button>
+          
+          {/* Profile Form */}
+          <div className="p-2 md:p-4 text-left">
+            <Profile
+              initialProfile={currentUser}
+              onProfileUpdate={(updated) => {
+                setCurrentUser(updated);
+                localStorage.setItem('user', JSON.stringify(updated));
+              }}
+              showToast={showToast}
+            />
+          </div>
+        </div>
+      </div>
+    )}
+    {/* Modal Dialog for Change Password - outside of translating header element */}
+    {activeModal === 'changePassword' && (
+      <div className="fixed inset-0 bg-black/65 backdrop-blur-sm z-[9999] flex justify-center items-start overflow-y-auto p-4 md:p-8">
+        <div className="bg-white rounded-none max-w-xl w-full my-4 md:my-8 shadow-2xl relative border border-outline-variant animate-scale-in">
+          {/* Close Button */}
+          <button
+            onClick={() => setActiveModal(null)}
+            className="absolute top-6 right-6 p-2 text-slate-600 hover:text-white hover:bg-primary transition-all border border-slate-200 cursor-pointer flex items-center justify-center z-50 rounded-none bg-transparent"
+          >
+            <span className="material-symbols-outlined text-sm font-bold">close</span>
+          </button>
+          
+          {/* Change Password Form */}
+          <div className="p-2 md:p-4 text-left">
+            <ChangePassword
+              onCancel={() => setActiveModal(null)}
+              showToast={showToast}
+            />
+          </div>
+        </div>
+      </div>
+    )}
+
+    <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+  </>
+);
 }

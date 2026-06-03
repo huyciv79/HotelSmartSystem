@@ -92,4 +92,19 @@ export const resetPassword = async ({ resetToken, newPassword }) => {
   return response.data;
 };
 
+/**
+ * Change user password.
+ *
+ * PUT /auth/change-password
+ * @param {{ currentPassword, newPassword }} data
+ * @returns {Promise<object>} API response data
+ */
+export const changePassword = async ({ currentPassword, newPassword }) => {
+  const response = await axiosInstance.put('/auth/change-password', {
+    currentPassword,
+    newPassword,
+  });
+  return response.data;
+};
+
 

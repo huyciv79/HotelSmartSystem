@@ -82,22 +82,29 @@ const DashboardSidebar = ({
       </div>
 
       <div className="px-4 pb-8 flex flex-col gap-2">
-        {bottomLinks.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => {
-              if (key === 'logout') {
-                onNavigate?.(key);
-                return;
-              }
-              handleNavigate(key);
-            }}
-            className="flex items-center gap-3 pl-5 py-3 text-sm text-slate-500/70 hover:text-slate-400 font-['Geist'] transition-colors cursor-pointer"
-          >
-            <Icon size={18} />
-            <span>{label}</span>
-          </button>
-        ))}
+        {bottomLinks.map(({ key, label, icon: Icon }) => {
+          const isActive = activeItem === key;
+          return (
+            <button
+              key={key}
+              onClick={() => {
+                if (key === 'logout') {
+                  onNavigate?.(key);
+                  return;
+                }
+                handleNavigate(key);
+              }}
+              className={`flex items-center gap-3 text-sm font-['Geist'] transition-colors cursor-pointer ${
+                isActive
+                  ? "pl-4 py-3 bg-gray-700/20 border-l-4 border-amber-200 text-amber-200"
+                  : "pl-5 py-3 text-slate-500/70 hover:text-slate-400"
+              }`}
+            >
+              <Icon size={18} />
+              <span>{label}</span>
+            </button>
+          );
+        })}
       </div>
     </aside>
   );
