@@ -1,4 +1,11 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -10,9 +17,49 @@ import Events from './pages/Events';
 import Register from './pages/Register';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
+import Dashboard from './pages/Dashboard';
 
-function App() {
-  const [activePage, setActivePage] = useState('home');
+function DashboardRoute() {
+  const navigate = useNavigate();
+
+  const setActivePage = useCallback(
+    (page) => {
+      if (page === 'dashboard') return;
+      navigate('/', { state: { page } });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    [navigate],
+  );
+
+  return <Dashboard setActivePage={setActivePage} />;
+}
+
+function MainSite() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [activePage, setActivePageState] = useState(
+    () => location.state?.page ?? 'home',
+  );
+
+  useEffect(() => {
+    if (location.state?.page) {
+      setActivePageState(location.state.page);
+      navigate('/', { replace: true });
+    }
+  }, [location.state, navigate]);
+
+  const setActivePage = useCallback(
+    (page) => {
+      if (page === 'dashboard') {
+        navigate('/dashboard');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      setActivePageState(page);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    [navigate],
+  );
 
   const renderPage = () => {
     switch (activePage) {
@@ -32,6 +79,8 @@ function App() {
         return <Login setActivePage={setActivePage} />;
       case 'forgot-password':
         return <ForgotPassword setActivePage={setActivePage} />;
+      case 'rewards':
+        return <Rewards />;
       default:
         return <Home setActivePage={setActivePage} />;
     }
@@ -40,13 +89,21 @@ function App() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-on-surface">
       <Navbar activePage={activePage} setActivePage={setActivePage} />
-      
-      <main className="flex-grow">
-        {renderPage()}
-      </main>
+
+      <main className="flex-grow">{renderPage()}</main>
 
       <Footer setActivePage={setActivePage} />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/dashborad" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/dashboard" element={<DashboardRoute />} />
+      <Route path="*" element={<MainSite />} />
+    </Routes>
   );
 }
 
