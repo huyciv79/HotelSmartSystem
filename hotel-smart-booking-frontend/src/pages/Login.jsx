@@ -48,7 +48,6 @@ export default function Login({ setActivePage }) {
 
       showToast('Đăng nhập thành công!', 'success');
       
-      // Redirect to home after successful login
       setTimeout(() => {
         setActivePage('home');
       }, 1500);
