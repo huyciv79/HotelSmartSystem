@@ -272,7 +272,6 @@ export default function Navbar({ activePage, setActivePage }) {
                     />
                     <div className="overflow-hidden">
                       <h4 className="text-xs font-bold text-slate-900 truncate m-0 uppercase tracking-wider">{fullName}</h4>
-                      <p className="text-[8px] text-primary uppercase tracking-widest mt-0.5 font-bold">Hội viên Elysian</p>
                     </div>
                   </div>
 
@@ -292,17 +291,6 @@ export default function Navbar({ activePage, setActivePage }) {
 
                   {/* Options */}
                   <div className="space-y-1">
-                    <button
-                      onClick={() => {
-                        setActiveModal('profile');
-                        setIsDropdownOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors cursor-pointer border-none bg-transparent rounded-none"
-                    >
-                      <span className="material-symbols-outlined text-base">settings</span>
-                      <span>Cài đặt & quyền riêng tư</span>
-                    </button>
-
                     <button
                       onClick={() => {
                         setActiveModal('changePassword');
