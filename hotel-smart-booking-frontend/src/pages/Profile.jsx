@@ -149,7 +149,7 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
           HỒ SƠ CÁ NHÂN
         </h2>
         <p className="text-secondary text-xs uppercase tracking-widest mt-3 font-bold opacity-80">
-          Quản lý thông tin tài khoản và cấu hình tùy chọn dành riêng cho hội viên
+          Quản lý thông tin tài khoản
         </p>
       </div>
 
@@ -157,7 +157,7 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
         {/* Left Column: Membership Card */}
         <div className="lg:col-span-1 flex flex-col gap-6">
           <div className="elysian-pattern text-white rounded-none overflow-hidden shadow-xl border border-[#a20513] relative">
-            <div className="bg-black/50 backdrop-blur-xs p-8 flex flex-col items-center text-center relative z-10">
+            <div className="bg-transparent p-8 flex flex-col items-center text-center relative z-10">
               
               {/* Avatar Uploader */}
               <div className="relative group cursor-pointer mb-6" onClick={handleAvatarClick}>
@@ -203,21 +203,9 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
               <h3 className="text-base font-bold font-['Playfair_Display'] text-white tracking-widest m-0 uppercase leading-normal">
                 {profile.fullName || 'Hội viên Elysian'}
               </h3>
-              <span className="mt-2 bg-white/10 border border-white/20 text-white px-4 py-0.5 rounded-none text-[9px] font-bold tracking-widest uppercase">
-                {profile.role === 'customer' ? 'HỘI VIÊN ELITE' : (profile.role || 'CUSTOMER').toUpperCase()}
-              </span>
-
               <div className="w-full h-px bg-white/15 my-6" />
 
-              {/* Quick Details */}
               <div className="w-full space-y-1 text-[10px] uppercase tracking-widest font-bold">
-                <div className="flex items-center justify-between py-2 border-b border-white/10">
-                  <span className="text-white/60">Trạng thái</span>
-                  <span className="text-white flex items-center gap-1.5">
-                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    {profile.status === 'active' ? 'Đang hoạt động' : 'Hoạt động'}
-                  </span>
-                </div>
                 <div className="flex items-center justify-between py-2">
                   <span className="text-white/60">Gia nhập</span>
                   <span className="text-white">
@@ -228,7 +216,7 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
             </div>
 
             {/* Card Footer */}
-            <div className="bg-[#5c030b] px-8 py-3.5 border-t border-white/10 flex justify-between items-center text-[9px]">
+            <div className="bg-black/20 px-8 py-3.5 border-t border-white/10 flex justify-between items-center text-[9px]">
               <span className="text-white/70 tracking-widest font-black font-mono">ELYSIAN HOTELS & RESORTS</span>
               <Award size={14} className="text-white/80" />
             </div>
