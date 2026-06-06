@@ -40,6 +40,14 @@ function MainSite() {
   const [activePage, setActivePageState] = useState(
     () => location.state?.page ?? 'home',
   );
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [menuWasOpened, setMenuWasOpened] = useState(false);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      setMenuWasOpened(true);
+    }
+  }, [isMobileMenuOpen]);
 
   useEffect(() => {
     if (location.state?.page) {
@@ -88,10 +96,14 @@ function MainSite() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-on-surface">
-      <Navbar activePage={activePage} setActivePage={setActivePage} />
+      <Navbar 
+        activePage={activePage} 
+        setActivePage={setActivePage} 
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+      />
 
       <main className="flex-grow">{renderPage()}</main>
-
       <Footer setActivePage={setActivePage} />
     </div>
   );

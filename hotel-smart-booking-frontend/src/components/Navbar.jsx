@@ -4,9 +4,10 @@ import Profile from '../pages/Profile';
 import ChangePassword from '../pages/ChangePassword';
 import { useToast, ToastContainer } from './Toast';
 import { getUserProfile } from '../services/userService';
+import { getRoomTypes, getRoomTypeDetail } from '../services/roomService';
+import RoomDetailModern from './room/RoomDetailModern';
 
-export default function Navbar({ activePage, setActivePage }) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, setIsMobileMenuOpen }) {
   const [menuState, setMenuState] = useState('idle'); // 'idle' | 'open' | 'closed'
   const [isScrolled, setIsScrolled] = useState(false);
   const [lang, setLang] = useState('VN');
@@ -14,6 +15,13 @@ export default function Navbar({ activePage, setActivePage }) {
   const [underlineStyle, setUnderlineStyle] = useState({ left: 0, width: 0, opacity: 0 });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null); // 'profile' | null
+  const [roomTypes, setRoomTypes] = useState([]);
+  const [showRoomTypes, setShowRoomTypes] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [prevRoom, setPrevRoom] = useState(null);
+  const [slideDirection, setSlideDirection] = useState('right'); // 'left' | 'right'
+  const [roomDetailData, setRoomDetailData] = useState(null);
+  const [isLoadingRoomDetail, setIsLoadingRoomDetail] = useState(false);
 
   const navContainerRef = useRef(null);
   const dropdownRef = useRef(null);
@@ -65,6 +73,71 @@ export default function Navbar({ activePage, setActivePage }) {
       fetchProfile();
     }
   }, [isLoggedIn, activeModal]);
+
+  // Fetch room types data on load
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        const response = await getRoomTypes();
+        if (response && response.data && response.data.content) {
+          setRoomTypes(response.data.content);
+          setSelectedRoom(response.data.content[0]);
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải danh sách loại phòng:', err);
+      }
+    };
+    fetchRooms();
+  }, []);
+
+  // Sync prevRoom for transition animation
+  useEffect(() => {
+    if (selectedRoom) {
+      if (!prevRoom) {
+        setPrevRoom(selectedRoom);
+      } else {
+        const timer = setTimeout(() => {
+          setPrevRoom(selectedRoom);
+        }, 800);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [selectedRoom, prevRoom]);
+
+  const handleNextRoom = (e) => {
+    e.stopPropagation();
+    if (roomTypes.length === 0) return;
+    const currentIndex = roomTypes.findIndex(r => r.id === selectedRoom?.id);
+    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % roomTypes.length;
+    setSlideDirection('right'); // Flow from left to right (towards the right side pressed)
+    setSelectedRoom(roomTypes[nextIndex]);
+  };
+
+  const handlePrevRoom = (e) => {
+    e.stopPropagation();
+    if (roomTypes.length === 0) return;
+    const currentIndex = roomTypes.findIndex(r => r.id === selectedRoom?.id);
+    const prevIndex = currentIndex === -1 ? 0 : (currentIndex - 1 + roomTypes.length) % roomTypes.length;
+    setSlideDirection('left'); // Flow from right to left (towards the left side pressed)
+    setSelectedRoom(roomTypes[prevIndex]);
+  };
+  const handleOpenRoomDetail = async (roomId) => {
+    if (!roomId) return;
+    setIsLoadingRoomDetail(true);
+    setActiveModal('roomDetail');
+    try {
+      const response = await getRoomTypeDetail(roomId);
+      if (response && response.data) {
+        setRoomDetailData(response.data);
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải chi tiết phòng:', err);
+      showToast('Không thể tải thông tin chi tiết phòng.', 'error');
+      setActiveModal(null);
+    } finally {
+      setIsLoadingRoomDetail(false);
+    }
+  };
 
   const navItems = [
     { id: 'home', label: 'KHÁCH SẠN' },
@@ -145,6 +218,18 @@ export default function Navbar({ activePage, setActivePage }) {
       clearTimeout(timer);
     };
   }, [hoveredId]);
+
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
 
   return (
     <>
@@ -335,36 +420,189 @@ export default function Navbar({ activePage, setActivePage }) {
           )}
         </div>
       </div>
+    </header>
+      
+    {/* Drawer Navigation - outside header to cover full landing page correctly */}
+    <div className={`fixed left-0 right-0 bottom-0 bg-background z-10 overflow-y-auto drawer-menu ${
+      isScrolled ? 'top-12' : 'top-24'
+    } ${
+      isMobileMenuOpen ? 'open' : ''
+    }`}>
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 p-10 pl-4 md:pl-6 gap-8 min-h-full items-start">
+          
+          {/* Left Column: Menu Items & Secondary Links (col-span-4) */}
+          <div className="md:col-span-4 flex flex-col justify-between min-h-[420px] py-4 self-start">
+            {/* Main Navigation List */}
+            <div className="flex flex-col space-y-7 text-left font-['Montserrat'] select-none">
 
-      {/* Mobile Drawer Navigation */}
-      {isMobileMenuOpen && (
-        <div className="absolute top-24 left-0 right-0 bg-surface border-b border-outline-variant shadow-xl md:hidden z-40 animate-fade-in">
-          <div className="flex flex-col p-4 space-y-4 text-left">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item.id)}
-                className={`text-left font-label-bold text-xs uppercase tracking-wider py-3 border-b border-outline-variant/30 cursor-pointer bg-transparent ${
-                  activePage === item.id ? 'text-primary font-bold' : 'text-on-surface'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-            <div className="flex items-center justify-between py-2">
-              <span className="text-xs text-secondary font-bold">NGÔN NGỮ / LANGUAGE</span>
-              <button 
-                onClick={() => setLang(lang === 'VN' ? 'EN' : 'VN')}
-                className="flex items-center gap-2 text-on-surface bg-transparent border-none cursor-pointer"
-              >
-                <span className="material-symbols-outlined">language</span>
-                <span className="text-xs font-bold">{lang}</span>
-              </button>
+              {/* LOẠI PHÒNG (Toggles room types list underneath) */}
+              <div className="flex flex-col text-left">
+                <button
+                  onClick={() => {
+                    setShowRoomTypes(!showRoomTypes);
+                  }}
+                  className="group text-left font-bold text-[12.5px] md:text-[14px] uppercase tracking-widest cursor-pointer bg-transparent border-none w-fit transition-all duration-300"
+                >
+                  <span className={`relative pb-1 transition-colors duration-300 font-extrabold ${
+                    (showRoomTypes || activePage === 'home') ? 'text-primary' : 'text-slate-800 group-hover:text-primary'
+                  }`}>
+                    LOẠI PHÒNG
+                    <span className={`absolute bottom-0 left-0 right-0 h-[2.5px] bg-primary transition-transform duration-300 origin-left ${
+                      (showRoomTypes || activePage === 'home') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                    }`} />
+                  </span>
+                </button>
+                
+                {/* Expandable sub-list of room names */}
+                {showRoomTypes && roomTypes.length > 0 && (
+                  <div className="pl-5 mt-3.5 flex flex-col space-y-3 border-l border-slate-300">
+                    {roomTypes.map((room) => (
+                      <button
+                        key={room.id}
+                        onMouseEnter={() => {
+                          const currentIndex = roomTypes.findIndex(r => r.id === selectedRoom?.id);
+                          const newIndex = roomTypes.findIndex(r => r.id === room.id);
+                          if (newIndex > currentIndex) {
+                            setSlideDirection('right');
+                          } else if (newIndex < currentIndex) {
+                            setSlideDirection('left');
+                          }
+                          setSelectedRoom(room);
+                        }}
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          setActivePage('home');
+                        }}
+                        className={`text-left text-[11px] font-bold uppercase tracking-wider cursor-pointer bg-transparent border-none transition-all duration-200 hover:text-primary ${
+                          selectedRoom?.id === room.id ? 'text-primary font-extrabold translate-x-0.5' : 'text-slate-600'
+                        }`}
+                      >
+                        {room.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Other items */}
+              {navItems.slice(1).map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setShowRoomTypes(false);
+                    handleNavClick(item.id);
+                  }}
+                  className="group text-left font-bold text-[12.5px] md:text-[14px] uppercase tracking-widest cursor-pointer bg-transparent border-none w-fit transition-all duration-300"
+                >
+                  <span className={`relative pb-1 transition-colors duration-300 font-extrabold ${
+                    (activePage === item.id && !showRoomTypes) ? 'text-primary' : 'text-slate-800 group-hover:text-primary'
+                  }`}>
+                    {item.label}
+                    <span className={`absolute bottom-0 left-0 right-0 h-[2.5px] bg-primary transition-transform duration-300 origin-left ${
+                      (activePage === item.id && !showRoomTypes) ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                    }`} />
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Bottom Left Secondary Links */}
+            <div className="grid grid-cols-2 gap-y-3.5 gap-x-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-12 select-none border-t border-slate-200 pt-6">
+              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">VỀ ELYSIAN HOTELS</button>
+              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">NGHỀ NGHIỆP</button>
+              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">ELYSIAN + MÔI TRƯỜNG</button>
+              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">ƯU ĐÃI</button>
+              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">BLOGS</button>
+              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">LIÊN HỆ</button>
             </div>
           </div>
+
+          {/* Right Column: Dynamic Room Image Carousel (col-span-8) */}
+          <div className="md:col-span-8 pl-0 md:pl-8 flex flex-col justify-start self-start py-4 w-full">
+            <div className="w-full h-[450px] overflow-hidden relative shadow-2xl border border-slate-200 group bg-slate-950">
+              
+              {/* Background Layer: Previous Room Image */}
+              {prevRoom && prevRoom.id !== selectedRoom?.id && (
+                <div className="absolute inset-0 w-full h-full overflow-hidden">
+                  <img 
+                    src={prevRoom?.primaryImageUrl} 
+                    alt={prevRoom?.name} 
+                    className="w-full h-full object-cover opacity-100 scale-100 transition-all duration-700"
+                  />
+                  {/* Dark Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+                </div>
+              )}
+
+              {/* Foreground Layer: Selected Room Image */}
+              <div 
+                key={selectedRoom?.id} 
+                className={`absolute inset-0 w-full h-full overflow-hidden ${
+                  slideDirection === 'left' ? 'animate-room-wipe-left' : 'animate-room-wipe-right'
+                }`}
+              >
+                <img 
+                  src={selectedRoom?.primaryImageUrl || (roomTypes[0]?.primaryImageUrl) || 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=1000&q=80'} 
+                  alt={selectedRoom?.name || "Elysian Room"} 
+                  className="w-full h-full object-cover animate-room-zoom"
+                />
+                
+                {/* Dark Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+
+                {/* Room Name & Info Overlay (Bottom Left) */}
+                <div className="absolute bottom-8 left-8 text-left z-10 animate-room-text">
+                  <span className="text-[10px] font-black text-white/80 uppercase tracking-widest block mb-1">
+                    {selectedRoom?.bedType || 'ELYSIAN HOTELS & RESORTS'}
+                  </span>
+                  <h3 className="text-2xl font-black text-white uppercase tracking-wider leading-tight">
+                    {selectedRoom?.name || 'KỲ NGHỈ DƯỠNG THƯỢNG LƯU'}
+                  </h3>
+                  {selectedRoom && (
+                    <p className="text-xs font-bold text-white/95 uppercase tracking-widest mt-1.5">
+                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedRoom.basePrice)} / ĐÊM
+                    </p>
+                  )}
+                </div>
+
+                {/* Chi tiết Button (Bottom Right) */}
+                {selectedRoom && (
+                  <div className="absolute bottom-8 right-8 z-10 animate-room-btn">
+                    <button
+                      onClick={() => handleOpenRoomDetail(selectedRoom.id)}
+                      className="bg-transparent text-white/95 hover:text-white transition-all duration-300 text-base border-b border-white/40 pb-1 cursor-pointer hover:border-white whitespace-nowrap"
+                      style={{ fontFamily: "'Playfair Display', serif" }}
+                    >
+                      Chi tiết
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Left/Right Carousel Controls */}
+              {roomTypes && roomTypes.length > 1 && (
+                <>
+                  <button 
+                    onClick={handlePrevRoom}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/30 hover:bg-black/60 text-white flex items-center justify-center transition-all cursor-pointer border-none z-20"
+                    aria-label="Previous room"
+                  >
+                    <span className="material-symbols-outlined text-2xl">chevron_left</span>
+                  </button>
+                  <button 
+                    onClick={handleNextRoom}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/30 hover:bg-black/60 text-white flex items-center justify-center transition-all cursor-pointer border-none z-20"
+                    aria-label="Next room"
+                  >
+                    <span className="material-symbols-outlined text-2xl">chevron_right</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
         </div>
-      )}
-    </header>
+      </div>
 
     {/* Modal Dialog for Profiles - outside of translating header element */}
     {activeModal === 'profile' && (
@@ -412,6 +650,34 @@ export default function Navbar({ activePage, setActivePage }) {
             />
           </div>
         </div>
+      </div>
+    )}
+
+    {/* Modal Dialog for Room Details */}
+    {activeModal === 'roomDetail' && (
+      <div className="fixed inset-0 bg-black/80 z-[9999] flex justify-center items-center p-4 md:p-8">
+        {isLoadingRoomDetail ? (
+          <div className="bg-white rounded-none p-12 max-w-md w-full text-center flex flex-col items-center justify-center border border-outline-variant shadow-2xl animate-fade-in">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary mb-4"></div>
+            <p className="text-xs uppercase font-bold tracking-widest text-slate-500 font-['Montserrat']">Đang tải thông tin chi tiết phòng...</p>
+          </div>
+        ) : (
+          <RoomDetailModern
+            roomDetailData={roomDetailData}
+            onClose={() => {
+              setActiveModal(null);
+              setRoomDetailData(null);
+            }}
+            onBookingPersonal={(room) => {
+              setActiveModal(null);
+              setIsMobileMenuOpen(false);
+              handleNavClick('login');
+            }}
+            onBookingGroup={(room) => {
+              showToast(`Đã ghi nhận yêu cầu Đặt phòng nhóm cho ${room.name}. Nhân viên Elysian sẽ liên hệ trực tiếp hỗ trợ đoàn của bạn qua số điện thoại/email đăng ký!`, 'success');
+            }}
+          />
+        )}
       </div>
     )}
 
