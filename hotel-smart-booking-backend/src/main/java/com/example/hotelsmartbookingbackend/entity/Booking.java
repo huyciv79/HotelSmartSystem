@@ -20,9 +20,13 @@ public class Booking {
     @Column(name = "bookingid", nullable = false)
     private Integer id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "userid")
+    private User userid;
+
     @Size(max = 20)
     @NotNull
-    @Column(name = "bookingreference", nullable = false, length = 20)
+    @Column(name = "bookingreference", nullable = false, unique = true, length = 20)
     private String bookingreference;
 
     @Size(max = 50)

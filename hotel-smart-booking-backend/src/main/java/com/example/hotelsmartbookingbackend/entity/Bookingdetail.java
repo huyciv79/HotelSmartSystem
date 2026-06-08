@@ -18,8 +18,12 @@ import java.time.Instant;
 @Table(name = "bookingdetails")
 public class Bookingdetail {
     @Id
+    @Column(name = "bookingid", nullable = false)
+    private Integer id;
+
     @NotNull
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @MapsId
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "bookingid", nullable = false)
     private Booking bookingid;
@@ -33,6 +37,11 @@ public class Bookingdetail {
     @OnDelete(action = OnDeleteAction.SET_NULL)
     @JoinColumn(name = "roomid")
     private Room roomid;
+
+    @NotNull
+    @ColumnDefault("1")
+    @Column(name = "quantity", nullable = false)
+    private Integer quantity;
 
     @NotNull
     @Column(name = "expectedcheckin", nullable = false)
