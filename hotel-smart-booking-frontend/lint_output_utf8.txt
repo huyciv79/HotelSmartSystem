@@ -1,0 +1,234 @@
+
+> hotel-smart-booking-frontend@0.0.0 lint
+> eslint .
+
+
+D:\SUMMER26\SEP\Web\HotelSmartSystem\hotel-smart-booking-frontend\src\App.jsx
+  47:10  error  'menuWasOpened' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+  51:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  49 |   useEffect(() => {
+  50 |     if (isMobileMenuOpen) {
+> 51 |       setMenuWasOpened(true);
+     |       ^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  52 |     }
+  53 |   }, [isMobileMenuOpen]);
+  54 |                                                                         react-hooks/set-state-in-effect
+  57:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  55 |   useEffect(() => {
+  56 |     if (location.state?.page) {
+> 57 |       setActivePageState(location.state.page);
+     |       ^^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  58 |       navigate('/', { replace: true });
+  59 |     }
+  60 |   }, [location.state, navigate]);  react-hooks/set-state-in-effect
+
+D:\SUMMER26\SEP\Web\HotelSmartSystem\hotel-smart-booking-frontend\src\components\Navbar.jsx
+  51:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  49 |
+  50 |   useEffect(() => {
+> 51 |     setIsLoggedIn(!!localStorage.getItem('accessToken'));
+     |     ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  52 |     const userStr = localStorage.getItem('user');
+  53 |     setCurrentUser(userStr ? JSON.parse(userStr) : null);
+  54 |   }, [activePage]);  react-hooks/set-state-in-effect
+  97:9  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+   95 |     if (selectedRoom) {
+   96 |       if (!prevRoom) {
+>  97 |         setPrevRoom(selectedRoom);
+      |         ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+   98 |       } else {
+   99 |         const timer = setTimeout(() => {
+  100 |           setPrevRoom(selectedRoom);                        react-hooks/set-state-in-effect
+
+D:\SUMMER26\SEP\Web\HotelSmartSystem\hotel-smart-booking-frontend\src\components\OtpInput.jsx
+  84:6  warning  React Hook useEffect has a missing dependency: 'value'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\SUMMER26\SEP\Web\HotelSmartSystem\hotel-smart-booking-frontend\src\components\Toast.jsx
+   1:20  error  'useEffect' is defined but never used                                                                                           no-unused-vars
+  10:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\SUMMER26\SEP\Web\HotelSmartSystem\hotel-smart-booking-frontend\src\components\dashboard\StatCard.jsx
+  7:3  error  'accentColor' is defined but never used  no-unused-vars
+  8:3  error  'accentBg' is defined but never used     no-unused-vars
+
+D:\SUMMER26\SEP\Web\HotelSmartSystem\hotel-smart-booking-frontend\src\components\room\ReviewSection.jsx
+    2:62  error    'Check' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           no-unused-vars
+   45:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  43 |     // Load reviews when roomId changes
+  44 |     if (roomId) {
+> 45 |       setReviews(getReviews(roomId));
+     |       ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  46 |     }
+  47 |
+  48 |     // Get current user details if logged in  react-hooks/set-state-in-effect
+  649:12  warning  React Hook useMemo has missing dependencies: 'handleDeleteConfirm', 'handleImageChange', and 'handleUpdateReview'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       react-hooks/exhaustive-deps
+
+D:\SUMMER26\SEP\Web\HotelSmartSystem\hotel-smart-booking-frontend\src\components\room\RoomDetailModern.jsx
+   2:27  error  'Bed' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       no-unused-vars
+   2:39  error  'Sparkles' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+   2:52  error  'ChevronRight' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              no-unused-vars
+   2:66  error  'HelpCircle' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                no-unused-vars
+  30:5   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  28 |   // Reset active index when roomDetailData changes
+  29 |   useEffect(() => {
+> 30 |     setActiveIndex(0);
+     |     ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  31 |   }, [roomDetailData]);
+  32 |
+  33 |   if (!roomDetailData) return null;  react-hooks/set-state-in-effect
+
+D:\SUMMER26\SEP\Web\HotelSmartSystem\hotel-smart-booking-frontend\src\data\dashboardData.js
+  8:3  error  'Car' is defined but never used       no-unused-vars
+  9:3  error  'Sparkles' is defined but never used  no-unused-vars
+
+D:\SUMMER26\SEP\Web\HotelSmartSystem\hotel-smart-booking-frontend\src\pages\Booking.jsx
+  63:6  warning  React Hook useEffect has a missing dependency: 'showToast'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react-hooks/exhaustive-deps
+  67:5  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  65 |   // Reset availability status when dates or room changes
+  66 |   useEffect(() => {
+> 67 |     setIsAvailable(null);
+     |     ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  68 |   }, [startDate, endDate, selectedRoom]);
+  69 |
+  70 |   const handleRoomChange = (roomId) => {  react-hooks/set-state-in-effect
+
+D:\SUMMER26\SEP\Web\HotelSmartSystem\hotel-smart-booking-frontend\src\pages\BookingDetail.jsx
+  54:6  warning  React Hook useEffect has missing dependencies: 'setActivePage' and 'showToast'. Either include them or remove the dependency array. If 'setActivePage' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+
+D:\SUMMER26\SEP\Web\HotelSmartSystem\hotel-smart-booking-frontend\src\pages\ForgotPassword.jsx
+  222:80  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+  220 |             <p className="text-secondary text-sm mt-2">
+  221 |               {step === 1 && 'Nhập email đã đăng ký hội viên của bạn để thiết lập lại mật khẩu.'}
+> 222 |               {step === 2 && `Mã xác thực OTP đã được gửi đến địa chỉ email: ${userEmail.current}`}
+      |                                                                                ^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  223 |               {step === 3 && 'Vui lòng thiết lập mật khẩu mới có độ bảo mật cao.'}
+  224 |               {step === 4 && 'Mật khẩu của bạn đã được cập nhật thành công.'}
+  225 |             </p>  react-hooks/refs
+  238:47  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+  236 |           {/* Step 1 Form */}
+  237 |           {step === 1 && (
+> 238 |             <form onSubmit={handleEmailSubmit(onEmailSubmit)} className="space-y-6">
+      |                                               ^^^^^^^^^^^^^ Passing a ref to a function may read its value during render
+  239 |               <div className="space-y-2">
+  240 |                 <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Email hội viên</label>
+  241 |                 <input                                                                                                                      react-hooks/refs
+  312:50  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+  310 |           {/* Step 3 Form */}
+  311 |           {step === 3 && (
+> 312 |             <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="space-y-6">
+      |                                                  ^^^^^^^^^^^^^^^^ Passing a ref to a function may read its value during render
+  313 |               <div className="space-y-2">
+  314 |                 <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Mật khẩu mới</label>
+  315 |                 <input                                                                                                            react-hooks/refs
+
+D:\SUMMER26\SEP\Web\HotelSmartSystem\hotel-smart-booking-frontend\src\pages\Payment.jsx
+  20:7  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  18 |     const savedBookingStr = sessionStorage.getItem('currentBooking');
+  19 |     if (savedBookingStr) {
+> 20 |       setBooking(JSON.parse(savedBookingStr));
+     |       ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  21 |     } else {
+  22 |       showToast('Không tìm thấy thông tin đặt phòng cần thanh toán.', 'error');
+  23 |       setTimeout(() => {  react-hooks/set-state-in-effect
+  27:6  warning  React Hook useEffect has missing dependencies: 'setActivePage' and 'showToast'. Either include them or remove the dependency array. If 'setActivePage' changes too often, find the parent component that defines it and wrap that definition in useCallback                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    react-hooks/exhaustive-deps
+
+D:\SUMMER26\SEP\Web\HotelSmartSystem\hotel-smart-booking-frontend\src\pages\Profile.jsx
+    2:52  error  'Calendar' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         no-unused-vars
+    3:10  error  'getUserProfile' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   no-unused-vars
+   20:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  18 |   useEffect(() => {
+  19 |     if (initialProfile) {
+> 20 |       setProfile(initialProfile);
+     |       ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  21 |       setFormData({
+  22 |         fullName: initialProfile.fullName || '',
+  23 |         address: initialProfile.address || '',  react-hooks/set-state-in-effect
+  139:14  error  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                no-unused-vars
+
+D:\SUMMER26\SEP\Web\HotelSmartSystem\hotel-smart-booking-frontend\src\pages\Register.jsx
+  224:40  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+  222 |         {/* Step 1 Form */}
+  223 |         {step === 1 && (
+> 224 |           <form onSubmit={handleSubmit(onRegisterSubmit)} className="space-y-6">
+      |                                        ^^^^^^^^^^^^^^^^ Passing a ref to a function may read its value during render
+  225 |             <div className="space-y-2">
+  226 |               <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Họ và tên</label>
+  227 |               <input   react-hooks/refs
+
+✖ 33 problems (28 errors, 5 warnings)
+

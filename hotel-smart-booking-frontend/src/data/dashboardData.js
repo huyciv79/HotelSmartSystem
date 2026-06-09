@@ -5,8 +5,6 @@ import {
   CreditCard,
   Gift,
   UtensilsCrossed,
-  Car,
-  Sparkles,
   CreditCard as PaymentIcon,
 } from 'lucide-react';
 
@@ -204,7 +202,7 @@ export const RECOMMENDED_SUITES = [
     amenities: '65m² • Library • Fireplace',
     price: '$950',
     rating: '4.8',
-    imageUrl: 'https://images.unsplash.com/photo-1590490360182-c33d955c4644?w=400&h=250&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=400&h=250&fit=crop',
   },
 ];
 

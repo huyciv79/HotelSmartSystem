@@ -1,27 +1,25 @@
 const HeroBanner = ({ name, tier, nextStayDate }) => {
   return (
-    <div className="h-72 rounded-2xl overflow-hidden relative">
+    <div className="h-72 rounded-none overflow-hidden relative font-['Montserrat'] border border-outline-variant shadow-lg">
       <img
         src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1000&h=400&fit=crop"
         alt="Luxury hotel"
         className="absolute inset-0 w-full h-full object-cover"
       />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent" />
-      <div className="relative h-full p-10 flex justify-between items-end">
+      <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/30 to-transparent" />
+      <div className="relative h-full p-10 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 text-left">
         <div>
-          <span className="px-3 py-[3px] bg-amber-200 rounded-full text-lime-950 text-[10px] font-bold uppercase tracking-wide">
+          <span className="px-3 py-1 bg-primary text-white text-[9px] font-black uppercase tracking-widest rounded-none">
             {tier}
           </span>
-          <h1 className="mt-3 text-white text-3xl font-bold font-['Playfair_Display']">
-            Welcome back, {name}
+          <h1 className="mt-3 text-white text-3xl font-black uppercase tracking-wider italic leading-tight">
+            Chào mừng trở lại, {name}
           </h1>
-          <p className="mt-1 text-white/70 text-sm font-['Geist']">
-            Experience your next stay on {nextStayDate}
+          <p className="mt-1.5 text-white/80 text-xs font-bold uppercase tracking-wider">
+            Kỳ nghỉ tiếp theo của bạn bắt đầu từ ngày {nextStayDate}
           </p>
         </div>
-        <button className="px-8 py-3 bg-white rounded-xl text-black font-bold font-['Geist'] hover:bg-gray-50 transition">
-          Manage Next Stay
-        </button>
+        {/* Removed Quản lý kỳ nghỉ button */}
       </div>
     </div>
   );

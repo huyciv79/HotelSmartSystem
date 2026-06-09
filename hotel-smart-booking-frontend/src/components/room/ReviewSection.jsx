@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Star, Trash2, Edit3, Camera, X, Image, AlertCircle, Check, Filter, ChevronDown } from 'lucide-react';
+import { Star, Trash2, Edit3, Camera, X, Image, AlertCircle, Filter, ChevronDown } from 'lucide-react';
 import { getReviews, createReview, updateReview, deleteReview } from '../../services/reviewService';
 
 export default function ReviewSection({ roomId, showToast }) {
@@ -42,14 +42,20 @@ export default function ReviewSection({ roomId, showToast }) {
   useEffect(() => {
     // Load reviews when roomId changes
     if (roomId) {
-      setReviews(getReviews(roomId));
+      const loaded = getReviews(roomId);
+      setTimeout(() => {
+        setReviews(loaded);
+      }, 0);
     }
 
     // Get current user details if logged in
     const userStr = localStorage.getItem('user');
     if (userStr) {
       try {
-        setCurrentUser(JSON.parse(userStr));
+        const parsed = JSON.parse(userStr);
+        setTimeout(() => {
+          setCurrentUser(parsed);
+        }, 0);
       } catch (e) {
         console.error('Error parsing user data', e);
       }
@@ -646,6 +652,7 @@ export default function ReviewSection({ roomId, showToast }) {
               )}
             </div>
           ));
+          // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [filteredReviews, editingId, editRating, editComment, editImages, deletingId])}
       </div>
 

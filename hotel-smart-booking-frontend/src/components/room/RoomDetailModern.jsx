@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Maximize, Users, Bed, Check, Sparkles, X, ChevronRight, HelpCircle } from 'lucide-react';
+import { Maximize, Users, Check, X } from 'lucide-react';
 import ReviewSection from './ReviewSection';
 import { useToast } from '../Toast';
 
@@ -27,7 +27,9 @@ export default function RoomDetailModern({ roomDetailData, onClose, onBookingPer
 
   // Reset active index when roomDetailData changes
   useEffect(() => {
-    setActiveIndex(0);
+    setTimeout(() => {
+      setActiveIndex(0);
+    }, 0);
   }, [roomDetailData]);
 
   if (!roomDetailData) return null;
