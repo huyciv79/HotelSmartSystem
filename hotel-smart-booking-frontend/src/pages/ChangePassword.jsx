@@ -81,13 +81,13 @@ export default function ChangePassword({ onCancel, showToast }) {
   };
 
   return (
-    <div className="max-w-xl mx-auto p-4 md:p-8 animate-fade-in font-['Montserrat'] text-left">
+    <div className="w-full font-['Montserrat'] text-left">
       {/* Title */}
-      <div className="mb-8 border-b border-outline-variant pb-6">
-        <h2 className="font-headline-lg text-2xl text-primary uppercase italic m-0 tracking-widest font-black leading-none">
+      <div className="mb-6 border-b border-outline-variant pb-4">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-primary">
           ĐỔI MẬT KHẨU
         </h2>
-        <p className="text-secondary text-xs uppercase tracking-widest mt-3 font-bold opacity-80 select-none">
+        <p className="text-secondary text-[11px] uppercase tracking-wider mt-1.5 font-bold opacity-80 select-none">
           Thay đổi mật khẩu định kỳ để bảo vệ tài khoản của bạn
         </p>
       </div>
@@ -173,15 +173,17 @@ export default function ChangePassword({ onCancel, showToast }) {
 
         {/* Buttons */}
         <div className="flex justify-end gap-4 pt-6 border-t border-slate-100 mt-8">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isSaving}
-            className="px-6 py-3 border border-secondary text-secondary font-bold text-[9px] tracking-widest uppercase hover:bg-slate-50 disabled:opacity-50 transition-all cursor-pointer bg-transparent rounded-none flex items-center gap-1.5"
-          >
-            <X size={12} />
-            HỦY BỎ
-          </button>
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={isSaving}
+              className="px-6 py-3 border border-secondary text-secondary font-bold text-[9px] tracking-widest uppercase hover:bg-slate-50 disabled:opacity-50 transition-all cursor-pointer bg-transparent rounded-none flex items-center gap-1.5"
+            >
+              <X size={12} />
+              HỦY BỎ
+            </button>
+          )}
 
           <button
             type="submit"

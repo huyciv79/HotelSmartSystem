@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { useState, useCallback } from 'react';
 
 /**
  * Lightweight toast notification hook.

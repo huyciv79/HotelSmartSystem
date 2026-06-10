@@ -81,6 +81,7 @@ export default function OtpInput({ value = '', onChange, disabled = false }) {
     if (value === '' && inputRefs.current[0]) {
       inputRefs.current[0].focus();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

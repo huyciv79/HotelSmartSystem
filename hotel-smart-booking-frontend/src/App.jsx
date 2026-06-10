@@ -18,6 +18,9 @@ import Register from './pages/Register';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
+import Booking from './pages/Booking';
+import Payment from './pages/Payment';
+import BookingDetail from './pages/BookingDetail';
 
 function DashboardRoute() {
   const navigate = useNavigate();
@@ -41,18 +44,15 @@ function MainSite() {
     () => location.state?.page ?? 'home',
   );
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [menuWasOpened, setMenuWasOpened] = useState(false);
-
-  useEffect(() => {
-    if (isMobileMenuOpen) {
-      setMenuWasOpened(true);
-    }
-  }, [isMobileMenuOpen]);
 
   useEffect(() => {
     if (location.state?.page) {
-      setActivePageState(location.state.page);
+      const page = location.state.page;
       navigate('/', { replace: true });
+      // Schedule state update to avoid synchronous setState inside render/effect cascade
+      setTimeout(() => {
+        setActivePageState(page);
+      }, 0);
     }
   }, [location.state, navigate]);
 
@@ -89,6 +89,12 @@ function MainSite() {
         return <ForgotPassword setActivePage={setActivePage} />;
       case 'rewards':
         return <Rewards />;
+      case 'booking':
+        return <Booking setActivePage={setActivePage} />;
+      case 'payment':
+        return <Payment setActivePage={setActivePage} />;
+      case 'booking-detail':
+        return <BookingDetail setActivePage={setActivePage} />;
       default:
         return <Home setActivePage={setActivePage} />;
     }

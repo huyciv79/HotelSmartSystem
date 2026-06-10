@@ -48,9 +48,18 @@ export default function Login({ setActivePage }) {
 
       showToast('Đăng nhập thành công!', 'success');
       
-      setTimeout(() => {
-        setActivePage('home');
-      }, 1500);
+      const pendingRoom = sessionStorage.getItem('pendingBookingRoom');
+      if (pendingRoom) {
+        sessionStorage.setItem('bookingRoom', pendingRoom);
+        sessionStorage.removeItem('pendingBookingRoom');
+        setTimeout(() => {
+          setActivePage('booking');
+        }, 1500);
+      } else {
+        setTimeout(() => {
+          setActivePage('home');
+        }, 1500);
+      }
     } catch (err) {
       const msg =
         err?.response?.data?.message ||

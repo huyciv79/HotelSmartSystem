@@ -1,51 +1,51 @@
-const CurrentBooking = ({ booking }) => {
+const CurrentBooking = ({ booking, onViewDetail }) => {
   const { suiteName, refCode, status, checkIn, checkOut, guests } = booking;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm outline outline-1 outline-neutral-300/30 overflow-hidden">
-      <div className="p-6 bg-slate-900 flex justify-between items-center">
+    <div className="bg-white rounded-none border border-outline-variant shadow-lg overflow-hidden font-['Montserrat'] text-left">
+      <div className="p-6 bg-[#111] border-b border-slate-900 flex justify-between items-center">
         <div>
-          <h2 className="text-white font-['Playfair_Display']">{suiteName}</h2>
-          <p className="text-slate-500 text-sm font-['Geist']">Ref: {refCode}</p>
+          <h2 className="text-white text-base font-black uppercase tracking-wider m-0">{suiteName === "Grand Deluxe Suite" ? "Phòng Grand Deluxe Suite" : suiteName}</h2>
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Mã đặt phòng: {refCode}</p>
         </div>
-        <span className="px-4 py-2 bg-green-500/20 rounded-full text-green-500 text-sm font-bold font-['Geist']">
+        <span className="px-4 py-2 bg-green-100 text-green-700 text-xs font-black uppercase tracking-widest rounded-none">
           {status}
         </span>
       </div>
 
-      <div className="p-8 grid grid-cols-3 gap-6">
+      <div className="p-8 grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div>
-          <p className="text-zinc-700 text-xs font-bold uppercase tracking-wider font-['Geist']">
-            CHECK IN
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
+            NHẬN PHÒNG (CHECK-IN)
           </p>
-          <p className="text-zinc-900 font-['Playfair_Display']">{checkIn.date}</p>
-          <p className="text-zinc-700 font-['Geist']">{checkIn.dayTime}</p>
+          <p className="text-slate-900 text-sm font-black mt-1 uppercase tracking-wide">{checkIn.date}</p>
+          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">{checkIn.dayTime}</p>
         </div>
         <div>
-          <p className="text-zinc-700 text-xs font-bold uppercase tracking-wider font-['Geist']">
-            CHECK OUT
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
+            TRẢ PHÒNG (CHECK-OUT)
           </p>
-          <p className="text-zinc-900 font-['Playfair_Display']">{checkOut.date}</p>
-          <p className="text-zinc-700 font-['Geist']">{checkOut.dayTime}</p>
+          <p className="text-slate-900 text-sm font-black mt-1 uppercase tracking-wide">{checkOut.date}</p>
+          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">{checkOut.dayTime}</p>
         </div>
         <div>
-          <p className="text-zinc-700 text-xs font-bold uppercase tracking-wider font-['Geist']">
-            GUESTS
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
+            SỐ KHÁCH (GUESTS)
           </p>
-          <p className="text-zinc-900 font-['Playfair_Display']">{guests.count}</p>
-          <p className="text-zinc-700 font-['Geist']">{guests.bedInfo}</p>
+          <p className="text-slate-900 text-sm font-black mt-1 uppercase tracking-wide">{guests.count}</p>
+          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">{guests.bedInfo}</p>
         </div>
       </div>
 
-      <div className="p-6 bg-gray-100 border-t border-neutral-300/30 flex items-center gap-4">
-        <button className="px-6 py-2 bg-black rounded-lg text-white font-['Geist'] hover:bg-gray-800 transition cursor-pointer">
-          Contact Concierge
+      <div className="p-6 bg-slate-50 border-t border-slate-150 flex flex-wrap gap-4 items-center">
+        <button className="px-6 py-2.5 bg-slate-900 hover:bg-slate-850 text-white font-bold uppercase text-[10px] tracking-widest transition-all cursor-pointer border-none rounded-none h-10">
+          Gửi yêu cầu
         </button>
-        <button className="px-6 py-2 rounded-lg outline outline-2 outline-amber-200 text-yellow-800 text-sm font-bold font-['Geist'] hover:bg-amber-50 transition cursor-pointer">
-          Modify Booking
-        </button>
-        <button className="ml-auto px-6 py-2.5 text-red-500 text-sm font-bold font-['Geist'] hover:bg-red-50 hover:rounded-lg transition cursor-pointer">
-          Cancel Stay
+        <button 
+          onClick={onViewDetail}
+          className="px-6 py-2.5 bg-primary hover:bg-slate-950 text-white font-bold uppercase text-[10px] tracking-widest transition-all cursor-pointer border-none parallelogram-btn h-10"
+        >
+          Xem Chi Tiết
         </button>
       </div>
     </div>
