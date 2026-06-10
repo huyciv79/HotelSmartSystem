@@ -19,6 +19,9 @@ public class BookingHistoryResponse {
     private Instant bookingDate;
     private Integer roomTypeId;
     private String roomType;
+    private Integer quantity;
+    private Integer numberOfAdults;
+    private Integer numberOfChildren;
     private LocalDate checkInDate;
     private LocalDate checkOutDate;
     private Long nights;

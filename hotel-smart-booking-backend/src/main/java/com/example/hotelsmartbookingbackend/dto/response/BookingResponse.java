@@ -19,6 +19,9 @@ public class BookingResponse {
     private String bookingType;
     private Integer roomTypeId;
     private String roomTypeName;
+    private Integer quantity;
+    private Integer numberOfAdults;
+    private Integer numberOfChildren;
     private LocalDate checkInDate;
     private LocalDate checkOutDate;
     private Long nights;

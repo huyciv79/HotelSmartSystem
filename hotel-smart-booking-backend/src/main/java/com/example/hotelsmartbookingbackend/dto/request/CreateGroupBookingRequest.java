@@ -1,7 +1,10 @@
 package com.example.hotelsmartbookingbackend.dto.request;
 
 import jakarta.validation.constraints.FutureOrPresent;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,7 +17,7 @@ import java.time.LocalDate;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class CreateBookingRequest {
+public class CreateGroupBookingRequest {
 
     @NotNull(message = "Vui lòng chọn loại phòng")
     private Integer roomTypeId;
@@ -25,6 +28,18 @@ public class CreateBookingRequest {
 
     @NotNull(message = "Vui lòng chọn ngày trả phòng")
     private LocalDate checkOutDate;
+
+    @NotNull(message = "Vui lòng nhập số lượng phòng")
+    @Min(value = 2, message = "Số lượng phòng cho đặt nhóm phải ít nhất là 2")
+    private Integer quantity;
+
+    @NotNull(message = "Vui lòng nhập số người lớn")
+    @Positive(message = "Số người lớn phải lớn hơn 0")
+    private Integer numberOfAdults;
+
+    @NotNull(message = "Vui lòng nhập số trẻ em")
+    @PositiveOrZero(message = "Số trẻ em không được âm")
+    private Integer numberOfChildren;
 
     @Size(max = 2000, message = "Yêu cầu đặc biệt không được vượt quá 2000 ký tự")
     private String specialRequests;

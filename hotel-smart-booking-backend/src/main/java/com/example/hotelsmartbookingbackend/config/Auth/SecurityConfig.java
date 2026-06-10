@@ -44,7 +44,7 @@ public class SecurityConfig {
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
                             response.getWriter().write(
-                                    "{\"success\":false,\"message\":\"Ban can dang nhap de thuc hien chuc nang nay\",\"data\":null}");
+                                    "{\"success\":false,\"message\":\"Bạn cần đăng nhập để thực hiện chức năng này\",\"data\":null}");
                         }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()

@@ -15,6 +15,18 @@ public interface BookingdetailRepository extends JpaRepository<Bookingdetail, In
     Optional<Bookingdetail> findByBookingid_Id(Integer bookingId);
 
     @Query("""
+            select d
+            from Bookingdetail d
+            join fetch d.bookingid b
+            join fetch d.roomtypeid r
+            where b.id = :bookingId
+              and b.userid.email = :email
+            """)
+    Optional<Bookingdetail> findBookingDetail(
+            @Param("bookingId") Integer bookingId,
+            @Param("email") String email);
+
+    @Query("""
             select coalesce(sum(d.quantity), 0)
             from Bookingdetail d
             where d.roomtypeid.id = :roomTypeId
