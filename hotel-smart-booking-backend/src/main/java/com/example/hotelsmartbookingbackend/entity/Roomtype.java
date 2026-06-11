@@ -42,8 +42,7 @@ public class Roomtype {
     @Column(name = "childcapacity", nullable = false)
     private Integer childcapacity;
 
-    @ColumnDefault("(adultcapacity + childcapacity)")
-    @Column(name = "totalcapacity")
+    @Column(name = "totalcapacity", insertable = false, updatable = false)
     private Integer totalcapacity;
 
     @Column(name = "area", precision = 8, scale = 2)
