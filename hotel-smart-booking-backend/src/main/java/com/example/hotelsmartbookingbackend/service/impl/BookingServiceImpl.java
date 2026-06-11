@@ -36,7 +36,6 @@ public class BookingServiceImpl implements BookingService {
     private static final String AVAILABLE_ROOM_STATUS = "Available";
     private static final String BOOKING_TYPE_ONLINE = "Online";
     private static final String BOOKING_TYPE_GROUP = "Group";
-    private static final String CHECK_IN_METHOD_MANUAL = "Manual";
     private static final String BOOKING_STATUS_CONFIRMED = "Confirmed";
     private static final String DETAIL_STATUS_ACTIVE = "Active";
     private static final int DEFAULT_SINGLE_BOOKING_QUANTITY = 1;
@@ -69,6 +68,7 @@ public class BookingServiceImpl implements BookingService {
                 DEFAULT_SINGLE_BOOKING_ADULTS,
                 DEFAULT_SINGLE_BOOKING_CHILDREN,
                 request.getSpecialRequests(),
+                request.getCheckInMethod(),
                 BOOKING_TYPE_ONLINE);
     }
 
@@ -87,6 +87,7 @@ public class BookingServiceImpl implements BookingService {
                 request.getNumberOfAdults(),
                 request.getNumberOfChildren(),
                 request.getSpecialRequests(),
+                request.getCheckInMethod(),
                 BOOKING_TYPE_GROUP);
     }
 
@@ -99,6 +100,7 @@ public class BookingServiceImpl implements BookingService {
             int numberOfAdults,
             int numberOfChildren,
             String specialRequests,
+            String checkInMethod,
             String bookingType) {
         User customer = userRepository.findByEmail(customerEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
@@ -123,7 +125,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setUserid(customer);
         booking.setBookingreference(generateBookingReference(now));
         booking.setBookingtype(bookingType);
-        booking.setCheckinmethod(CHECK_IN_METHOD_MANUAL);
+        booking.setCheckinmethod(checkInMethod);
         booking.setTotalamount(totalAmount);
         booking.setPaidamount(BigDecimal.ZERO);
         booking.setDepositamount(BigDecimal.ZERO);
@@ -276,6 +278,7 @@ public class BookingServiceImpl implements BookingService {
                 .bookingId(booking.getId())
                 .bookingReference(booking.getBookingreference())
                 .bookingType(booking.getBookingtype())
+                .checkInMethod(booking.getCheckinmethod())
                 .roomTypeId(roomtype.getId())
                 .roomTypeName(roomtype.getName())
                 .quantity(detail.getQuantity())
@@ -302,6 +305,7 @@ public class BookingServiceImpl implements BookingService {
                 .bookingId(booking.getId())
                 .bookingNumber(booking.getBookingreference())
                 .bookingDate(booking.getCreatedat())
+                .checkInMethod(booking.getCheckinmethod())
                 .roomTypeId(roomtype.getId())
                 .roomType(roomtype.getName())
                 .quantity(detail.getQuantity())

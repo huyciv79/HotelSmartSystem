@@ -2,7 +2,9 @@ package com.example.hotelsmartbookingbackend.dto.request;
 
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -28,6 +30,12 @@ public class CreateGroupBookingRequest {
 
     @NotNull(message = "Vui lòng chọn ngày trả phòng")
     private LocalDate checkOutDate;
+
+    @NotBlank(message = "Vui lòng chọn phương thức check-in")
+    @Pattern(
+            regexp = "Face Recognition|QR Code|Manual",
+            message = "Phương thức check-in chỉ được là Face Recognition, QR Code hoặc Manual")
+    private String checkInMethod;
 
     @NotNull(message = "Vui lòng nhập số lượng phòng")
     @Min(value = 2, message = "Số lượng phòng cho đặt nhóm phải ít nhất là 2")
