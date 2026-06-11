@@ -17,6 +17,7 @@ public class BookingResponse {
     private Integer bookingId;
     private String bookingReference;
     private String bookingType;
+    private String checkInMethod;
     private Integer roomTypeId;
     private String roomTypeName;
     private Integer quantity;
