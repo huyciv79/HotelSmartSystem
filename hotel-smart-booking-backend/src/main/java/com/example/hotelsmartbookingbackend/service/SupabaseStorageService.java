@@ -12,6 +12,11 @@ public interface SupabaseStorageService {
     String uploadAvatar(byte[] fileBytes, String originalFilename, String contentType);
 
     /**
+     * Uploads an eKYC document to the ekyc-documents bucket.
+     */
+    String uploadEkycDocument(byte[] fileBytes, String originalFilename, String contentType);
+
+    /**
      * Safely deletes the old avatar image from Supabase Storage.
      *
      * @param avatarUrl The public URL of the avatar image to delete.
