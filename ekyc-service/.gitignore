@@ -1,0 +1,33 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Environment file (chứa secret)
+.env
+
+# DeepFace model cache
+~/.deepface/
+
+# EasyOCR model cache
+~/.EasyOCR/
+
+# Temp files
+ekyc_*.jpg
+ekyc_*.png
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
