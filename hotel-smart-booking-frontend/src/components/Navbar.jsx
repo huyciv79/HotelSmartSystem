@@ -363,7 +363,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                   {/* Primary view profile action */}
                   <button
                     onClick={() => {
-                      setActiveModal('profile');
+                      navigate('/dashboard');
                       setIsDropdownOpen(false);
                     }}
                     className="w-full py-2.5 bg-primary-container text-on-primary font-bold text-[10px] tracking-widest uppercase hover:brightness-110 transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 rounded-none"
@@ -371,24 +371,11 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                     <span className="material-symbols-outlined text-sm">account_circle</span>
                     Xem tất cả trang cá nhân
                   </button>
-
+ 
                   <div className="h-px bg-slate-200 my-3" />
-
+ 
                   {/* Options */}
                   <div className="space-y-1">
-                    <button
-                      onClick={() => {
-                        setActiveModal('changePassword');
-                        setIsDropdownOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors cursor-pointer border-none bg-transparent rounded-none"
-                    >
-                      <span className="material-symbols-outlined text-base">lock</span>
-                      <span>Đổi mật khẩu</span>
-                    </button>
-
-                    <div className="h-px bg-slate-100 my-2" />
-
                     <button
                       onClick={() => {
                         showToast('Đăng xuất thành công!', 'success');
@@ -671,7 +658,14 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
             onBookingPersonal={(room) => {
               setActiveModal(null);
               setIsMobileMenuOpen(false);
-              handleNavClick('login');
+              if (localStorage.getItem('accessToken')) {
+                sessionStorage.setItem('bookingRoom', JSON.stringify(room));
+                handleNavClick('booking');
+              } else {
+                sessionStorage.setItem('pendingBookingRoom', JSON.stringify(room));
+                showToast('Vui lòng đăng nhập để tiến hành đặt phòng!', 'info');
+                handleNavClick('login');
+              }
             }}
             onBookingGroup={(room) => {
               showToast(`Đã ghi nhận yêu cầu Đặt phòng nhóm cho ${room.name}. Nhân viên Elysian sẽ liên hệ trực tiếp hỗ trợ đoàn của bạn qua số điện thoại/email đăng ký!`, 'success');

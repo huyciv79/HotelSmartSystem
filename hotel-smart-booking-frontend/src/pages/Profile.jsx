@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, User, Mail, Phone, MapPin, Award, Calendar, Check, X } from 'lucide-react';
-import { getUserProfile, updateUserProfile, uploadAvatar } from '../services/userService';
+import { Camera, User, Mail, Phone, MapPin, Award, Check, X } from 'lucide-react';
+import { updateUserProfile, uploadAvatar } from '../services/userService';
+import ChangePassword from './ChangePassword';
 
 export default function Profile({ initialProfile, onProfileUpdate, showToast }) {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -17,12 +18,14 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
   // Sync state if initialProfile changes
   useEffect(() => {
     if (initialProfile) {
-      setProfile(initialProfile);
-      setFormData({
-        fullName: initialProfile.fullName || '',
-        address: initialProfile.address || '',
-      });
-      setAvatarPreview(initialProfile.avatar || '');
+      setTimeout(() => {
+        setProfile(initialProfile);
+        setFormData({
+          fullName: initialProfile.fullName || '',
+          address: initialProfile.address || '',
+        });
+        setAvatarPreview(initialProfile.avatar || '');
+      }, 0);
     }
   }, [initialProfile]);
 
@@ -108,7 +111,7 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
     try {
       const response = await uploadAvatar(file);
       const newAvatarUrl = response?.data || response?.avatarUrl;
-      
+
       if (newAvatarUrl) {
         const updatedProfile = { ...profile, avatar: newAvatarUrl };
         setProfile(updatedProfile);
@@ -136,7 +139,7 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
         month: 'long',
         day: 'numeric',
       });
-    } catch (e) {
+    } catch {
       return 'Thành viên mới';
     }
   };
@@ -158,7 +161,7 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
         <div className="lg:col-span-1 flex flex-col gap-6">
           <div className="elysian-pattern text-white rounded-none overflow-hidden shadow-xl border border-[#a20513] relative">
             <div className="bg-transparent p-8 flex flex-col items-center text-center relative z-10">
-              
+
               {/* Avatar Uploader */}
               <div className="relative group cursor-pointer mb-6" onClick={handleAvatarClick}>
                 <div className="size-32 rounded-full overflow-hidden border-2 border-white shadow-md relative bg-black/40 flex items-center justify-center">
@@ -223,8 +226,8 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
           </div>
         </div>
 
-        {/* Right Column: Detailed Info Form */}
-        <div className="lg:col-span-2">
+        {/* Right Column: Detailed Info Form & Change Password */}
+        <div className="lg:col-span-2 flex flex-col gap-8">
           <div className="bg-white rounded-none p-6 md:p-8 border border-outline-variant shadow-lg text-left">
             <div className="flex justify-between items-center mb-8 border-b border-outline-variant pb-4">
               <div>
@@ -333,11 +336,10 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
                   <button
                     type="submit"
                     disabled={!isDirty || isSaving}
-                    className={`px-6 py-3 font-bold text-[9px] tracking-widest uppercase rounded-none flex items-center gap-1.5 transition-all cursor-pointer border-none ${
-                      isDirty && !isSaving
+                    className={`px-6 py-3 font-bold text-[9px] tracking-widest uppercase rounded-none flex items-center gap-1.5 transition-all cursor-pointer border-none ${isDirty && !isSaving
                         ? 'bg-primary text-on-primary hover:brightness-110 shadow-md'
                         : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    }`}
+                      }`}
                   >
                     {isSaving ? (
                       <>
@@ -354,6 +356,10 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
                 </div>
               )}
             </form>
+          </div>
+
+          <div className="bg-white rounded-none p-6 md:p-8 border border-outline-variant shadow-lg text-left">
+            <ChangePassword showToast={showToast} />
           </div>
         </div>
       </div>

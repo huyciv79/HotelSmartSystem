@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -47,7 +47,7 @@ export default function Register({ setActivePage }) {
   const [apiError, setApiError] = useState(null);
 
   // Store submitted email to use in OTP verification
-  const registeredEmail = useRef('');
+  const [registeredEmail, setRegisteredEmail] = useState('');
 
   // OTP state
   const [otp, setOtp] = useState('');
@@ -83,7 +83,7 @@ export default function Register({ setActivePage }) {
     setApiError(null);
     try {
       await registerUser(data);
-      registeredEmail.current = data.email;
+      setRegisteredEmail(data.email);
       setStep(2);
       setCountdown(60);
       setOtp('');
@@ -117,7 +117,7 @@ export default function Register({ setActivePage }) {
     setIsLoading(true);
     setApiError(null);
     try {
-      await verifyOTP({ email: registeredEmail.current, otp });
+      await verifyOTP({ email: registeredEmail, otp });
       setStep(3);
       // Redirect to login after a short celebration delay
       setTimeout(() => setActivePage('login'), 2500);

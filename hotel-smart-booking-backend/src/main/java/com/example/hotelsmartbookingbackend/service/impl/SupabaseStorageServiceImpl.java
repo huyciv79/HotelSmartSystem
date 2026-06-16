@@ -206,7 +206,6 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
     }
 
     private void deleteStorageObject(String publicUrl, String bucket, String objectLabel) {
-
         if (publicUrl == null || publicUrl.isBlank()) {
             return;
         }
@@ -214,73 +213,33 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
         if (supabaseUrl == null || supabaseUrl.isBlank()
                 || supabaseKey == null || supabaseKey.isBlank()
                 || bucket == null || bucket.isBlank()) {
-
-            log.warn(
-                    "Supabase configuration is missing. Skipping delete {}.",
-                    objectLabel);
-
+            log.warn("Supabase configuration is missing. Skipping delete {}.", objectLabel);
             return;
         }
 
-        String cleanUrl =
-                supabaseUrl.endsWith("/")
-                        ? supabaseUrl.substring(0, supabaseUrl.length() - 1)
-                        : supabaseUrl;
-
-        String publicPrefix =
-                cleanUrl
-                        + "/storage/v1/object/public/"
-                        + bucket
-                        + "/";
+        String cleanUrl = supabaseUrl.endsWith("/") ? supabaseUrl.substring(0, supabaseUrl.length() - 1) : supabaseUrl;
+        String publicPrefix = cleanUrl + "/storage/v1/object/public/" + bucket + "/";
 
         if (!publicUrl.startsWith(publicPrefix)) {
-
-            log.info(
-                    "{} URL {} is not hosted in bucket {}, skipping deletion.",
-                    objectLabel,
-                    publicUrl,
-                    bucket);
-
+            log.info("{} URL {} is not hosted in bucket {}, skipping deletion.", objectLabel, publicUrl, bucket);
             return;
         }
 
         String fileName = publicUrl.substring(publicPrefix.length());
-
-        String deleteUrl =
-                cleanUrl
-                        + "/storage/v1/object/"
-                        + bucket
-                        + "/"
-                        + fileName;
+        String deleteUrl = cleanUrl + "/storage/v1/object/" + bucket + "/" + fileName;
 
         try {
-
             RestTemplate restTemplate = new RestTemplate();
-
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + supabaseKey);
             headers.set("apikey", supabaseKey);
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
+            restTemplate.exchange(deleteUrl, HttpMethod.DELETE, entity, Void.class);
 
-            restTemplate.exchange(
-                    deleteUrl,
-                    HttpMethod.DELETE,
-                    entity,
-                    Void.class);
-
-            log.info(
-                    "Successfully deleted {} from bucket {}: {}",
-                    objectLabel,
-                    bucket,
-                    fileName);
-
+            log.info("Successfully deleted {} from bucket {}: {}", objectLabel, bucket, fileName);
         } catch (Exception e) {
-
-            log.error(
-                    "Failed to delete {} from Supabase Storage: {}",
-                    objectLabel,
-                    e.getMessage());
+            log.error("Failed to delete {} from Supabase Storage: {}", objectLabel, e.getMessage());
         }
     }
 

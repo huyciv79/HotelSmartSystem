@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -34,9 +34,9 @@ export default function ForgotPassword({ setActivePage }) {
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
 
-  // References to keep data across steps
-  const userEmail = useRef('');
-  const resetToken = useRef('');
+  // States to keep data across steps
+  const [userEmail, setUserEmail] = useState('');
+  const [resetToken, setResetToken] = useState('');
 
   // OTP state
   const [otp, setOtp] = useState('');
@@ -81,7 +81,7 @@ export default function ForgotPassword({ setActivePage }) {
     setApiError(null);
     try {
       await forgotPassword({ email: data.email });
-      userEmail.current = data.email;
+      setUserEmail(data.email);
       showToast('Mã OTP đã được gửi đến email của bạn.', 'success');
       setStep(2);
       setCountdown(60);
@@ -106,9 +106,9 @@ export default function ForgotPassword({ setActivePage }) {
     setIsLoading(true);
     setApiError(null);
     try {
-      const response = await verifyForgotOTP({ email: userEmail.current, otp });
+      const response = await verifyForgotOTP({ email: userEmail, otp });
       // The response.data should contain the resetToken
-      resetToken.current = response.data;
+      setResetToken(response.data);
       showToast('Xác thực mã OTP thành công.', 'success');
       setStep(3);
     } catch (err) {
@@ -126,7 +126,7 @@ export default function ForgotPassword({ setActivePage }) {
     setApiError(null);
     try {
       await resetPassword({
-        resetToken: resetToken.current,
+        resetToken: resetToken,
         newPassword: data.newPassword,
       });
       showToast('Đặt lại mật khẩu thành công.', 'success');
@@ -149,7 +149,7 @@ export default function ForgotPassword({ setActivePage }) {
     setApiError(null);
     setOtp('');
     try {
-      await forgotPassword({ email: userEmail.current });
+      await forgotPassword({ email: userEmail });
       setCountdown(60);
       showToast('Mã OTP mới đã được gửi thành công.', 'success');
     } catch (err) {
@@ -219,7 +219,7 @@ export default function ForgotPassword({ setActivePage }) {
             </h2>
             <p className="text-secondary text-sm mt-2">
               {step === 1 && 'Nhập email đã đăng ký hội viên của bạn để thiết lập lại mật khẩu.'}
-              {step === 2 && `Mã xác thực OTP đã được gửi đến địa chỉ email: ${userEmail.current}`}
+              {step === 2 && `Mã xác thực OTP đã được gửi đến địa chỉ email: ${userEmail}`}
               {step === 3 && 'Vui lòng thiết lập mật khẩu mới có độ bảo mật cao.'}
               {step === 4 && 'Mật khẩu của bạn đã được cập nhật thành công.'}
             </p>

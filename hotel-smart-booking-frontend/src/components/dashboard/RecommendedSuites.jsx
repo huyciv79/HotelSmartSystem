@@ -16,28 +16,28 @@ const RecommendedSuites = ({ suites }) => {
   };
 
   return (
-    <div className="pb-10 flex flex-col gap-6">
+    <div className="pb-10 flex flex-col gap-6 font-['Montserrat'] text-left">
       <div className="px-2 flex justify-between items-end">
         <div>
-          <h2 className="text-black font-['Playfair_Display']">
-            Recommended for You
+          <h2 className="font-headline-lg text-headline-md text-primary uppercase italic tracking-wider m-0 mb-1">
+            Đề xuất dành riêng cho bạn
           </h2>
-          <p className="text-zinc-700 text-sm font-['Geist']">
-            Exclusive suites curated based on your preferences
+          <p className="text-secondary text-xs font-bold uppercase tracking-wider">
+            Các hạng phòng thượng lưu được tuyển chọn dựa trên sở thích của bạn
           </p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => scroll("left")}
-            className="p-2 rounded-full outline outline-1 outline-neutral-300 hover:bg-gray-100 transition"
+            className="p-2.5 rounded-none border border-outline-variant bg-white hover:bg-slate-100 transition cursor-pointer flex items-center justify-center h-10 w-10"
           >
-            <ChevronLeft size={16} className="text-zinc-900" />
+            <ChevronLeft size={16} className="text-slate-900" />
           </button>
           <button
             onClick={() => scroll("right")}
-            className="p-2 rounded-full outline outline-1 outline-neutral-300 hover:bg-gray-100 transition"
+            className="p-2.5 rounded-none border border-outline-variant bg-white hover:bg-slate-100 transition cursor-pointer flex items-center justify-center h-10 w-10"
           >
-            <ChevronRight size={16} className="text-zinc-900" />
+            <ChevronRight size={16} className="text-slate-900" />
           </button>
         </div>
       </div>
