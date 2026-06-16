@@ -9,7 +9,6 @@ import com.example.hotelsmartbookingbackend.entity.User;
 import com.example.hotelsmartbookingbackend.repository.EkycProfileRepository;
 import com.example.hotelsmartbookingbackend.repository.FaceembeddingRepository;
 import com.example.hotelsmartbookingbackend.repository.UserRepository;
-import com.example.hotelsmartbookingbackend.service.AesEncryptionService;
 import com.example.hotelsmartbookingbackend.service.EkycService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

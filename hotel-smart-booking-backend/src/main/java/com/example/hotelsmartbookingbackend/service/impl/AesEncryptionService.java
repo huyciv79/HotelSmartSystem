@@ -1,4 +1,4 @@
-package com.example.hotelsmartbookingbackend.service;
+package com.example.hotelsmartbookingbackend.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

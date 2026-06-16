@@ -100,11 +100,6 @@ public class Booking {
     private Instant updatedat;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "customerid")
-    private User customerid;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cancelledby")
     private User cancelledby;
 
@@ -112,8 +107,5 @@ public class Booking {
     @JoinColumn(name = "createdby")
     private User createdby;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "userid")
-    private User userid;
 
 }
