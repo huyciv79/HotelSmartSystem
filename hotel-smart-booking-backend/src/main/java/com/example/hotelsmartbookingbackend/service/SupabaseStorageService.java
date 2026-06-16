@@ -1,15 +1,10 @@
 package com.example.hotelsmartbookingbackend.service;
 
 public interface SupabaseStorageService {
-    /**
-     * Uploads the avatar image to Supabase Storage.
-     *
-     * @param fileBytes        The byte array of the image.
-     * @param originalFilename The original filename.
-     * @param contentType      The MIME content type of the image.
-     * @return The public URL of the uploaded image.
-     */
+
     String uploadAvatar(byte[] fileBytes, String originalFilename, String contentType);
+
+    String uploadEkycDocument(byte[] fileBytes, String originalFilename, String contentType);
 
     /**
      * Uploads a room type image to Supabase Storage.

@@ -1,12 +1,15 @@
 package com.example.hotelsmartbookingbackend.service.impl;
 
 import com.example.hotelsmartbookingbackend.service.SupabaseStorageService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -25,179 +28,171 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
     @Value("${supabase.roomtype-bucket}")
     private String roomtypeBucket;
 
+    @Value("${supabase.ekyc-bucket:ekyc-documents}")
+    private String ekycBucket;
+
     @Override
     public String uploadAvatar(byte[] fileBytes, String originalFilename, String contentType) {
-
         if (supabaseUrl == null || supabaseUrl.isBlank()
                 || supabaseKey == null || supabaseKey.isBlank()) {
-            throw new RuntimeException(
-                    "Supabase storage is not configured properly (missing URL or Key)");
+            throw new RuntimeException("Supabase storage is not configured properly (missing URL or Key)");
         }
         if (avatarBucket == null || avatarBucket.isBlank()) {
-            throw new RuntimeException(
-                    "Supabase storage is not configured properly (missing avatar bucket)");
+            throw new RuntimeException("Supabase storage is not configured properly (missing avatar bucket)");
         }
 
         String extension = resolveImageExtension(originalFilename, contentType);
-
-        String fileName =
-                "avatar_"
-                        + System.currentTimeMillis()
-                        + "_"
-                        + UUID.randomUUID().toString().substring(0, 8)
-                        + "."
-                        + extension;
-
-        String cleanUrl =
-                supabaseUrl.endsWith("/")
-                        ? supabaseUrl.substring(0, supabaseUrl.length() - 1)
-                        : supabaseUrl;
-
-        String uploadUrl =
-                cleanUrl
-                        + "/storage/v1/object/"
-                        + avatarBucket
-                        + "/"
-                        + fileName;
-
-        log.info("UPLOAD AVATAR CALLED");
-        log.info("avatarBucket = {}", avatarBucket);
-        log.info("roomtypeBucket = {}", roomtypeBucket);
-        log.info("uploadUrl = {}", uploadUrl);
+        String fileName = "avatar_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + "." + extension;
+        String cleanUrl = supabaseUrl.endsWith("/") ? supabaseUrl.substring(0, supabaseUrl.length() - 1) : supabaseUrl;
+        String uploadUrl = cleanUrl + "/storage/v1/object/" + avatarBucket + "/" + fileName;
 
         try {
-
             RestTemplate restTemplate = new RestTemplate();
-
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + supabaseKey);
             headers.set("apikey", supabaseKey);
-            headers.setContentType(
-                    MediaType.parseMediaType(
-                            contentType != null ? contentType : "image/jpeg"));
+            headers.setContentType(MediaType.parseMediaType(contentType != null ? contentType : "image/jpeg"));
 
             HttpEntity<byte[]> entity = new HttpEntity<>(fileBytes, headers);
-
-            ResponseEntity<String> response =
-                    restTemplate.postForEntity(
-                            uploadUrl,
-                            entity,
-                            String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(uploadUrl, entity, String.class);
 
             if (!response.getStatusCode().is2xxSuccessful()) {
-                throw new RuntimeException(
-                        "Failed to upload image to Supabase Storage: "
-                                + response.getStatusCode());
+                throw new RuntimeException("Failed to upload avatar to Supabase Storage: " + response.getStatusCode());
             }
 
-            log.info(
-                    "Successfully uploaded avatar to bucket {}. File: {}",
-                    avatarBucket,
-                    fileName);
-
-            return cleanUrl
-                    + "/storage/v1/object/public/"
-                    + avatarBucket
-                    + "/"
-                    + fileName;
+            log.info("Successfully uploaded avatar to bucket {}. File: {}", avatarBucket, fileName);
+            return cleanUrl + "/storage/v1/object/public/" + avatarBucket + "/" + fileName;
 
         } catch (Exception e) {
+            log.error("Error occurred while uploading avatar to Supabase: {}", e.getMessage(), e);
+            throw new RuntimeException("Lỗi khi tải ảnh lên hệ thống lưu trữ: " + e.getMessage());
+        }
+    }
 
-            log.error(
-                    "Error occurred while uploading avatar to Supabase: {}",
-                    e.getMessage(),
-                    e);
+    @Override
+    public String uploadEkycDocument(byte[] fileBytes, String originalFilename, String contentType) {
+        if (supabaseUrl == null || supabaseUrl.isBlank()
+                || supabaseKey == null || supabaseKey.isBlank()) {
+            throw new RuntimeException("Supabase storage is not configured properly (missing URL or Key)");
+        }
+        if (ekycBucket == null || ekycBucket.isBlank()) {
+            throw new RuntimeException("Supabase storage is not configured properly (missing ekyc bucket)");
+        }
 
-            throw new RuntimeException(
-                    "Lỗi khi tải ảnh lên hệ thống lưu trữ: "
-                            + e.getMessage());
+        String extension = resolveImageExtension(originalFilename, contentType);
+        String fileName = "ekyc_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + "." + extension;
+        if (originalFilename != null && originalFilename.startsWith("ekyc_") && originalFilename.contains(".")) {
+            fileName = originalFilename.substring(0, originalFilename.lastIndexOf(".")) + "_" + UUID.randomUUID().toString().substring(0, 8) + "." + extension;
+        }
+
+        String cleanUrl = supabaseUrl.endsWith("/") ? supabaseUrl.substring(0, supabaseUrl.length() - 1) : supabaseUrl;
+        String uploadUrl = cleanUrl + "/storage/v1/object/" + ekycBucket + "/" + fileName;
+
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + supabaseKey);
+            headers.set("apikey", supabaseKey);
+            headers.setContentType(MediaType.parseMediaType(contentType != null ? contentType : "image/jpeg"));
+
+            HttpEntity<byte[]> entity = new HttpEntity<>(fileBytes, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(uploadUrl, entity, String.class);
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("Failed to upload ekyc file to Supabase Storage: " + response.getStatusCode());
+            }
+
+            log.info("Successfully uploaded ekyc file to bucket {}. File: {}", ekycBucket, fileName);
+            return createSignedUrl(cleanUrl, ekycBucket, fileName);
+
+        } catch (Exception e) {
+            log.error("Error occurred while uploading ekyc file to Supabase: {}", e.getMessage(), e);
+            throw new RuntimeException("Lỗi khi tải ảnh eKYC lên hệ thống lưu trữ: " + e.getMessage());
         }
     }
 
     @Override
     public String uploadRoomTypeImage(byte[] fileBytes, String originalFilename, String contentType) {
-
         if (supabaseUrl == null || supabaseUrl.isBlank()
                 || supabaseKey == null || supabaseKey.isBlank()) {
-            throw new RuntimeException(
-                    "Supabase storage is not configured properly (missing URL or Key)");
+            throw new RuntimeException("Supabase storage is not configured properly (missing URL or Key)");
         }
         if (roomtypeBucket == null || roomtypeBucket.isBlank()) {
-            throw new RuntimeException(
-                    "Supabase storage is not configured properly (missing room type bucket)");
+            throw new RuntimeException("Supabase storage is not configured properly (missing room type bucket)");
         }
 
-        String fileName =
-                "roomtype_"
-                        + System.currentTimeMillis()
-                        + "_"
-                        + UUID.randomUUID().toString().substring(0, 8)
-                        + "."
-                        + resolveImageExtension(originalFilename, contentType);
-
-        String cleanUrl =
-                supabaseUrl.endsWith("/")
-                        ? supabaseUrl.substring(0, supabaseUrl.length() - 1)
-                        : supabaseUrl;
-
-        String uploadUrl =
-                cleanUrl
-                        + "/storage/v1/object/"
-                        + roomtypeBucket
-                        + "/"
-                        + fileName;
+        String fileName = "roomtype_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + "." + resolveImageExtension(originalFilename, contentType);
+        String cleanUrl = supabaseUrl.endsWith("/") ? supabaseUrl.substring(0, supabaseUrl.length() - 1) : supabaseUrl;
+        String uploadUrl = cleanUrl + "/storage/v1/object/" + roomtypeBucket + "/" + fileName;
 
         log.info("UPLOAD ROOM TYPE IMAGE CALLED");
         log.info("roomtypeBucket = {}", roomtypeBucket);
         log.info("uploadUrl = {}", uploadUrl);
 
         try {
-
             RestTemplate restTemplate = new RestTemplate();
-
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + supabaseKey);
             headers.set("apikey", supabaseKey);
-            headers.setContentType(
-                    MediaType.parseMediaType(
-                            contentType != null ? contentType : "image/jpeg"));
+            headers.setContentType(MediaType.parseMediaType(contentType != null ? contentType : "image/jpeg"));
 
             HttpEntity<byte[]> entity = new HttpEntity<>(fileBytes, headers);
-
-            ResponseEntity<String> response =
-                    restTemplate.postForEntity(
-                            uploadUrl,
-                            entity,
-                            String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(uploadUrl, entity, String.class);
 
             if (!response.getStatusCode().is2xxSuccessful()) {
-                throw new RuntimeException(
-                        "Failed to upload room type image to Supabase Storage: "
-                                + response.getStatusCode());
+                throw new RuntimeException("Failed to upload room type image to Supabase Storage: " + response.getStatusCode());
             }
 
-            log.info(
-                    "Successfully uploaded room type image to bucket {}. File: {}",
-                    roomtypeBucket,
-                    fileName);
-
-            return cleanUrl
-                    + "/storage/v1/object/public/"
-                    + roomtypeBucket
-                    + "/"
-                    + fileName;
+            log.info("Successfully uploaded room type image to bucket {}. File: {}", roomtypeBucket, fileName);
+            return cleanUrl + "/storage/v1/object/public/" + roomtypeBucket + "/" + fileName;
 
         } catch (Exception e) {
-
-            log.error(
-                    "Error occurred while uploading room type image to Supabase: {}",
-                    e.getMessage(),
-                    e);
-
-            throw new RuntimeException(
-                    "Loi khi tai anh loai phong len he thong luu tru: "
-                            + e.getMessage());
+            log.error("Error occurred while uploading room type image to Supabase: {}", e.getMessage(), e);
+            throw new RuntimeException("Loi khi tai anh loai phong len he thong luu tru: " + e.getMessage());
         }
+    }
+
+    /**
+     * Tạo Signed URL cho file vừa upload, có hiệu lực 3600 giây (1 giờ).
+     * Cho phép AI Service tải ảnh từ bucket private mà không cần xác thực.
+     */
+    private String createSignedUrl(String cleanUrl, String bucket, String fileName) {
+        String signedUrlEndpoint = cleanUrl + "/storage/v1/object/sign/" + bucket + "/" + fileName;
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + supabaseKey);
+            headers.set("apikey", supabaseKey);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            // Supabase API yêu cầu body: {"expiresIn": 3600}
+            HttpEntity<Map<String, Integer>> entity = new HttpEntity<>(Map.of("expiresIn", 3600), headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(signedUrlEndpoint, entity, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                JsonNode json = new ObjectMapper().readTree(response.getBody());
+                String signedPath = json.path("signedURL").asText("");
+                if (!signedPath.isBlank()) {
+                    // Supabase trả về signedPath dạng "/object/sign/..." (thiếu "/storage/v1")
+                    // Cần thêm "/storage/v1" để tạo URL đúng
+                    String fullSignedUrl;
+                    if (signedPath.startsWith("http")) {
+                        fullSignedUrl = signedPath;
+                    } else if (!signedPath.startsWith("/storage/")) {
+                        fullSignedUrl = cleanUrl + "/storage/v1" + signedPath;
+                    } else {
+                        fullSignedUrl = cleanUrl + signedPath;
+                    }
+                    log.info("Created signed URL for file: {}", fileName);
+                    return fullSignedUrl;
+                }
+            }
+            log.warn("Không tạo được signed URL cho {}. Fallback về public URL.", fileName);
+        } catch (Exception e) {
+            log.warn("Lỗi khi tạo signed URL cho {}: {}. Fallback về public URL.", fileName, e.getMessage());
+        }
+        // Fallback: trả về public URL nếu tạo signed URL thất bại
+        return cleanUrl + "/storage/v1/object/public/" + bucket + "/" + fileName;
     }
 
     @Override
@@ -211,7 +206,6 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
     }
 
     private void deleteStorageObject(String publicUrl, String bucket, String objectLabel) {
-
         if (publicUrl == null || publicUrl.isBlank()) {
             return;
         }
@@ -219,73 +213,33 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
         if (supabaseUrl == null || supabaseUrl.isBlank()
                 || supabaseKey == null || supabaseKey.isBlank()
                 || bucket == null || bucket.isBlank()) {
-
-            log.warn(
-                    "Supabase configuration is missing. Skipping delete {}.",
-                    objectLabel);
-
+            log.warn("Supabase configuration is missing. Skipping delete {}.", objectLabel);
             return;
         }
 
-        String cleanUrl =
-                supabaseUrl.endsWith("/")
-                        ? supabaseUrl.substring(0, supabaseUrl.length() - 1)
-                        : supabaseUrl;
-
-        String publicPrefix =
-                cleanUrl
-                        + "/storage/v1/object/public/"
-                        + bucket
-                        + "/";
+        String cleanUrl = supabaseUrl.endsWith("/") ? supabaseUrl.substring(0, supabaseUrl.length() - 1) : supabaseUrl;
+        String publicPrefix = cleanUrl + "/storage/v1/object/public/" + bucket + "/";
 
         if (!publicUrl.startsWith(publicPrefix)) {
-
-            log.info(
-                    "{} URL {} is not hosted in bucket {}, skipping deletion.",
-                    objectLabel,
-                    publicUrl,
-                    bucket);
-
+            log.info("{} URL {} is not hosted in bucket {}, skipping deletion.", objectLabel, publicUrl, bucket);
             return;
         }
 
         String fileName = publicUrl.substring(publicPrefix.length());
-
-        String deleteUrl =
-                cleanUrl
-                        + "/storage/v1/object/"
-                        + bucket
-                        + "/"
-                        + fileName;
+        String deleteUrl = cleanUrl + "/storage/v1/object/" + bucket + "/" + fileName;
 
         try {
-
             RestTemplate restTemplate = new RestTemplate();
-
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + supabaseKey);
             headers.set("apikey", supabaseKey);
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
+            restTemplate.exchange(deleteUrl, HttpMethod.DELETE, entity, Void.class);
 
-            restTemplate.exchange(
-                    deleteUrl,
-                    HttpMethod.DELETE,
-                    entity,
-                    Void.class);
-
-            log.info(
-                    "Successfully deleted {} from bucket {}: {}",
-                    objectLabel,
-                    bucket,
-                    fileName);
-
+            log.info("Successfully deleted {} from bucket {}: {}", objectLabel, bucket, fileName);
         } catch (Exception e) {
-
-            log.error(
-                    "Failed to delete {} from Supabase Storage: {}",
-                    objectLabel,
-                    e.getMessage());
+            log.error("Failed to delete {} from Supabase Storage: {}", objectLabel, e.getMessage());
         }
     }
 
