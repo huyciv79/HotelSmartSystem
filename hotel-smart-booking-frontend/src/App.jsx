@@ -21,6 +21,7 @@ import Dashboard from './pages/Dashboard';
 import Booking from './pages/Booking';
 import Payment from './pages/Payment';
 import BookingDetail from './pages/BookingDetail';
+import GroupBooking from './pages/GroupBooking';
 
 function DashboardRoute() {
   const navigate = useNavigate();
@@ -91,6 +92,8 @@ function MainSite() {
         return <Rewards />;
       case 'booking':
         return <Booking setActivePage={setActivePage} />;
+      case 'group-booking':
+        return <GroupBooking setActivePage={setActivePage} />;
       case 'payment':
         return <Payment setActivePage={setActivePage} />;
       case 'booking-detail':

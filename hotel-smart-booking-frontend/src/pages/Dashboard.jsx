@@ -230,6 +230,7 @@ export default function Dashboard({ setActivePage }) {
                   <BookingHistory 
                     bookings={mapRealToBookingHistory(realBookings.slice(0, 3))} 
                     onViewDetail={(id) => handleViewBookingDetail(id)}
+                    onViewAll={() => setActiveTab('stays')}
                   />
                 </div>
               </div>

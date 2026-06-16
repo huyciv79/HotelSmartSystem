@@ -229,7 +229,7 @@ export default function BookingDetail({ setActivePage }) {
               {/* Room Details Info */}
               <div className="border-t border-gray-100 pt-6">
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest pb-3 mb-4">Chi tiết phòng nghỉ & Thời gian</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs font-bold text-slate-700">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 text-xs font-bold text-slate-700">
                   <div>
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Ngày Nhận Phòng</span>
                     <span className="text-slate-900 font-black tracking-wide block mt-1">{booking.checkInDate}</span>
@@ -241,9 +241,19 @@ export default function BookingDetail({ setActivePage }) {
                     <span className="text-[9px] text-slate-500 uppercase tracking-wider">Trước 12h trưa (12:00)</span>
                   </div>
                   <div>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Số lượng khách</span>
+                    <span className="text-slate-900 font-black tracking-wide block mt-1">
+                      {booking.numberOfAdults || 1} Người lớn
+                      {booking.numberOfChildren ? `, ${booking.numberOfChildren} Trẻ em` : ''}
+                    </span>
+                    <span className="text-[9px] text-slate-500 uppercase tracking-wider">
+                      {booking.quantity ? `Số lượng: ${booking.quantity} phòng` : 'Số lượng: 1 phòng'}
+                    </span>
+                  </div>
+                  <div>
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Hình thức nhận phòng</span>
                     <span className="text-primary font-black uppercase tracking-wider block mt-1">
-                      {booking.checkInMethod === 'FaceID' ? 'FaceID eKYC' : booking.checkInMethod === 'QR Code' ? 'Mã QR Code' : 'Tại quầy lễ tân'}
+                      {booking.checkInMethod === 'FaceID' || booking.checkInMethod === 'Face Recognition' ? 'FaceID eKYC' : booking.checkInMethod === 'QR Code' ? 'Mã QR Code' : 'Tại quầy lễ tân'}
                     </span>
                   </div>
                 </div>
@@ -285,13 +295,48 @@ export default function BookingDetail({ setActivePage }) {
             {/* Right Column: Booking Summary Card (col-span-4) */}
             <div className="lg:col-span-4 bg-white border border-outline-variant shadow-md p-6 md:p-8 flex flex-col justify-between h-fit">
               <div>
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest border-b border-gray-100 pb-3 mb-6">Tóm tắt đặt phòng</h3>
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest border-b border-gray-100 pb-3 mb-4">Tóm tắt đặt phòng</h3>
                 
                 <div className="space-y-4">
-                  {/* Totals table */}
-                  <div className="space-y-3 text-xs font-bold text-slate-700">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Tổng chi phí:</span>
+                  {/* Room Info */}
+                  <div>
+                    <span className="text-[9px] text-primary font-black uppercase tracking-widest block mb-0.5">ELYSIAN HOTELS</span>
+                    <h4 className="text-sm font-black text-slate-950 uppercase tracking-wider">{booking.roomTypeName}</h4>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 block">Mã: {booking.bookingReference}</span>
+                  </div>
+
+                  {/* Detail items */}
+                  <div className="space-y-2.5 border-t border-b border-gray-100 py-4 text-xs font-bold text-slate-700">
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">Thời gian:</span>
+                      <span className="text-right">{booking.checkInDate} đến {booking.checkOutDate} ({booking.nights} đêm)</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">Số phòng đặt:</span>
+                      <span>{booking.quantity || 1} phòng</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">Số lượng khách:</span>
+                      <span>{booking.numberOfAdults || 1} NL {booking.numberOfChildren ? `• ${booking.numberOfChildren} TE` : ''}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">Check-in:</span>
+                      <span className="text-primary uppercase">{booking.checkInMethod === 'FaceID' || booking.checkInMethod === 'Face Recognition' ? 'FaceID eKYC' : booking.checkInMethod === 'QR Code' ? 'Mã QR' : 'Quầy lễ tân'}</span>
+                    </div>
+                  </div>
+
+                  {/* Price breakdown */}
+                  <div className="space-y-2 text-xs font-bold text-slate-700">
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">Tạm tính (chưa thuế):</span>
+                      <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(booking.totalAmount || (finalAmount / 1.1))}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">Thuế VAT (10%):</span>
+                      <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(finalAmount - (booking.totalAmount || (finalAmount / 1.1)))}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-slate-950 pt-3 text-sm gap-4">
+                      <span className="font-black text-slate-900 uppercase tracking-wider">TỔNG CỘNG:</span>
                       <span className="font-black text-primary text-base">
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(finalAmount)}
                       </span>

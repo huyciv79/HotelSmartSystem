@@ -495,6 +495,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
 
             {/* Bottom Left Secondary Links */}
             <div className="grid grid-cols-2 gap-y-3.5 gap-x-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-12 select-none border-t border-slate-200 pt-6">
+              <button onClick={() => handleNavClick('group-booking')} className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider text-primary">ĐẶT PHÒNG ĐOÀN</button>
               <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">VỀ ELYSIAN HOTELS</button>
               <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">NGHỀ NGHIỆP</button>
               <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">ELYSIAN + MÔI TRƯỜNG</button>
@@ -668,7 +669,16 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
               }
             }}
             onBookingGroup={(room) => {
-              showToast(`Đã ghi nhận yêu cầu Đặt phòng nhóm cho ${room.name}. Nhân viên Elysian sẽ liên hệ trực tiếp hỗ trợ đoàn của bạn qua số điện thoại/email đăng ký!`, 'success');
+              setActiveModal(null);
+              setIsMobileMenuOpen(false);
+              if (localStorage.getItem('accessToken')) {
+                sessionStorage.setItem('bookingRoom', JSON.stringify(room));
+                handleNavClick('group-booking');
+              } else {
+                sessionStorage.setItem('pendingBookingRoom', JSON.stringify(room));
+                showToast('Vui lòng đăng nhập để tiến hành đặt phòng nhóm!', 'info');
+                handleNavClick('login');
+              }
             }}
           />
         )}
