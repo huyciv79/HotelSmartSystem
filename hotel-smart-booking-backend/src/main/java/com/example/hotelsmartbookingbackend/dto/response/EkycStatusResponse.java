@@ -20,4 +20,7 @@ public class EkycStatusResponse {
     private Instant verifiedAt;
     private String rejectionReason;
     private String requestId;
+    private String frontImage;
+    private String backImage;
+    private String faceImage;
 }
