@@ -6,6 +6,8 @@ public interface SupabaseStorageService {
 
     String uploadEkycDocument(byte[] fileBytes, String originalFilename, String contentType);
 
+    String getSignedUrl(String pathOrUrl);
+
     /**
      * Uploads a room type image to Supabase Storage.
      *

@@ -87,18 +87,18 @@ def _is_valid_id_number(candidate: str, raw_line: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# 1. OCR – Bóc tách Số CCCD từ ảnh mặt trước
+# 1. OCR – Bóc tách thông tin từ ảnh mặt trước (Số CCCD, Họ tên, Ngày sinh)
 # ---------------------------------------------------------------------------
-def extract_id_card_number(front_img: np.ndarray) -> Optional[str]:
+def extract_id_card_details(front_img: np.ndarray) -> tuple[Optional[str], Optional[str], Optional[str]]:
     """
     Quét toàn bộ văn bản trên ảnh mặt trước CCCD bằng EasyOCR,
-    sau đó bóc tách chuỗi Số CCCD (12 chữ số) hoặc số CMND (9 chữ số).
+    sau đó bóc tách chuỗi Số CCCD, Họ tên và Ngày sinh.
 
     Args:
         front_img: numpy array ảnh mặt trước CCCD (RGB)
 
     Returns:
-        Chuỗi số CCCD (vd: "012345678901") hoặc None nếu không tìm được.
+        tuple (id_number, full_name, date_of_birth)
     """
     reader = _get_ocr_reader()
 
@@ -119,7 +119,7 @@ def extract_id_card_number(front_img: np.ndarray) -> Optional[str]:
     logger.info("OCR nhận dạng được %d dòng văn bản", len(lines))
     logger.debug("OCR raw text:\n%s", raw_text)
 
-    # Ưu tiên 12 chữ số trước (CCCD mới), sau đó 9 chữ số (CMND cũ)
+    # 1. Bóc tách số CCCD/CMND
     found_12: Optional[str] = None
     found_9: Optional[str] = None
 
@@ -135,12 +135,52 @@ def extract_id_card_number(front_img: np.ndarray) -> Optional[str]:
 
     id_number = found_12 or found_9
 
+    # 2. Bóc tách Họ tên và Ngày sinh
+    full_name: Optional[str] = None
+    date_of_birth: Optional[str] = None
+
+    for i, (text_line, _) in enumerate(lines):
+        text_lower = text_line.lower()
+
+        # Tìm Họ tên (thường nằm sau hoặc dưới dòng "Họ và tên / Full name")
+        if "họ và tên" in text_lower or "full name" in text_lower or "ho va ten" in text_lower:
+            if i + 1 < len(lines):
+                candidate_name = lines[i + 1][0].strip()
+                # Tên trên CCCD luôn viết hoa toàn bộ và thường có từ 2-4 từ
+                if candidate_name.isupper() and len(candidate_name.split()) >= 2:
+                    full_name = candidate_name
+
+        # Tìm Ngày sinh (regex tìm định dạng dd/mm/yyyy)
+        dob_match = re.search(r"(\d{2}/\d{2}/\d{4})", text_line)
+        if dob_match and not date_of_birth:
+            date_of_birth = dob_match.group(1)
+
+    # Cơ chế dự phòng tìm Họ tên (nếu nhãn Họ và tên không đọc rõ nhưng tên đọc rõ)
+    if not full_name:
+        for text_line, _ in lines:
+            skip_keywords = ["CỘNG HÒA", "ĐỘC LẬP", "TỰ DO", "GIÁ TRỊ", "NƠI ĐK", "THƯỜNG TRÚ", "QUỐC TỊCH", "DÂN TỘC", "QUÊ QUÁN", "NHẬN DẠNG", "NƠI CẤP"]
+            if text_line.isupper() and len(text_line.split()) >= 2 and len(text_line.split()) <= 5:
+                if not any(kw in text_line for kw in skip_keywords):
+                    if not any(char.isdigit() for char in text_line):
+                        full_name = text_line
+                        break
+
     if id_number:
         logger.info("✓ Bóc tách Số CCCD thành công: %s", id_number)
     else:
         logger.warning("✗ Không tìm thấy Số CCCD trong ảnh mặt trước")
 
-    return id_number
+    if full_name:
+        logger.info("✓ Bóc tách Họ tên thành công: %s", full_name)
+    else:
+        logger.warning("✗ Không tìm thấy Họ tên trong ảnh mặt trước")
+
+    if date_of_birth:
+        logger.info("✓ Bóc tách Ngày sinh thành công: %s", date_of_birth)
+    else:
+        logger.warning("✗ Không tìm thấy Ngày sinh trong ảnh mặt trước")
+
+    return id_number, full_name, date_of_birth
 
 
 # ---------------------------------------------------------------------------

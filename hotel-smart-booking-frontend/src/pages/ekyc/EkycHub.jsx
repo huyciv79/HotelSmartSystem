@@ -1,14 +1,11 @@
 import { useState, useCallback } from 'react';
-import { ShieldCheck } from 'lucide-react';
 import ViewEkyc from './ViewEkyc';
-import EkycStatus from './EkycStatus';
 import RegisterEkycWizard from '../../components/ekyc/RegisterEkycWizard';
 import { submitEkyc, updateEkyc } from '../../services/ekycService';
 
 // Internal screens
 const SCREEN = {
   VIEW: 'view',
-  STATUS: 'status',
   REGISTER: 'register',
   UPDATE: 'update',
 };
@@ -59,14 +56,6 @@ export default function EkycHub({ onBack }) {
           onBack={onBack}
           onRegister={openRegister}
           onUpdate={openUpdate}
-          onViewStatus={() => setScreen(SCREEN.STATUS)}
-        />
-      )}
-
-      {/* EkycStatus */}
-      {screen === SCREEN.STATUS && (
-        <EkycStatus
-          onBack={() => setScreen(SCREEN.VIEW)}
         />
       )}
     </div>

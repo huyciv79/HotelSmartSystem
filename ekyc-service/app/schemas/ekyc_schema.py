@@ -46,6 +46,14 @@ class EKYCResponse(BaseModel):
         None,
         description="Số CCCD/CMND bóc tách từ ảnh (None nếu không đọc được)",
     )
+    full_name: Optional[str] = Field(
+        None,
+        description="Họ và tên bóc tách từ ảnh (None nếu không đọc được)",
+    )
+    date_of_birth: Optional[str] = Field(
+        None,
+        description="Ngày sinh bóc tách từ ảnh (None nếu không đọc được, định dạng dd/mm/yyyy)",
+    )
     embedding: List[float] = Field(
         ...,
         description="Vector khuôn mặt 512 chiều trích xuất từ ảnh selfie",

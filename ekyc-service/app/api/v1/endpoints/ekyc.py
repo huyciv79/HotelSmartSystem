@@ -14,7 +14,7 @@ import logging
 from fastapi import APIRouter, HTTPException, status
 
 from app.schemas.ekyc_schema import EKYCRequest, EKYCResponse
-from app.services.ekyc_service import extract_id_card_number, extract_face_embedding
+from app.services.ekyc_service import extract_id_card_details, extract_face_embedding
 from app.utils.image_utils import download_image
 
 logger = logging.getLogger(__name__)
@@ -84,18 +84,18 @@ async def verify_ekyc(payload: EKYCRequest) -> EKYCResponse:
             detail=f"Không thể tải ảnh selfie: {exc}",
         )
 
-    # ── Bước 2: OCR – Bóc tách Số CCCD từ ảnh mặt trước ────────────────
+    # ── Bước 2: OCR – Bóc tách thông tin từ ảnh mặt trước ────────────────
     id_card_number: str | None = None
+    full_name: str | None = None
+    date_of_birth: str | None = None
     try:
-        id_card_number = extract_id_card_number(front_img)
+        id_card_number, full_name, date_of_birth = extract_id_card_details(front_img)
         if id_card_number:
             logger.info("✓ OCR bóc tách Số CCCD: %s", id_card_number)
         else:
-            # Trả về None – Spring Boot sẽ báo lỗi cho client
             logger.warning("✗ OCR không đọc được Số CCCD từ ảnh mặt trước")
     except Exception as exc:
         logger.exception("Lỗi OCR không xác định")
-        # Trả về None thay vì crash – Spring Boot xử lý lỗi này
         id_card_number = None
 
     # ── Bước 3: Face Embedding – Trích xuất vector 512 chiều ─────────────
@@ -118,5 +118,7 @@ async def verify_ekyc(payload: EKYCRequest) -> EKYCResponse:
     # ── Trả về kết quả ───────────────────────────────────────────────────
     return EKYCResponse(
         id_card_number=id_card_number,
+        full_name=full_name,
+        date_of_birth=date_of_birth,
         embedding=face_embedding,
     )
