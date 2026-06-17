@@ -244,6 +244,9 @@ public class EkycServiceImpl implements EkycService {
                 .verifiedAt(profile.getVerifiedat())
                 .rejectionReason(profile.getRejectionreason())
                 .requestId(profile.getId() != null ? profile.getId().toString() : null)
+                .frontImage(profile.getFrontimage())
+                .backImage(profile.getBackimage())
+                .faceImage(profile.getFaceimage())
                 .build();
     }
 
