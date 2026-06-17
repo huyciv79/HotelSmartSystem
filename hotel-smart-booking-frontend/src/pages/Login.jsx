@@ -39,11 +39,15 @@ export default function Login({ setActivePage }) {
       const response = await loginUser(data);
       
       // Save tokens/user information to localStorage
+      let loggedInUser = null;
       if (response && response.data) {
-        const { accessToken, refreshToken, user } = response.data;
+        const { accessToken, refreshToken, email, fullName, role } = response.data;
         if (accessToken) localStorage.setItem('accessToken', accessToken);
         if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
-        if (user) localStorage.setItem('user', JSON.stringify(user));
+        
+        const userObj = { email, fullName, role };
+        localStorage.setItem('user', JSON.stringify(userObj));
+        loggedInUser = userObj;
       }
 
       showToast('Đăng nhập thành công!', 'success');
@@ -57,7 +61,11 @@ export default function Login({ setActivePage }) {
         }, 1500);
       } else {
         setTimeout(() => {
-          setActivePage('home');
+          if (loggedInUser && (loggedInUser.role === 'manager' || loggedInUser.role === 'receptionist')) {
+            setActivePage('dashboard');
+          } else {
+            setActivePage('home');
+          }
         }, 1500);
       }
     } catch (err) {
