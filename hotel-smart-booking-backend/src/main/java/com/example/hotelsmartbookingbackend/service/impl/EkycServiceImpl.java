@@ -4,6 +4,8 @@ import com.example.hotelsmartbookingbackend.dto.request.EkycRequest;
 import com.example.hotelsmartbookingbackend.dto.response.AiEkycResponse;
 import com.example.hotelsmartbookingbackend.dto.response.EkycResponse;
 import com.example.hotelsmartbookingbackend.dto.response.EkycStatusResponse;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 import com.example.hotelsmartbookingbackend.entity.EkycProfile;
 import com.example.hotelsmartbookingbackend.entity.User;
 import com.example.hotelsmartbookingbackend.repository.EkycProfileRepository;
@@ -12,7 +14,6 @@ import com.example.hotelsmartbookingbackend.repository.UserRepository;
 import com.example.hotelsmartbookingbackend.service.EkycService;
 import com.example.hotelsmartbookingbackend.service.SupabaseStorageService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -50,7 +51,6 @@ import java.util.stream.Collectors;
  * <p>Tính toàn vẹn: @Transactional bảo vệ ghi vào 2 bảng trong cùng một transaction.
  * Redis được cập nhật sau khi commit thành công.
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EkycServiceImpl implements EkycService {
@@ -83,12 +83,21 @@ public class EkycServiceImpl implements EkycService {
 
     @Override
     @Transactional
-    public EkycResponse processEkyc(Integer userId, EkycRequest request) {
-        log.info("[eKYC] Bắt đầu xử lý eKYC tự động cho userId={}", userId);
+    public EkycResponse processEkyc(String email, MultipartFile frontImage, MultipartFile backImage, MultipartFile selfieImage) {
+        // ── Upload 3 ảnh lên Supabase → lấy public URL ───────────────────────
+        String frontUrl   = uploadImage(frontImage,   "ekyc_front");
+        String backUrl    = uploadImage(backImage,    "ekyc_back");
+        String selfieUrl  = uploadImage(selfieImage,  "ekyc_selfie");
+
+        EkycRequest request = EkycRequest.builder()
+                .frontImageUrl(frontUrl)
+                .backImageUrl(backUrl)
+                .faceImageUrl(selfieUrl)
+                .build();
 
         // ── 1. Kiểm tra user tồn tại ─────────────────────────────────────────
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy user với ID: " + userId));
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy user với email: " + email));
 
         // PRE-2: The Customer account status is Active
         if (!"Active".equalsIgnoreCase(user.getStatus())) {
@@ -104,15 +113,12 @@ public class EkycServiceImpl implements EkycService {
         if (profileOpt.isPresent()) {
             EkycProfile existingProfile = profileOpt.get();
             if ("Verified".equalsIgnoreCase(existingProfile.getStatus())) {
-                log.warn("[eKYC] userId={} đã được xác minh trước đó, bỏ qua.", userId);
                 throw new RuntimeException("Tài khoản của bạn đã được xác minh eKYC trước đó.");
             } else if ("Pending".equalsIgnoreCase(existingProfile.getStatus())) {
-                log.warn("[eKYC] userId={} đang có yêu cầu xác minh chờ xử lý.", userId);
                 throw new RuntimeException("Yêu cầu xác minh eKYC của bạn đang được xử lý, không thể thực hiện yêu cầu mới.");
             } else if ("Rejected".equalsIgnoreCase(existingProfile.getStatus())) {
                 isUpdateFlow = true;
                 profile = existingProfile;
-                log.info("[eKYC] Phát hiện profile Rejected cho userId={}. Chuyển sang luồng Update.", userId);
             } else {
                 isUpdateFlow = true;
                 profile = existingProfile;
@@ -131,11 +137,9 @@ public class EkycServiceImpl implements EkycService {
             profile.setVerificationmethod(VERIFICATION_METHOD);
             profile.setUpdatedat(now);
             ekycProfileRepository.save(profile);
-            log.info("[eKYC] Đã cập nhật profile ekycId={} sang Pending cho userId={}", profile.getId(), userId);
         } else {
             profile = createPendingProfile(user, request);
             ekycProfileRepository.save(profile);
-            log.info("[eKYC] Đã tạo EkycProfile mới id={} (Pending) cho userId={}", profile.getId(), userId);
         }
 
         // ── 4. Gọi Python AI Service và bắt exception ──────────────────────────
@@ -146,19 +150,17 @@ public class EkycServiceImpl implements EkycService {
                 throw new RuntimeException("AI Service trả về kết quả hoặc vector khuôn mặt rỗng");
             }
         } catch (Exception ex) {
-            log.error("[eKYC] Lỗi trích xuất khuôn mặt hoặc kết nối AI Service cho userId={}: {}", userId, ex.getMessage());
-
             // Đánh dấu status = Rejected, cập nhật lý do từ chối vào DB bằng new transaction để tránh rollback
             String rejectionReason = "Face detection failed: " + ex.getMessage();
             self.markAsRejectedNewTx(profile.getId(), rejectionReason, Instant.now());
 
             if (isUpdateFlow) {
                 throw new RuntimeException(
-                        "Verification failed. Please ensure your face is clearly visible and well-lit, or bring your original identification documents to the reception desk for manual verification during check-in."
+                        "Verification failed. Please ensure your face is clearly visible and well-lit, or bring your original identification documents to the reception desk for manual verification during check-in.", ex
                 );
             } else {
                 throw new RuntimeException(
-                        "Face detection failed. Please ensure your face is clearly visible, well-lit, and fits inside the frame, then try again."
+                        "Face detection failed. Please ensure your face is clearly visible, well-lit, and fits inside the frame, then try again.", ex
                 );
             }
         }
@@ -166,8 +168,6 @@ public class EkycServiceImpl implements EkycService {
         // ── 5. Kiểm tra số CCCD bóc tách từ OCR ────────────────────────────
         String idCardNumber = aiResponse.getIdCardNumber();
         if (idCardNumber == null || idCardNumber.isBlank()) {
-            log.warn("[eKYC] OCR không đọc được số CCCD cho userId={}", userId);
-
             // Đánh dấu Rejected
             self.markAsRejectedNewTx(
                     profile.getId(),
@@ -180,13 +180,9 @@ public class EkycServiceImpl implements EkycService {
             );
         }
 
-        log.info("[eKYC] OCR đọc được Số CCCD thành công ({}***) cho userId={}",
-                idCardNumber.substring(0, Math.min(4, idCardNumber.length())), userId);
-
         // ── 5b. So khớp Họ tên giữa OCR và thông tin tài khoản đăng ký ────────────────────────────
         String ocrName = aiResponse.getFullName();
         if (ocrName == null || ocrName.isBlank()) {
-            log.warn("[eKYC] OCR không đọc được họ tên cho userId={}", userId);
             self.markAsRejectedNewTx(
                     profile.getId(),
                     "OCR không đọc được họ tên trên mặt trước CCCD",
@@ -201,7 +197,6 @@ public class EkycServiceImpl implements EkycService {
         String normalizedOcr = removeDiacritics(ocrName).replaceAll("\\s+", "").trim().toLowerCase();
 
         if (!normalizedUser.equals(normalizedOcr)) {
-            log.warn("[eKYC] Họ tên không khớp cho userId={}: user='{}', ocr='{}'", userId, user.getFullname(), ocrName);
             self.markAsRejectedNewTx(
                     profile.getId(),
                     "Họ tên trên CCCD (" + ocrName + ") không khớp với tên đăng ký tài khoản (" + user.getFullname() + ")",
@@ -221,9 +216,9 @@ public class EkycServiceImpl implements EkycService {
      * Lấy trạng thái eKYC của user và thông tin chi tiết liên quan.
      */
     @Override
-    public EkycStatusResponse getEkycStatus(Integer userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy user với ID: " + userId));
+    public EkycStatusResponse getEkycStatus(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy user với email: " + email));
 
         Optional<EkycProfile> profileOpt = ekycProfileRepository.findTopByUseridOrderByCreatedatDesc(user);
 
@@ -261,8 +256,6 @@ public class EkycServiceImpl implements EkycService {
                     decryptedIdNumber = maskIdNumber(decryptedIdNumber);
                 }
             } catch (Exception ex) {
-                log.error("[eKYC] Không thể giải mã idcardnumber cho ekycId={}: {}",
-                        profile.getId(), ex.getMessage());
                 // Trả về null thay vì crash – frontend sẽ hiển thị "N/A"
             }
         }
@@ -272,8 +265,6 @@ public class EkycServiceImpl implements EkycService {
             try {
                 decryptedFullName = aesEncryptionService.decrypt(profile.getFullname());
             } catch (Exception ex) {
-                log.error("[eKYC] Không thể giải mã fullname cho ekycId={}: {}",
-                        profile.getId(), ex.getMessage());
             }
         }
 
@@ -282,8 +273,6 @@ public class EkycServiceImpl implements EkycService {
             try {
                 decryptedDob = aesEncryptionService.decrypt(profile.getDateofbirth());
             } catch (Exception ex) {
-                log.error("[eKYC] Không thể giải mã dateofbirth cho ekycId={}: {}",
-                        profile.getId(), ex.getMessage());
             }
         }
 
@@ -355,7 +344,6 @@ public class EkycServiceImpl implements EkycService {
                 "face_image_url",  request.getFaceImageUrl()
         );
 
-        log.info("[eKYC] Gọi Python AI Service tại URL: {}", aiEkycUrl);
         try {
             AiEkycResponse response = webClient.post()
                     .uri(aiEkycUrl)
@@ -369,19 +357,14 @@ public class EkycServiceImpl implements EkycService {
                 throw new RuntimeException("AI Service trả về phản hồi rỗng");
             }
 
-            log.info("[eKYC] Nhận kết quả từ AI Service: idCardNumber={}, embeddingSize={}",
-                    response.getIdCardNumber(),
-                    response.getEmbedding() != null ? response.getEmbedding().size() : 0);
             return response;
 
         } catch (WebClientResponseException ex) {
-            log.error("[eKYC] AI Service trả về lỗi HTTP {}: {}", ex.getStatusCode(), ex.getMessage());
             throw new RuntimeException("AI Service lỗi: " + ex.getResponseBodyAsString(), ex);
         } catch (RuntimeException ex) {
             // Rethrow RuntimeException trực tiếp (bao gồm timeout, response rỗng, ...)
             throw ex;
         } catch (Exception ex) {
-            log.error("[eKYC] Không thể kết nối AI Service: {}", ex.getMessage());
             throw new RuntimeException("Không thể kết nối tới dịch vụ xác minh AI. Vui lòng thử lại sau.", ex);
         }
     }
@@ -401,7 +384,6 @@ public class EkycServiceImpl implements EkycService {
                                                    String dateOfBirth,
                                                    List<Double> embedding,
                                                    boolean isUpdateFlow) {
-        log.info("[eKYC] Xác minh thành công cho userId={}", user.getId());
         Instant now = Instant.now();
 
         // ─ 1. Tính HMAC-SHA256 fingerprint (deterministic, không thể reverse) ────────
@@ -416,9 +398,6 @@ public class EkycServiceImpl implements EkycService {
         }
 
         if (isDuplicate) {
-            log.warn("[eKYC] Phát hiện trùng số CCCD (hash={}) cho userId={}",
-                    idCardNumberHash.substring(0, 8) + "...", user.getId());
-
             // Đánh dấu Rejected vì số CCCD đã thuộc tài khoản khác (dùng new tx)
             String reason = isUpdateFlow
                     ? "Số CCCD này đã được đăng ký xác minh với một tài khoản khác trong hệ thống"
@@ -447,8 +426,6 @@ public class EkycServiceImpl implements EkycService {
         // ─ 5. Lưu cả ciphertext lẫn HMAC hash trong 1 query ──────────────────
         ekycProfileRepository.updateIdCardDetailsAndHash(
                 profile.getId(), encryptedIdCardNumber, idCardNumberHash, encryptedFullName, encryptedDob);
-        log.info("[eKYC] Đã lưu AES ciphertext + HMAC hash cho userId={}, ekycId={}",
-                user.getId(), profile.getId());
 
 
         // ─ 6. Chuyển embedding → vector PostgreSQL và lưu FaceEmbedding ─────
@@ -456,11 +433,9 @@ public class EkycServiceImpl implements EkycService {
 
         // Upsert FaceEmbedding (tạo mới hoặc cập nhật nếu user verify lại)
         faceembeddingRepository.upsertEmbedding(user.getId(), embeddingVector, now);
-        log.info("[eKYC] Đã lưu FaceEmbedding cho userId={}", user.getId());
 
         // Lưu trạng thái "Verified" vào Redis Cache
         cacheEkycStatus(user.getId(), "Verified");
-        log.info("[eKYC] Đã cache trạng thái Verified vào Redis cho userId={}", user.getId());
 
         String successMessage = isUpdateFlow
                 ? "eKYC documents and facial data have been updated successfully. Your face data is now ready for Face Recognition Check-in."
@@ -486,7 +461,7 @@ public class EkycServiceImpl implements EkycService {
             throw new RuntimeException("AI Service trả về embedding rỗng");
         }
         if (embedding.size() != 512) {
-            log.warn("[eKYC] Kích thước embedding không đúng: expected=512, actual={}", embedding.size());
+            // Kích thước không đúng
         }
 
         String vectorContent = embedding.stream()
@@ -517,7 +492,6 @@ public class EkycServiceImpl implements EkycService {
 
         if (!verifiedInDb) {
             // Cache lỗi thời (DB bị rollback trước đó) → xóa để user có thể retry
-            log.warn("[eKYC] Phát hiện stale cache cho userId={}: Redis=Verified nhưng DB không có bản ghi. Xóa cache.", userId);
             redisTemplate.delete(EKYC_CACHE_PREFIX + userId);
             return false;
         }
@@ -542,7 +516,6 @@ public class EkycServiceImpl implements EkycService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markAsRejectedNewTx(Integer ekycId, String reason, Instant updatedAt) {
-        log.info("[eKYC] Đánh dấu Rejected cho ekycId={} với lý do: {}", ekycId, reason);
         ekycProfileRepository.markAsRejected(ekycId, reason, updatedAt);
     }
 
@@ -557,5 +530,18 @@ public class EkycServiceImpl implements EkycService {
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
         String withoutDiacritics = pattern.matcher(nfdNormalizedString).replaceAll("");
         return withoutDiacritics.replace("Đ", "D").replace("đ", "d");
+    }
+
+    private String uploadImage(MultipartFile file, String prefix) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File '" + prefix + "' không được để trống.");
+        }
+        try {
+            String contentType = file.getContentType() != null ? file.getContentType() : "image/jpeg";
+            String originalName = prefix + "_" + file.getOriginalFilename();
+            return supabaseStorageService.uploadEkycDocument(file.getBytes(), originalName, contentType);
+        } catch (IOException e) {
+            throw new RuntimeException("Lỗi khi đọc file upload: " + e.getMessage(), e);
+        }
     }
 }

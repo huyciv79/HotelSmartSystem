@@ -50,6 +50,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/room-types/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/feedbacks/**").permitAll()
                         .requestMatchers("/api/room-types/**").hasRole("MANAGER")
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/error").permitAll()

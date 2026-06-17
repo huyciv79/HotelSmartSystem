@@ -3,7 +3,6 @@ package com.example.hotelsmartbookingbackend.service.impl;
 import com.example.hotelsmartbookingbackend.service.SupabaseStorageService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -13,7 +12,6 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-@Slf4j
 public class SupabaseStorageServiceImpl implements SupabaseStorageService {
 
     @Value("${supabase.url}")
@@ -60,12 +58,10 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
                 throw new RuntimeException("Failed to upload avatar to Supabase Storage: " + response.getStatusCode());
             }
 
-            log.info("Successfully uploaded avatar to bucket {}. File: {}", avatarBucket, fileName);
             return cleanUrl + "/storage/v1/object/public/" + avatarBucket + "/" + fileName;
 
         } catch (Exception e) {
-            log.error("Error occurred while uploading avatar to Supabase: {}", e.getMessage(), e);
-            throw new RuntimeException("Lỗi khi tải ảnh lên hệ thống lưu trữ: " + e.getMessage());
+            throw new RuntimeException("Lỗi khi tải ảnh lên hệ thống lưu trữ: " + e.getMessage(), e);
         }
     }
 
@@ -102,12 +98,10 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
                 throw new RuntimeException("Failed to upload ekyc file to Supabase Storage: " + response.getStatusCode());
             }
 
-            log.info("Successfully uploaded ekyc file to bucket {}. File: {}", ekycBucket, fileName);
             return createSignedUrl(cleanUrl, ekycBucket, fileName);
 
         } catch (Exception e) {
-            log.error("Error occurred while uploading ekyc file to Supabase: {}", e.getMessage(), e);
-            throw new RuntimeException("Lỗi khi tải ảnh eKYC lên hệ thống lưu trữ: " + e.getMessage());
+            throw new RuntimeException("Lỗi khi tải ảnh eKYC lên hệ thống lưu trữ: " + e.getMessage(), e);
         }
     }
 
@@ -125,10 +119,6 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
         String cleanUrl = supabaseUrl.endsWith("/") ? supabaseUrl.substring(0, supabaseUrl.length() - 1) : supabaseUrl;
         String uploadUrl = cleanUrl + "/storage/v1/object/" + roomtypeBucket + "/" + fileName;
 
-        log.info("UPLOAD ROOM TYPE IMAGE CALLED");
-        log.info("roomtypeBucket = {}", roomtypeBucket);
-        log.info("uploadUrl = {}", uploadUrl);
-
         try {
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
@@ -143,12 +133,10 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
                 throw new RuntimeException("Failed to upload room type image to Supabase Storage: " + response.getStatusCode());
             }
 
-            log.info("Successfully uploaded room type image to bucket {}. File: {}", roomtypeBucket, fileName);
             return cleanUrl + "/storage/v1/object/public/" + roomtypeBucket + "/" + fileName;
 
         } catch (Exception e) {
-            log.error("Error occurred while uploading room type image to Supabase: {}", e.getMessage(), e);
-            throw new RuntimeException("Loi khi tai anh loai phong len he thong luu tru: " + e.getMessage());
+            throw new RuntimeException("Loi khi tai anh loai phong len he thong luu tru: " + e.getMessage(), e);
         }
     }
 
@@ -183,13 +171,11 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
                     } else {
                         fullSignedUrl = cleanUrl + signedPath;
                     }
-                    log.info("Created signed URL for file: {}", fileName);
                     return fullSignedUrl;
                 }
             }
-            log.warn("Không tạo được signed URL cho {}. Fallback về public URL.", fileName);
         } catch (Exception e) {
-            log.warn("Lỗi khi tạo signed URL cho {}: {}. Fallback về public URL.", fileName, e.getMessage());
+            // Fallback
         }
         // Fallback: trả về public URL nếu tạo signed URL thất bại
         return cleanUrl + "/storage/v1/object/public/" + bucket + "/" + fileName;
@@ -213,7 +199,6 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
         if (supabaseUrl == null || supabaseUrl.isBlank()
                 || supabaseKey == null || supabaseKey.isBlank()
                 || bucket == null || bucket.isBlank()) {
-            log.warn("Supabase configuration is missing. Skipping delete {}.", objectLabel);
             return;
         }
 
@@ -221,7 +206,6 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
         String publicPrefix = cleanUrl + "/storage/v1/object/public/" + bucket + "/";
 
         if (!publicUrl.startsWith(publicPrefix)) {
-            log.info("{} URL {} is not hosted in bucket {}, skipping deletion.", objectLabel, publicUrl, bucket);
             return;
         }
 
@@ -236,10 +220,8 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
             restTemplate.exchange(deleteUrl, HttpMethod.DELETE, entity, Void.class);
-
-            log.info("Successfully deleted {} from bucket {}: {}", objectLabel, bucket, fileName);
         } catch (Exception e) {
-            log.error("Failed to delete {} from Supabase Storage: {}", objectLabel, e.getMessage());
+            // Thất bại khi xóa cũng bỏ qua
         }
     }
 
