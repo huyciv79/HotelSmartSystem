@@ -40,7 +40,7 @@ export const updateEkyc = async (frontImage, backImage, selfieImage) => {
   formData.append('backImage', backImage);
   formData.append('selfieImage', selfieImage);
 
-  const response = await axiosInstance.post('/v1/ekyc/verify', formData, {
+  const response = await axiosInstance.post('/v1/ekyc/update', formData, {
     headers: { 'Content-Type': undefined },
     timeout: 120000,
   });

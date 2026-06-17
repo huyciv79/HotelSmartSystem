@@ -27,6 +27,8 @@ public class EkycProfile {
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "userid", nullable = false)
     private User userid;
+
+
     @Size(max = 512)
     @Column(name = "idcardnumber", length = 512)
     private String idcardnumber;
@@ -34,6 +36,14 @@ public class EkycProfile {
     @Size(max = 64)
     @Column(name = "idcardnumber_hash", length = 64, unique = true)
     private String idcardnumberhash;
+
+    @Size(max = 512)
+    @Column(name = "fullname", length = 512)
+    private String fullname;
+
+    @Size(max = 512)
+    @Column(name = "dateofbirth", length = 512)
+    private String dateofbirth;
 
     @Size(max = 512)
     @Column(name = "frontimage", length = 512)
@@ -73,4 +83,5 @@ public class EkycProfile {
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "updatedat", nullable = false)
     private Instant updatedat;
+
 }

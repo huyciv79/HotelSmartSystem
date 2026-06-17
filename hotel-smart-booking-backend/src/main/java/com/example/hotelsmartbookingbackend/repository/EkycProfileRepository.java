@@ -85,12 +85,16 @@ public interface EkycProfileRepository extends JpaRepository<EkycProfile, Intege
     @Query("""
             UPDATE EkycProfile e
             SET e.idcardnumber     = :idCardNumber,
-                e.idcardnumberhash = :idCardNumberHash
+                e.idcardnumberhash = :idCardNumberHash,
+                e.fullname         = :fullName,
+                e.dateofbirth      = :dateOfBirth
             WHERE e.id = :ekycId
             """)
-    void updateIdCardNumberAndHash(@Param("ekycId")           Integer ekycId,
-                                   @Param("idCardNumber")     String  idCardNumber,
-                                   @Param("idCardNumberHash") String  idCardNumberHash);
+    void updateIdCardDetailsAndHash(@Param("ekycId")           Integer ekycId,
+                                    @Param("idCardNumber")     String  idCardNumber,
+                                    @Param("idCardNumberHash") String  idCardNumberHash,
+                                    @Param("fullName")         String  fullName,
+                                    @Param("dateOfBirth")      String  dateOfBirth);
 
     /**
      * Kiểm tra số CCCD (qua HMAC-SHA256 fingerprint) đã được đăng ký bởi user khác chưa.

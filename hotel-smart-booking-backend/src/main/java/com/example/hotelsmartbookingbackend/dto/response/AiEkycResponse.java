@@ -34,6 +34,18 @@ public class AiEkycResponse {
     private String idCardNumber;
 
     /**
+     * Họ tên bóc tách tự động từ ảnh mặt trước CCCD.
+     */
+    @JsonProperty("full_name")
+    private String fullName;
+
+    /**
+     * Ngày sinh bóc tách tự động từ ảnh mặt trước CCCD (định dạng dd/mm/yyyy).
+     */
+    @JsonProperty("date_of_birth")
+    private String dateOfBirth;
+
+    /**
      * Mảng vector embedding khuôn mặt 512 chiều từ ảnh selfie (DeepFace.represent).
      */
     @JsonProperty("embedding")

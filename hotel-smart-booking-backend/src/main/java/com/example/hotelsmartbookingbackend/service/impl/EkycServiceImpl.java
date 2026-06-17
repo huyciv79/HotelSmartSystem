@@ -10,6 +10,7 @@ import com.example.hotelsmartbookingbackend.repository.EkycProfileRepository;
 import com.example.hotelsmartbookingbackend.repository.FaceembeddingRepository;
 import com.example.hotelsmartbookingbackend.repository.UserRepository;
 import com.example.hotelsmartbookingbackend.service.EkycService;
+import com.example.hotelsmartbookingbackend.service.SupabaseStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,6 +62,7 @@ public class EkycServiceImpl implements EkycService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final WebClient webClient;
     private final AesEncryptionService aesEncryptionService;
+    private final SupabaseStorageService supabaseStorageService;
 
     @Autowired
     @Lazy
@@ -181,8 +183,38 @@ public class EkycServiceImpl implements EkycService {
         log.info("[eKYC] OCR đọc được Số CCCD thành công ({}***) cho userId={}",
                 idCardNumber.substring(0, Math.min(4, idCardNumber.length())), userId);
 
-        // ── 6. Xác minh thành công: lưu Số CCCD + embedding ──────────────────
-        return handleVerificationSuccess(user, profile, idCardNumber, aiResponse.getEmbedding(), isUpdateFlow);
+        // ── 5b. So khớp Họ tên giữa OCR và thông tin tài khoản đăng ký ────────────────────────────
+        String ocrName = aiResponse.getFullName();
+        if (ocrName == null || ocrName.isBlank()) {
+            log.warn("[eKYC] OCR không đọc được họ tên cho userId={}", userId);
+            self.markAsRejectedNewTx(
+                    profile.getId(),
+                    "OCR không đọc được họ tên trên mặt trước CCCD",
+                    Instant.now()
+            );
+            throw new RuntimeException(
+                    "Unable to read your name clearly from the ID card. Please ensure the image is bright, unblurred, and try again."
+            );
+        }
+
+        String normalizedUser = removeDiacritics(user.getFullname()).replaceAll("\\s+", "").trim().toLowerCase();
+        String normalizedOcr = removeDiacritics(ocrName).replaceAll("\\s+", "").trim().toLowerCase();
+
+        if (!normalizedUser.equals(normalizedOcr)) {
+            log.warn("[eKYC] Họ tên không khớp cho userId={}: user='{}', ocr='{}'", userId, user.getFullname(), ocrName);
+            self.markAsRejectedNewTx(
+                    profile.getId(),
+                    "Họ tên trên CCCD (" + ocrName + ") không khớp với tên đăng ký tài khoản (" + user.getFullname() + ")",
+                    Instant.now()
+            );
+            throw new RuntimeException(
+                    "Verification failed. The name on your ID card does not match your registered profile name."
+            );
+        }
+
+        // ── 6. Xác minh thành công: lưu Số CCCD + Họ tên + Ngày sinh + embedding ──────────────────
+        return handleVerificationSuccess(user, profile, idCardNumber, aiResponse.getFullName(),
+                aiResponse.getDateOfBirth(), aiResponse.getEmbedding(), isUpdateFlow);
     }
 
     /**
@@ -235,18 +267,39 @@ public class EkycServiceImpl implements EkycService {
             }
         }
 
+        String decryptedFullName = null;
+        if (profile.getFullname() != null) {
+            try {
+                decryptedFullName = aesEncryptionService.decrypt(profile.getFullname());
+            } catch (Exception ex) {
+                log.error("[eKYC] Không thể giải mã fullname cho ekycId={}: {}",
+                        profile.getId(), ex.getMessage());
+            }
+        }
+
+        String decryptedDob = null;
+        if (profile.getDateofbirth() != null) {
+            try {
+                decryptedDob = aesEncryptionService.decrypt(profile.getDateofbirth());
+            } catch (Exception ex) {
+                log.error("[eKYC] Không thể giải mã dateofbirth cho ekycId={}: {}",
+                        profile.getId(), ex.getMessage());
+            }
+        }
+
         return EkycStatusResponse.builder()
                 .status(statusStr)
                 .message(statusMsg)
-                .fullName(user.getFullname())
+                .fullName(decryptedFullName != null ? decryptedFullName : user.getFullname())
                 .idNumber(decryptedIdNumber)
+                .dateOfBirth(decryptedDob)
                 .address(user.getAddress())
                 .verifiedAt(profile.getVerifiedat())
                 .rejectionReason(profile.getRejectionreason())
                 .requestId(profile.getId() != null ? profile.getId().toString() : null)
-                .frontImage(profile.getFrontimage())
-                .backImage(profile.getBackimage())
-                .faceImage(profile.getFaceimage())
+                .frontImage(supabaseStorageService.getSignedUrl(profile.getFrontimage()))
+                .backImage(supabaseStorageService.getSignedUrl(profile.getBackimage()))
+                .faceImage(supabaseStorageService.getSignedUrl(profile.getFaceimage()))
                 .build();
     }
 
@@ -344,6 +397,8 @@ public class EkycServiceImpl implements EkycService {
      */
     private EkycResponse handleVerificationSuccess(User user, EkycProfile profile,
                                                    String idCardNumber,
+                                                   String fullName,
+                                                   String dateOfBirth,
                                                    List<Double> embedding,
                                                    boolean isUpdateFlow) {
         log.info("[eKYC] Xác minh thành công cho userId={}", user.getId());
@@ -384,12 +439,14 @@ public class EkycServiceImpl implements EkycService {
         // ─ 3. Cập nhật EkycProfile → Verified ────────────────────────────────
         ekycProfileRepository.markAsVerified(profile.getId(), now, now, VERIFICATION_METHOD);
 
-        // ─ 4. Mã hóa số CCCD bằng AES-256-GCM ────────────────────────────
+        // ─ 4. Mã hóa Số CCCD, Họ tên, Ngày sinh bằng AES-256-GCM ────────────────────────────
         String encryptedIdCardNumber = aesEncryptionService.encrypt(idCardNumber);
+        String encryptedFullName = fullName != null ? aesEncryptionService.encrypt(fullName) : null;
+        String encryptedDob = dateOfBirth != null ? aesEncryptionService.encrypt(dateOfBirth) : null;
 
         // ─ 5. Lưu cả ciphertext lẫn HMAC hash trong 1 query ──────────────────
-        ekycProfileRepository.updateIdCardNumberAndHash(
-                profile.getId(), encryptedIdCardNumber, idCardNumberHash);
+        ekycProfileRepository.updateIdCardDetailsAndHash(
+                profile.getId(), encryptedIdCardNumber, idCardNumberHash, encryptedFullName, encryptedDob);
         log.info("[eKYC] Đã lưu AES ciphertext + HMAC hash cho userId={}, ekycId={}",
                 user.getId(), profile.getId());
 
@@ -487,5 +544,18 @@ public class EkycServiceImpl implements EkycService {
     public void markAsRejectedNewTx(Integer ekycId, String reason, Instant updatedAt) {
         log.info("[eKYC] Đánh dấu Rejected cho ekycId={} với lý do: {}", ekycId, reason);
         ekycProfileRepository.markAsRejected(ekycId, reason, updatedAt);
+    }
+
+    /**
+     * Loại bỏ dấu tiếng Việt để so khớp tên.
+     */
+    private String removeDiacritics(String str) {
+        if (str == null) {
+            return "";
+        }
+        String nfdNormalizedString = java.text.Normalizer.normalize(str, java.text.Normalizer.Form.NFD);
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
+        String withoutDiacritics = pattern.matcher(nfdNormalizedString).replaceAll("");
+        return withoutDiacritics.replace("Đ", "D").replace("đ", "d");
     }
 }

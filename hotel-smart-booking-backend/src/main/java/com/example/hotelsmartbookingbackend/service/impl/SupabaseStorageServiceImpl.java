@@ -243,6 +243,54 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
         }
     }
 
+    @Override
+    public String getSignedUrl(String pathOrUrl) {
+        String fileName = extractFileName(pathOrUrl);
+        if (fileName == null || fileName.isBlank()) {
+            return null;
+        }
+        String cleanUrl = supabaseUrl.endsWith("/") ? supabaseUrl.substring(0, supabaseUrl.length() - 1) : supabaseUrl;
+        return createSignedUrl(cleanUrl, ekycBucket, fileName);
+    }
+
+    private String extractFileName(String urlOrPath) {
+        if (urlOrPath == null || urlOrPath.isBlank()) {
+            return null;
+        }
+        String keyword = "/" + ekycBucket + "/";
+        int index = urlOrPath.indexOf(keyword);
+        if (index != -1) {
+            String afterKeyword = urlOrPath.substring(index + keyword.length());
+            int questionMarkIndex = afterKeyword.indexOf("?");
+            if (questionMarkIndex != -1) {
+                return afterKeyword.substring(0, questionMarkIndex);
+            }
+            return afterKeyword;
+        }
+        String publicKeyword = "/public/" + ekycBucket + "/";
+        int pubIndex = urlOrPath.indexOf(publicKeyword);
+        if (pubIndex != -1) {
+            String afterKeyword = urlOrPath.substring(pubIndex + publicKeyword.length());
+            int questionMarkIndex = afterKeyword.indexOf("?");
+            if (questionMarkIndex != -1) {
+                return afterKeyword.substring(0, questionMarkIndex);
+            }
+            return afterKeyword;
+        }
+        if (urlOrPath.startsWith("http")) {
+            int lastSlash = urlOrPath.lastIndexOf("/");
+            if (lastSlash != -1) {
+                String afterSlash = urlOrPath.substring(lastSlash + 1);
+                int questionMarkIndex = afterSlash.indexOf("?");
+                if (questionMarkIndex != -1) {
+                    return afterSlash.substring(0, questionMarkIndex);
+                }
+                return afterSlash;
+            }
+        }
+        return urlOrPath;
+    }
+
     private String resolveImageExtension(String originalFilename, String contentType) {
         if (contentType != null) {
             if (contentType.contains("png")) {
