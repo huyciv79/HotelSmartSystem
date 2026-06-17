@@ -76,7 +76,11 @@ export default function Dashboard({ setActivePage }) {
         if (token) {
           const response = await getBookingHistory();
           if (response && response.data) {
-            setRealBookings(response.data);
+            const overridden = response.data.map(bk => {
+              const localStatus = localStorage.getItem(`booking_status_${bk.bookingId}`);
+              return localStatus ? { ...bk, status: localStatus } : bk;
+            });
+            setRealBookings(overridden);
           }
         }
       } catch (err) {

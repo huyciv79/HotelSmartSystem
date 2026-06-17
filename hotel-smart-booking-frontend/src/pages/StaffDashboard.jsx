@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getRoomTypes } from '../services/roomService';
 import { createRoomType, updateRoomType, deleteRoomType } from '../services/roomManagementService';
-import { getBookingHistory } from '../services/bookingService';
+import { getBookingHistory, getAllBookings, checkInBooking, checkOutBooking } from '../services/bookingService';
 import Profile from './Profile';
 import { useToast, ToastContainer } from '../components/Toast';
 
@@ -61,27 +61,54 @@ export default function StaffDashboard({ setActivePage }) {
 
   const fetchRealBookings = async () => {
     try {
-      const response = await getBookingHistory();
-      if (response && response.data) {
-        const realMapped = response.data.map(bk => ({
-          id: bk.bookingId,
-          bookingReference: bk.bookingNumber || `BK-${bk.bookingId}`,
-          guestName: bk.guestName || 'Khách hàng Elysian',
-          email: bk.guestEmail || '',
-          roomType: bk.roomType,
-          quantity: bk.quantity || 1,
-          checkInDate: bk.checkInDate,
-          checkOutDate: bk.checkOutDate,
-          nights: bk.nights,
-          totalAmount: bk.totalAmount,
-          status: bk.status === 'Cancelled' ? 'Cancelled' : bk.status === 'Checked-in' || bk.status === 'Checked In' ? 'Checked In' : bk.status === 'Checked-out' || bk.status === 'Checked Out' ? 'Checked Out' : 'Confirmed',
-          checkInMethod: bk.checkInMethod || 'Manual',
-          bookingType: bk.bookingType || 'Online',
-          guestPhone: bk.guestPhone || '',
-          specialRequests: bk.specialRequests || '',
-          numberOfAdults: bk.numberOfAdults || 1,
-          numberOfChildren: bk.numberOfChildren || 0
-        }));
+      let allBookings = [];
+      try {
+        const response = await getAllBookings();
+        if (response && response.data) {
+          allBookings = response.data;
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải toàn bộ đặt phòng từ backend:', err);
+        // Fallback: try getBookingHistory or localStorage just in case
+        try {
+          const response = await getBookingHistory();
+          if (response && response.data) {
+            allBookings = [...response.data];
+          }
+        } catch (e2) {}
+        try {
+          const localCreated = JSON.parse(localStorage.getItem('hotel_all_bookings') || '[]');
+          localCreated.forEach(localBk => {
+            if (!allBookings.some(b => b.bookingId === localBk.bookingId)) {
+              allBookings.push(localBk);
+            }
+          });
+        } catch (e3) {}
+      }
+
+      if (allBookings.length > 0) {
+        const realMapped = allBookings.map(bk => {
+          const localStatus = localStorage.getItem(`booking_status_${bk.bookingId}`) || bk.status;
+          return {
+            id: bk.bookingId,
+            bookingReference: bk.bookingNumber || bk.bookingReference || `BK-${bk.bookingId}`,
+            guestName: bk.guestName || 'Khách hàng Elysian',
+            email: bk.guestEmail || bk.email || '',
+            roomType: bk.roomType || bk.roomTypeName,
+            quantity: bk.quantity || 1,
+            checkInDate: bk.checkInDate,
+            checkOutDate: bk.checkOutDate,
+            nights: bk.nights,
+            totalAmount: bk.totalAmount,
+            status: localStatus === 'Cancelled' ? 'Cancelled' : localStatus === 'Checked-in' || localStatus === 'Checked In' ? 'Checked In' : localStatus === 'Checked-out' || localStatus === 'Checked Out' ? 'Checked Out' : 'Confirmed',
+            checkInMethod: bk.checkInMethod || 'Manual',
+            bookingType: bk.bookingType || 'Online',
+            guestPhone: bk.guestPhone || '',
+            specialRequests: bk.specialRequests || '',
+            numberOfAdults: bk.numberOfAdults || 1,
+            numberOfChildren: bk.numberOfChildren || 0
+          };
+        });
 
         setBookings(prev => {
           const filteredMocks = prev.filter(mock => 
@@ -91,7 +118,7 @@ export default function StaffDashboard({ setActivePage }) {
         });
       }
     } catch (err) {
-      console.error('Lỗi khi tải lịch sử đặt phòng từ backend:', err);
+      console.error('Lỗi trong fetchRealBookings:', err);
     }
   };
 
@@ -127,24 +154,65 @@ export default function StaffDashboard({ setActivePage }) {
     }, 2500);
   };
 
-  const completeScannerAction = () => {
-    const nextStatus = scanningBooking.status === 'Confirmed' ? 'Checked In' : 'Checked Out';
+  const completeScannerAction = async () => {
+    const isCheckIn = scanningBooking.status === 'Confirmed';
+    const nextStatus = isCheckIn ? 'Checked In' : 'Checked Out';
     
-    setBookings(prev => prev.map(bk => 
-      bk.id === scanningBooking.id ? { ...bk, status: nextStatus } : bk
-    ));
-    
-    showToast(`Đã cập nhật trạng thái đơn ${scanningBooking.bookingReference} sang ${nextStatus === 'Checked In' ? 'ĐÃ NHẬN PHÒNG' : 'ĐÃ TRẢ PHÒNG'} thành công!`, 'success');
-    setIsScanning(false);
-    setScanningBooking(null);
-    setScanType(null);
+    try {
+      if (isCheckIn) {
+        await checkInBooking(scanningBooking.id);
+      } else {
+        await checkOutBooking(scanningBooking.id);
+      }
+      
+      // Save to localStorage so it persists across logins
+      localStorage.setItem(`booking_status_${scanningBooking.id}`, nextStatus);
+      if (nextStatus === 'Checked In') {
+        localStorage.setItem(`booking_actualcheckin_${scanningBooking.id}`, new Date().toISOString());
+      } else if (nextStatus === 'Checked Out') {
+        localStorage.setItem(`booking_actualcheckout_${scanningBooking.id}`, new Date().toISOString());
+      }
+
+      setBookings(prev => prev.map(bk => 
+        bk.id === scanningBooking.id ? { ...bk, status: nextStatus } : bk
+      ));
+      
+      showToast(`Đã cập nhật trạng thái đơn ${scanningBooking.bookingReference} sang ${nextStatus === 'Checked In' ? 'ĐÃ NHẬN PHÒNG' : 'ĐÃ TRẢ PHÒNG'} thành công!`, 'success');
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật trạng thái.', 'error');
+    } finally {
+      setIsScanning(false);
+      setScanningBooking(null);
+      setScanType(null);
+    }
   };
 
-  const handleDirectCheckInOut = (booking, targetStatus) => {
-    setBookings(prev => prev.map(bk => 
-      bk.id === booking.id ? { ...bk, status: targetStatus } : bk
-    ));
-    showToast(`Đã chuyển trạng thái sang ${targetStatus === 'Checked In' ? 'ĐÃ NHẬN PHÒNG' : 'ĐÃ TRẢ PHÒNG'}!`, 'success');
+  const handleDirectCheckInOut = async (booking, targetStatus) => {
+    const isCheckIn = targetStatus === 'Checked In';
+    try {
+      if (isCheckIn) {
+        await checkInBooking(booking.id);
+      } else {
+        await checkOutBooking(booking.id);
+      }
+
+      // Save to localStorage so it persists across logins
+      localStorage.setItem(`booking_status_${booking.id}`, targetStatus);
+      if (targetStatus === 'Checked In') {
+        localStorage.setItem(`booking_actualcheckin_${booking.id}`, new Date().toISOString());
+      } else if (targetStatus === 'Checked Out') {
+        localStorage.setItem(`booking_actualcheckout_${booking.id}`, new Date().toISOString());
+      }
+
+      setBookings(prev => prev.map(bk => 
+        bk.id === booking.id ? { ...bk, status: targetStatus } : bk
+      ));
+      showToast(`Đã chuyển trạng thái sang ${targetStatus === 'Checked In' ? 'ĐÃ NHẬN PHÒNG' : 'ĐÃ TRẢ PHÒNG'}!`, 'success');
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật trạng thái.', 'error');
+    }
   };
 
   // Filter bookings for receptionist
