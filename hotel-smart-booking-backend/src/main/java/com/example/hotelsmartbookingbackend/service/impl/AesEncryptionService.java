@@ -1,6 +1,5 @@
 package com.example.hotelsmartbookingbackend.service.impl;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -38,7 +37,6 @@ import java.util.HexFormat;
  *   openssl rand -base64 32
  * </pre>
  */
-@Slf4j
 @Service
 public class AesEncryptionService {
 
@@ -80,8 +78,6 @@ public class AesEncryptionService {
             );
         }
         this.hmacKey = new SecretKeySpec(hmacBytes, HMAC_ALGORITHM);
-
-        log.info("[AES] AesEncryptionService khởi tạo thành công: AES-256-GCM + HMAC-SHA256.");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -113,7 +109,6 @@ public class AesEncryptionService {
             return ivBase64 + DELIMITER + ciphertextBase64;
 
         } catch (Exception ex) {
-            log.error("[AES] Lỗi khi mã hóa dữ liệu: {}", ex.getMessage());
             throw new RuntimeException("Không thể mã hóa dữ liệu nhạy cảm.", ex);
         }
     }
@@ -146,10 +141,8 @@ public class AesEncryptionService {
             return new String(plaintextBytes, java.nio.charset.StandardCharsets.UTF_8);
 
         } catch (javax.crypto.AEADBadTagException ex) {
-            log.error("[AES] Xác thực GCM thất bại – dữ liệu có thể bị giả mạo hoặc key sai.");
             throw new RuntimeException("Dữ liệu mã hóa không hợp lệ hoặc đã bị chỉnh sửa.", ex);
         } catch (Exception ex) {
-            log.error("[AES] Lỗi khi giải mã dữ liệu: {}", ex.getMessage());
             throw new RuntimeException("Không thể giải mã dữ liệu nhạy cảm.", ex);
         }
     }
@@ -180,7 +173,6 @@ public class AesEncryptionService {
             );
             return HexFormat.of().formatHex(hashBytes);  // 64 ký tự hex
         } catch (Exception ex) {
-            log.error("[HMAC] Lỗi khi tạo HMAC fingerprint: {}", ex.getMessage());
             throw new RuntimeException("Không thể tạo fingerprint dữ liệu.", ex);
         }
     }
