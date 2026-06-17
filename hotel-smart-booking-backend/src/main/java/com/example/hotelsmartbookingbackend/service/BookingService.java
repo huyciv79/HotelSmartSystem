@@ -16,4 +16,10 @@ public interface BookingService {
     List<BookingHistoryResponse> getBookingHistory(String customerEmail);
 
     BookingResponse getBookingDetail(Integer bookingId, String customerEmail);
+
+    BookingResponse performCheckIn(Integer bookingId, String staffEmail);
+
+    BookingResponse performCheckOut(Integer bookingId, String staffEmail);
+
+    List<BookingHistoryResponse> getAllBookingsForStaff(String staffEmail);
 }

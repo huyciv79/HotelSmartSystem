@@ -27,6 +27,7 @@ easyocr==1.7.2
 
 # Deep Learning Backend
 tensorflow==2.17.0
+tf-keras==2.17.0
 
 # Logging & Utilities
 python-dotenv==1.0.1

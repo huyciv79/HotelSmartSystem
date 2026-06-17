@@ -25,9 +25,9 @@ public class Feedbackimage {
     @JoinColumn(name = "feedbackid", nullable = false)
     private Feedback feedbackid;
 
-    @Size(max = 500)
+    @Size(max = 10485760)
     @NotNull
-    @Column(name = "imageurl", nullable = false, length = 500)
+    @Column(name = "imageurl", nullable = false, length = 10485760)
     private String imageurl;
 
     @NotNull

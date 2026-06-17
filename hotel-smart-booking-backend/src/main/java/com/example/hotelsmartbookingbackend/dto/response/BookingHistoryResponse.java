@@ -28,4 +28,8 @@ public class BookingHistoryResponse {
     private Long nights;
     private BigDecimal totalAmount;
     private String status;
+    private String guestName;
+    private String guestEmail;
+    private Instant actualCheckIn;
+    private Instant actualCheckOut;
 }

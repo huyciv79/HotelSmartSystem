@@ -7,7 +7,9 @@ import com.example.hotelsmartbookingbackend.entity.Booking;
 import com.example.hotelsmartbookingbackend.entity.Feedback;
 import com.example.hotelsmartbookingbackend.entity.Feedbackimage;
 import com.example.hotelsmartbookingbackend.entity.User;
+import com.example.hotelsmartbookingbackend.entity.Bookingdetail;
 import com.example.hotelsmartbookingbackend.repository.BookingRepository;
+import com.example.hotelsmartbookingbackend.repository.BookingdetailRepository;
 import com.example.hotelsmartbookingbackend.repository.FeedbackRepository;
 import com.example.hotelsmartbookingbackend.repository.FeedbackimageRepository;
 import com.example.hotelsmartbookingbackend.repository.UserRepository;
@@ -32,6 +34,7 @@ public class FeedbackServiceImpl implements FeedbackService {
     private final FeedbackimageRepository feedbackimageRepository;
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
+    private final BookingdetailRepository bookingdetailRepository;
 
     @Override
     @Transactional
@@ -60,8 +63,13 @@ public class FeedbackServiceImpl implements FeedbackService {
         }
 
         // 4. Tạo bản ghi Feedback
+        Bookingdetail detail = bookingdetailRepository.findByBookingid_Id(booking.getId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đặt phòng"));
+
         Feedback feedback = new Feedback();
         feedback.setBookingid(booking);
+        feedback.setUserid(booking.getUserid());
+        feedback.setRoomtypeid(detail.getRoomtypeid());
         feedback.setRating(request.getRating());
         feedback.setComment(request.getComment());
         feedback.setPros(request.getPros());
