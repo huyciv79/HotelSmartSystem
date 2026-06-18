@@ -39,8 +39,6 @@ public class BookingServiceImpl implements BookingService {
     private static final String BOOKING_STATUS_CONFIRMED = "Confirmed";
     private static final String DETAIL_STATUS_ACTIVE = "Active";
     private static final int DEFAULT_SINGLE_BOOKING_QUANTITY = 1;
-    private static final int DEFAULT_SINGLE_BOOKING_ADULTS = 1;
-    private static final int DEFAULT_SINGLE_BOOKING_CHILDREN = 0;
     private static final List<String> INVENTORY_HOLDING_BOOKING_STATUSES =
             List.of("Pending", "Confirmed", "Checked In");
     private static final List<String> INVENTORY_HOLDING_DETAIL_STATUSES = List.of("Active");
@@ -58,6 +56,7 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponse createBooking(CreateBookingRequest request, String customerEmail) {
         validateDates(request.getCheckInDate(), request.getCheckOutDate());
+        validateGuestCounts(request.getNumberOfAdults(), request.getNumberOfChildren());
 
         return createBookingInternal(
                 customerEmail,
@@ -65,8 +64,8 @@ public class BookingServiceImpl implements BookingService {
                 request.getCheckInDate(),
                 request.getCheckOutDate(),
                 DEFAULT_SINGLE_BOOKING_QUANTITY,
-                DEFAULT_SINGLE_BOOKING_ADULTS,
-                DEFAULT_SINGLE_BOOKING_CHILDREN,
+                request.getNumberOfAdults(),
+                request.getNumberOfChildren(),
                 request.getSpecialRequests(),
                 request.getCheckInMethod(),
                 BOOKING_TYPE_ONLINE);
@@ -202,11 +201,15 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Số lượng phòng cho đặt nhóm phải ít nhất là 2");
         }
 
-        if (request.getNumberOfAdults() == null || request.getNumberOfAdults() <= 0) {
+        validateGuestCounts(request.getNumberOfAdults(), request.getNumberOfChildren());
+    }
+
+    private void validateGuestCounts(Integer numberOfAdults, Integer numberOfChildren) {
+        if (numberOfAdults == null || numberOfAdults <= 0) {
             throw new RuntimeException("Số người lớn phải lớn hơn 0");
         }
 
-        if (request.getNumberOfChildren() == null || request.getNumberOfChildren() < 0) {
+        if (numberOfChildren == null || numberOfChildren < 0) {
             throw new RuntimeException("Số trẻ em không được âm");
         }
     }
