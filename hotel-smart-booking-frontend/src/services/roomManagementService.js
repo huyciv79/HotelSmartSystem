@@ -34,3 +34,27 @@ export const deleteRoomType = async (id) => {
   const response = await axiosInstance.delete(`/room-types/${id}`);
   return response.data;
 };
+
+/**
+ * Fetch list of individual rooms from backend.
+ * GET /api/rooms
+ */
+export const getRooms = async (params = {}) => {
+  const query = new URLSearchParams();
+  Object.keys(params).forEach(key => {
+    if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+      query.append(key, params[key]);
+    }
+  });
+  const response = await axiosInstance.get(`/rooms?${query.toString()}`);
+  return response.data;
+};
+
+/**
+ * Update an existing individual room's details.
+ * PUT /api/rooms/{id}
+ */
+export const updateRoom = async (id, data) => {
+  const response = await axiosInstance.put(`/rooms/${id}`, data);
+  return response.data;
+};
