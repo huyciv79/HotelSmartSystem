@@ -1,7 +1,9 @@
 package com.example.hotelsmartbookingbackend.dto.request;
 
 import jakarta.validation.constraints.FutureOrPresent;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -35,6 +37,13 @@ public class CreateBookingRequest {
     @NotNull(message = "Vui lòng nhập số trẻ em")
     @PositiveOrZero(message = "Số trẻ em không được âm")
     private Integer numberOfChildren;
+
+    @NotBlank(message = "Vui lòng chọn phương thức check-in")
+    @Pattern(
+            regexp = "Face Recognition|QR Code|Manual",
+            message = "Phương thức check-in chỉ được là Face Recognition, QR Code hoặc Manual"
+    )
+    private String checkInMethod;
 
     @Size(max = 2000, message = "Yêu cầu đặc biệt không được vượt quá 2000 ký tự")
     private String specialRequests;

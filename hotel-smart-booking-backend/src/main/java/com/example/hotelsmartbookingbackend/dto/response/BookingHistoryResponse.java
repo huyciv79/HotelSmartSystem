@@ -17,6 +17,7 @@ public class BookingHistoryResponse {
     private Integer bookingId;
     private String bookingNumber;
     private Instant bookingDate;
+    private String checkInMethod;
     private Integer roomTypeId;
     private String roomType;
     private Integer quantity;
@@ -27,4 +28,8 @@ public class BookingHistoryResponse {
     private Long nights;
     private BigDecimal totalAmount;
     private String status;
+    private String guestName;
+    private String guestEmail;
+    private Instant actualCheckIn;
+    private Instant actualCheckOut;
 }

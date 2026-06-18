@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.Instant;
 
@@ -14,15 +16,34 @@ import java.time.Instant;
 @Entity
 @Table(name = "ekyc_profiles")
 public class EkycProfile {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ekycid", nullable = false)
     private Integer id;
 
-    @Size(max = 50)
     @NotNull
-    @Column(name = "idcardnumber", nullable = false, length = 50)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name = "userid", nullable = false)
+    private User userid;
+
+
+    @Size(max = 512)
+    @Column(name = "idcardnumber", length = 512)
     private String idcardnumber;
+
+    @Size(max = 64)
+    @Column(name = "idcardnumber_hash", length = 64, unique = true)
+    private String idcardnumberhash;
+
+    @Size(max = 512)
+    @Column(name = "fullname", length = 512)
+    private String fullname;
+
+    @Size(max = 512)
+    @Column(name = "dateofbirth", length = 512)
+    private String dateofbirth;
 
     @Size(max = 512)
     @Column(name = "frontimage", length = 512)

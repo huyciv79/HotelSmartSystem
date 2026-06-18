@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -101,4 +103,14 @@ public class Booking {
     @Column(name = "updatedat", nullable = false)
     private Instant updatedat;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cancelledby")
+    private User cancelledby;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "createdby")
+    private User createdby;
+
+
 }
+

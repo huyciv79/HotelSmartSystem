@@ -5,11 +5,13 @@ import {
   Plus,
   Settings,
   LogOut,
+  ShieldCheck,
 } from "lucide-react";
 
 const navItems = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
   { key: "stays", label: "My Stays", icon: Building2 },
+  { key: "ekyc", label: "Identity Verification", icon: ShieldCheck },
 ];
 
 const bottomLinks = [
@@ -56,7 +58,7 @@ const DashboardSidebar = ({
               }`}
             >
               <Icon size={17} className={isActive ? "text-primary" : "text-slate-400"} />
-              <span>{label === "Overview" ? "Tổng quan" : label === "My Stays" ? "Đặt phòng của tôi" : label}</span>
+              <span>{label === "Overview" ? "Tổng quan" : label === "My Stays" ? "Đặt phòng của tôi" : label === "Identity Verification" ? "Xác minh danh tính (eKYC)" : label}</span>
             </button>
           );
         })}

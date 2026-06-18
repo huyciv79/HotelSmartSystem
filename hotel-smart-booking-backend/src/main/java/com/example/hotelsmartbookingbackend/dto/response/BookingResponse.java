@@ -17,6 +17,7 @@ public class BookingResponse {
     private Integer bookingId;
     private String bookingReference;
     private String bookingType;
+    private String checkInMethod;
     private Integer roomTypeId;
     private String roomTypeName;
     private Integer quantity;
@@ -29,5 +30,7 @@ public class BookingResponse {
     private BigDecimal finalAmount;
     private String status;
     private String specialRequests;
+    private Instant actualCheckIn;
+    private Instant actualCheckOut;
     private Instant createdAt;
 }

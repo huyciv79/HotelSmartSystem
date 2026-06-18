@@ -178,7 +178,7 @@ export default function Booking({ setActivePage }) {
         roomTypeId: selectedRoom.id,
         checkInDate: formatDateString(startDate),
         checkOutDate: formatDateString(endDate),
-        checkInMethod,
+        checkInMethod: checkInMethod === 'FaceID' ? 'Face Recognition' : checkInMethod,
         specialRequests
       };
 
@@ -186,6 +186,20 @@ export default function Booking({ setActivePage }) {
       if (response && response.data) {
         showToast('Đặt phòng thành công!', 'success');
         
+        try {
+          const existing = JSON.parse(localStorage.getItem('hotel_all_bookings') || '[]');
+          const userObj = JSON.parse(localStorage.getItem('user') || '{}');
+          const newBk = {
+            ...response.data,
+            guestName: userObj.fullName || userObj.name || 'Khách hàng Elysian',
+            guestEmail: userObj.email || ''
+          };
+          existing.push(newBk);
+          localStorage.setItem('hotel_all_bookings', JSON.stringify(existing));
+        } catch (e) {
+          console.error('Lỗi khi lưu đặt phòng vào danh sách dùng chung:', e);
+        }
+
         sessionStorage.removeItem('bookingRoom');
         sessionStorage.setItem('selectedBookingId', response.data.bookingId);
         

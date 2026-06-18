@@ -60,6 +60,31 @@ public class BookingController {
         return ResponseEntity.ok(ApiResponse.success("Lấy chi tiết đặt phòng thành công", response));
     }
 
+    @GetMapping("/all")
+    public ResponseEntity<ApiResponse<List<BookingHistoryResponse>>> getAllBookings(Authentication authentication) {
+        String staffEmail = resolveCustomerEmail(authentication);
+        List<BookingHistoryResponse> response = bookingService.getAllBookingsForStaff(staffEmail);
+        return ResponseEntity.ok(ApiResponse.success("Lấy toàn bộ lịch sử đặt phòng thành công", response));
+    }
+
+    @PostMapping("/{bookingId}/check-in")
+    public ResponseEntity<ApiResponse<BookingResponse>> checkIn(
+            @PathVariable Integer bookingId,
+            Authentication authentication) {
+        String staffEmail = resolveCustomerEmail(authentication);
+        BookingResponse response = bookingService.performCheckIn(bookingId, staffEmail);
+        return ResponseEntity.ok(ApiResponse.success("Nhận phòng thành công", response));
+    }
+
+    @PostMapping("/{bookingId}/check-out")
+    public ResponseEntity<ApiResponse<BookingResponse>> checkOut(
+            @PathVariable Integer bookingId,
+            Authentication authentication) {
+        String staffEmail = resolveCustomerEmail(authentication);
+        BookingResponse response = bookingService.performCheckOut(bookingId, staffEmail);
+        return ResponseEntity.ok(ApiResponse.success("Trả phòng thành công", response));
+    }
+
     private String resolveCustomerEmail(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()
                 || "anonymousUser".equals(authentication.getPrincipal())) {

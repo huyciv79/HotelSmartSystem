@@ -4,6 +4,8 @@ import DashboardSidebar from '../components/dashboard/DashboardSidebar';
 import HeroBanner from '../components/dashboard/HeroBanner';
 import CurrentBooking from '../components/dashboard/CurrentBooking';
 import BookingHistory from '../components/dashboard/BookingHistory';
+import IdentityCard from '../components/dashboard/IdentityCard';
+import EkycHub from './ekyc/EkycHub';
 import Profile from './Profile';
 import { getUserProfile } from '../services/userService';
 import { getBookingHistory } from '../services/bookingService';
@@ -74,7 +76,11 @@ export default function Dashboard({ setActivePage }) {
         if (token) {
           const response = await getBookingHistory();
           if (response && response.data) {
-            setRealBookings(response.data);
+            const overridden = response.data.map(bk => {
+              const localStatus = localStorage.getItem(`booking_status_${bk.bookingId}`);
+              return localStatus ? { ...bk, status: localStatus } : bk;
+            });
+            setRealBookings(overridden);
           }
         }
       } catch (err) {
@@ -196,6 +202,8 @@ export default function Dashboard({ setActivePage }) {
                 </div>
               )}
             </div>
+          ) : activeTab === 'ekyc' ? (
+            <EkycHub onBack={() => setActiveTab('overview')} />
           ) : (
             <>
               <HeroBanner
@@ -226,10 +234,12 @@ export default function Dashboard({ setActivePage }) {
                   )}
                 </div>
 
-                <div className="lg:col-span-1">
+                <div className="lg:col-span-1 flex flex-col gap-8">
+                  <IdentityCard onNavigate={() => setActiveTab('ekyc')} />
                   <BookingHistory 
                     bookings={mapRealToBookingHistory(realBookings.slice(0, 3))} 
                     onViewDetail={(id) => handleViewBookingDetail(id)}
+                    onViewAll={() => setActiveTab('stays')}
                   />
                 </div>
               </div>
