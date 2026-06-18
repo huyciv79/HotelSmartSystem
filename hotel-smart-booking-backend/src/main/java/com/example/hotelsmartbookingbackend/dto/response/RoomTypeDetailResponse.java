@@ -13,7 +13,7 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class RoomTypeDetailDTO {
+public class RoomTypeDetailResponse {
     private Integer id;
     private String name;
     private String description;
@@ -25,7 +25,7 @@ public class RoomTypeDetailDTO {
     private String bedType;
     private String amenities;
     private String status;
-    private List<RoomTypeImageDTO> images;
+    private List<RoomTypeImageResponse> images;
     private Instant createdAt;
     private Instant updatedAt;
 }

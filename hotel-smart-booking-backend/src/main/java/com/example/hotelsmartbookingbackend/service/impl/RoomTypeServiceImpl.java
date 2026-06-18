@@ -2,9 +2,9 @@ package com.example.hotelsmartbookingbackend.service.impl;
 
 import com.example.hotelsmartbookingbackend.dto.request.RoomTypeFilterCriteria;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
-import com.example.hotelsmartbookingbackend.dto.response.RoomTypeDetailDTO;
-import com.example.hotelsmartbookingbackend.dto.response.RoomTypeImageDTO;
-import com.example.hotelsmartbookingbackend.dto.response.RoomTypeSummaryDTO;
+import com.example.hotelsmartbookingbackend.dto.response.RoomTypeDetailResponse;
+import com.example.hotelsmartbookingbackend.dto.response.RoomTypeImageResponse;
+import com.example.hotelsmartbookingbackend.dto.response.RoomTypeSummaryResponse;
 import com.example.hotelsmartbookingbackend.entity.Roomtype;
 import com.example.hotelsmartbookingbackend.entity.Roomtypeimage;
 import com.example.hotelsmartbookingbackend.repository.RoomRepository;
@@ -33,15 +33,15 @@ public class RoomTypeServiceImpl implements RoomTypeService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<RoomTypeSummaryDTO> getRoomTypeList(RoomTypeFilterCriteria criteria, Pageable pageable) {
+    public PageResponse<RoomTypeSummaryResponse> getRoomTypeList(RoomTypeFilterCriteria criteria, Pageable pageable) {
         Specification<Roomtype> spec = RoomTypeSpecification.withFilters(criteria);
         Page<Roomtype> page = roomtypeRepository.findAll(spec, pageable);
 
-        List<RoomTypeSummaryDTO> content = page.getContent().stream()
+        List<RoomTypeSummaryResponse> content = page.getContent().stream()
                 .map(this::mapToSummaryDTO)
                 .toList();
 
-        return PageResponse.<RoomTypeSummaryDTO>builder()
+        return PageResponse.<RoomTypeSummaryResponse>builder()
                 .content(content)
                 .page(page.getNumber())
                 .size(page.getSize())
@@ -54,13 +54,13 @@ public class RoomTypeServiceImpl implements RoomTypeService {
 
     @Override
     @Transactional(readOnly = true)
-    public RoomTypeDetailDTO getRoomTypeDetail(Integer id) {
+    public RoomTypeDetailResponse getRoomTypeDetail(Integer id) {
         Roomtype roomtype = roomtypeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy loại phòng với mã: " + id));
 
         List<Roomtypeimage> images = roomtypeimageRepository.findByRoomtypeid_IdOrderByDisplayorderAsc(id);
 
-        return RoomTypeDetailDTO.builder()
+        return RoomTypeDetailResponse.builder()
                 .id(roomtype.getId())
                 .name(roomtype.getName())
                 .description(roomtype.getDescription())
@@ -78,8 +78,8 @@ public class RoomTypeServiceImpl implements RoomTypeService {
                 .build();
     }
 
-    private RoomTypeSummaryDTO mapToSummaryDTO(Roomtype roomtype) {
-        return RoomTypeSummaryDTO.builder()
+    private RoomTypeSummaryResponse mapToSummaryDTO(Roomtype roomtype) {
+        return RoomTypeSummaryResponse.builder()
                 .id(roomtype.getId())
                 .name(roomtype.getName())
                 .description(roomtype.getDescription())
@@ -103,8 +103,8 @@ public class RoomTypeServiceImpl implements RoomTypeService {
                 .orElse(roomtype.getImages());
     }
 
-    private RoomTypeImageDTO mapToImageDTO(Roomtypeimage image) {
-        return RoomTypeImageDTO.builder()
+    private RoomTypeImageResponse mapToImageDTO(Roomtypeimage image) {
+        return RoomTypeImageResponse.builder()
                 .id(image.getId())
                 .imageUrl(image.getImageurl())
                 .primary(image.getIsprimary())

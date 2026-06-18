@@ -2,13 +2,13 @@ package com.example.hotelsmartbookingbackend.service;
 
 import com.example.hotelsmartbookingbackend.dto.request.RoomTypeFilterCriteria;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
-import com.example.hotelsmartbookingbackend.dto.response.RoomTypeDetailDTO;
-import com.example.hotelsmartbookingbackend.dto.response.RoomTypeSummaryDTO;
+import com.example.hotelsmartbookingbackend.dto.response.RoomTypeDetailResponse;
+import com.example.hotelsmartbookingbackend.dto.response.RoomTypeSummaryResponse;
 import org.springframework.data.domain.Pageable;
 
 public interface RoomTypeService {
 
-    PageResponse<RoomTypeSummaryDTO> getRoomTypeList(RoomTypeFilterCriteria criteria, Pageable pageable);
+    PageResponse<RoomTypeSummaryResponse> getRoomTypeList(RoomTypeFilterCriteria criteria, Pageable pageable);
 
-    RoomTypeDetailDTO getRoomTypeDetail(Integer id);
+    RoomTypeDetailResponse getRoomTypeDetail(Integer id);
 }

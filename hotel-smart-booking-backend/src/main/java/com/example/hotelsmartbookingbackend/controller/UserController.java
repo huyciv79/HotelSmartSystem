@@ -2,7 +2,7 @@ package com.example.hotelsmartbookingbackend.controller;
 
 import com.example.hotelsmartbookingbackend.dto.request.UpdateProfileRequest;
 import com.example.hotelsmartbookingbackend.dto.response.ApiResponse;
-import com.example.hotelsmartbookingbackend.dto.response.UserProfileDTO;
+import com.example.hotelsmartbookingbackend.dto.response.UserProfileResponse;
 import com.example.hotelsmartbookingbackend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,16 +21,16 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping("/profile")
-    public ResponseEntity<ApiResponse<UserProfileDTO>> getProfile(Principal principal) {
-        UserProfileDTO profile = userService.getUserProfile(principal.getName());
+    public ResponseEntity<ApiResponse<UserProfileResponse>> getProfile(Principal principal) {
+        UserProfileResponse profile = userService.getUserProfile(principal.getName());
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin cá nhân thành công", profile));
     }
 
     @PutMapping("/profile")
-    public ResponseEntity<ApiResponse<UserProfileDTO>> updateProfile(
+    public ResponseEntity<ApiResponse<UserProfileResponse>> updateProfile(
             Principal principal,
             @Valid @RequestBody UpdateProfileRequest request) {
-        UserProfileDTO profile = userService.updateUserProfile(principal.getName(), request);
+        UserProfileResponse profile = userService.updateUserProfile(principal.getName(), request);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật hồ sơ thành công", profile));
     }
 
