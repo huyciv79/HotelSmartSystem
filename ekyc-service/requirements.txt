@@ -1,0 +1,33 @@
+# eKYC Service - Python Dependencies
+# Python >= 3.10
+# Install: pip install -r requirements.txt
+
+# Web Framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.18
+
+# Config & Validation
+pydantic==2.10.2
+pydantic-settings==2.6.1
+
+# HTTP Client
+requests==2.32.3
+
+# Image Processing
+Pillow==10.4.0
+numpy==1.26.4
+opencv-python-headless==4.10.0.84
+
+# Face Recognition - DeepFace
+deepface==0.0.93
+
+# OCR - EasyOCR
+easyocr==1.7.2
+
+# Deep Learning Backend
+tensorflow==2.17.0
+tf-keras==2.17.0
+
+# Logging & Utilities
+python-dotenv==1.0.1

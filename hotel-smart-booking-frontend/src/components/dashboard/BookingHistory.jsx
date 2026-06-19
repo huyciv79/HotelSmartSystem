@@ -1,33 +1,20 @@
 import { ChevronRight, MoreVertical } from "lucide-react";
 
-const BookingHistory = ({ bookings, onViewDetail }) => {
+const BookingHistory = ({ bookings, onViewDetail, onViewAll }) => {
   return (
     <div className="bg-white rounded-none border border-outline-variant shadow-lg overflow-hidden font-['Montserrat'] text-left">
       <div className="p-6 border-b border-neutral-300/30 flex justify-between items-center bg-slate-50">
         <h2 className="text-black font-black uppercase text-sm tracking-wider m-0">Lịch sử đặt phòng</h2>
-        <button className="flex items-center gap-1 text-primary text-[10px] font-black uppercase tracking-wider cursor-pointer border-none bg-transparent hover:text-slate-900 transition-colors">
+        <button 
+          onClick={onViewAll}
+          className="flex items-center gap-1 text-primary text-[10px] font-black uppercase tracking-wider cursor-pointer border-none bg-transparent hover:text-slate-900 transition-colors"
+        >
           Xem tất cả
           <ChevronRight size={14} />
         </button>
       </div>
 
-      <div className="bg-slate-100 grid grid-cols-[1fr_1fr_0.8fr_0.8fr_0.3fr] px-6 py-4 border-b border-slate-200">
-        <span className="text-slate-500 text-[9px] font-black uppercase tracking-wider">
-          ĐIỂM ĐẾN
-        </span>
-        <span className="text-slate-500 text-[9px] font-black uppercase tracking-wider">
-          THỜI GIAN LƯU TRÚ
-        </span>
-        <span className="text-slate-500 text-[9px] font-black uppercase tracking-wider">
-          TỔNG TIỀN
-        </span>
-        <span className="text-slate-500 text-[9px] font-black uppercase tracking-wider">
-          TRẠNG THÁI
-        </span>
-        <span />
-      </div>
-
-      <div>
+      <div className="flex flex-col divide-y divide-neutral-100">
         {bookings.length === 0 ? (
           <div className="p-8 text-center text-slate-400 font-bold text-[10px] uppercase tracking-wider">
             Không có lịch sử đặt phòng
@@ -62,21 +49,28 @@ const BookingHistory = ({ bookings, onViewDetail }) => {
               <div
                 key={index}
                 onClick={() => onViewDetail && onViewDetail(booking.id)}
-                className="grid grid-cols-[1fr_1fr_0.8fr_0.8fr_0.3fr] px-6 py-5 border-t border-neutral-300/20 items-center cursor-pointer hover:bg-slate-50 transition-colors"
+                className="p-5 flex flex-col gap-3.5 hover:bg-slate-50 transition-colors cursor-pointer"
               >
-                <div>
-                  <p className="text-zinc-900 font-black text-sm uppercase tracking-wide">{booking.name}</p>
-                  <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">{booking.roomType}</p>
-                </div>
-                <p className="text-zinc-800 text-xs font-bold uppercase tracking-wider">{booking.period}</p>
-                <p className="text-primary text-xs font-black">{booking.amount}</p>
-                <div>
-                  <span className={`px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-none ${statusClass}`}>
+                {/* Top Row: Room name & Status */}
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-zinc-900 font-black text-xs uppercase tracking-wide truncate">{booking.name}</p>
+                    <p className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider mt-0.5">{booking.roomType}</p>
+                  </div>
+                  <span className={`px-2.5 py-1 text-[8px] font-black uppercase tracking-widest shrink-0 ${statusClass}`}>
                     {statusText}
                   </span>
                 </div>
-                <div className="flex justify-end">
-                  <MoreVertical size={16} className="text-zinc-400 cursor-pointer" />
+
+                {/* Bottom Row: Period & Amount */}
+                <div className="flex justify-between items-end border-t border-dashed border-slate-100 pt-2.5">
+                  <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                    {booking.period}
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider block leading-none mb-0.5">TỔNG TIỀN</span>
+                    <span className="text-primary text-xs font-black">{booking.amount}</span>
+                  </div>
                 </div>
               </div>
             );

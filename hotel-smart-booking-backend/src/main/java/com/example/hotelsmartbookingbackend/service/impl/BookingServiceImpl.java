@@ -39,10 +39,8 @@ public class BookingServiceImpl implements BookingService {
     private static final String BOOKING_STATUS_CONFIRMED = "Confirmed";
     private static final String DETAIL_STATUS_ACTIVE = "Active";
     private static final int DEFAULT_SINGLE_BOOKING_QUANTITY = 1;
-    private static final int DEFAULT_SINGLE_BOOKING_ADULTS = 1;
-    private static final int DEFAULT_SINGLE_BOOKING_CHILDREN = 0;
-    private static final List<String> INVENTORY_HOLDING_BOOKING_STATUSES = List.of("Pending", "Confirmed",
-            "Checked In");
+    private static final List<String> INVENTORY_HOLDING_BOOKING_STATUSES =
+            List.of("Pending", "Confirmed", "Checked In");
     private static final List<String> INVENTORY_HOLDING_DETAIL_STATUSES = List.of("Active");
     private static final DateTimeFormatter BOOKING_REFERENCE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
             .withZone(HOTEL_ZONE);
@@ -58,6 +56,7 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponse createBooking(CreateBookingRequest request, String customerEmail) {
         validateDates(request.getCheckInDate(), request.getCheckOutDate());
+        validateGuestCounts(request.getNumberOfAdults(), request.getNumberOfChildren());
 
         return createBookingInternal(
                 customerEmail,
@@ -65,8 +64,8 @@ public class BookingServiceImpl implements BookingService {
                 request.getCheckInDate(),
                 request.getCheckOutDate(),
                 DEFAULT_SINGLE_BOOKING_QUANTITY,
-                DEFAULT_SINGLE_BOOKING_ADULTS,
-                DEFAULT_SINGLE_BOOKING_CHILDREN,
+                request.getNumberOfAdults(),
+                request.getNumberOfChildren(),
                 request.getSpecialRequests(),
                 request.getCheckInMethod(),
                 BOOKING_TYPE_ONLINE);
@@ -206,11 +205,15 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Số lượng phòng cho đặt nhóm phải ít nhất là 2");
         }
 
-        if (request.getNumberOfAdults() == null || request.getNumberOfAdults() <= 0) {
+        validateGuestCounts(request.getNumberOfAdults(), request.getNumberOfChildren());
+    }
+
+    private void validateGuestCounts(Integer numberOfAdults, Integer numberOfChildren) {
+        if (numberOfAdults == null || numberOfAdults <= 0) {
             throw new RuntimeException("Số người lớn phải lớn hơn 0");
         }
 
-        if (request.getNumberOfChildren() == null || request.getNumberOfChildren() < 0) {
+        if (numberOfChildren == null || numberOfChildren < 0) {
             throw new RuntimeException("Số trẻ em không được âm");
         }
     }
@@ -297,6 +300,8 @@ public class BookingServiceImpl implements BookingService {
                 .depositAmount(booking.getDepositamount())
                 .status(booking.getStatus())
                 .specialRequests(booking.getSpecialrequests())
+                .actualCheckIn(detail.getActualcheckin())
+                .actualCheckOut(detail.getActualcheckout())
                 .createdAt(booking.getCreatedat())
                 .build();
     }
@@ -322,7 +327,86 @@ public class BookingServiceImpl implements BookingService {
                 .nights(ChronoUnit.DAYS.between(checkInDate, checkOutDate))
                 .totalAmount(booking.getFinalamount())
                 .status(booking.getStatus())
+                .guestName(booking.getUserid() != null ? booking.getUserid().getFullname() : "Khách hàng Elysian")
+                .guestEmail(booking.getUserid() != null ? booking.getUserid().getEmail() : "")
+                .actualCheckIn(detail.getActualcheckin())
+                .actualCheckOut(detail.getActualcheckout())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse performCheckIn(Integer bookingId, String staffEmail) {
+        User staff = userRepository.findByEmail(staffEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        if (!"receptionist".equalsIgnoreCase(staff.getRole().name()) && !"manager".equalsIgnoreCase(staff.getRole().name())) {
+            throw new RuntimeException("Bạn không có quyền thực hiện chức năng này");
+        }
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
+
+        if (!"Confirmed".equalsIgnoreCase(booking.getStatus())) {
+            throw new RuntimeException("Đơn đặt phòng không ở trạng thái có thể nhận phòng");
+        }
+
+        booking.setStatus("Checked-in");
+        booking.setUpdatedat(Instant.now());
+        bookingRepository.save(booking);
+
+        Bookingdetail detail = bookingdetailRepository.findByBookingid_Id(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đặt phòng"));
+        detail.setActualcheckin(Instant.now());
+        detail.setUpdatedat(Instant.now());
+        bookingdetailRepository.save(detail);
+
+        return mapToResponse(booking, detail, detail.getRoomtypeid());
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse performCheckOut(Integer bookingId, String staffEmail) {
+        User staff = userRepository.findByEmail(staffEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        if (!"receptionist".equalsIgnoreCase(staff.getRole().name()) && !"manager".equalsIgnoreCase(staff.getRole().name())) {
+            throw new RuntimeException("Bạn không có quyền thực hiện chức năng này");
+        }
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
+
+        if (!"Checked-in".equalsIgnoreCase(booking.getStatus()) && !"Checked In".equalsIgnoreCase(booking.getStatus())) {
+            throw new RuntimeException("Đơn đặt phòng chưa được check-in");
+        }
+
+        booking.setStatus("Checked-out");
+        booking.setUpdatedat(Instant.now());
+        bookingRepository.save(booking);
+
+        Bookingdetail detail = bookingdetailRepository.findByBookingid_Id(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đặt phòng"));
+        detail.setActualcheckout(Instant.now());
+        detail.setUpdatedat(Instant.now());
+        bookingdetailRepository.save(detail);
+
+        return mapToResponse(booking, detail, detail.getRoomtypeid());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookingHistoryResponse> getAllBookingsForStaff(String staffEmail) {
+        User staff = userRepository.findByEmail(staffEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        if (!"receptionist".equalsIgnoreCase(staff.getRole().name()) && !"manager".equalsIgnoreCase(staff.getRole().name())) {
+            throw new RuntimeException("Bạn không có quyền thực hiện chức năng này");
+        }
+
+        return bookingdetailRepository.findAll().stream()
+                .map(this::mapToHistoryResponse)
+                .toList();
     }
 
     private Instant toInstant(LocalDate date) {

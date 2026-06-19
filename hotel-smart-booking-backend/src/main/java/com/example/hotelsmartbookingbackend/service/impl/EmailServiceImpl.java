@@ -23,7 +23,6 @@ public class EmailServiceImpl implements EmailService {
         try {
             mailSender.send(message);
         } catch (Exception e) {
-            System.err.println("Failed to send email to " + to + ": " + e.getMessage());
             throw new RuntimeException("Lỗi gửi email xác thực: " + e.getMessage(), e);
         }
     }
@@ -39,7 +38,6 @@ public class EmailServiceImpl implements EmailService {
         try {
             mailSender.send(message);
         } catch (Exception e) {
-            System.err.println("Failed to send email to " + to + ": " + e.getMessage());
             throw new RuntimeException("Lỗi gửi email xác thực khôi phục mật khẩu: " + e.getMessage(), e);
         }
     }

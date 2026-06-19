@@ -1,13 +1,12 @@
 package com.example.hotelsmartbookingbackend.service.impl;
 
 import com.example.hotelsmartbookingbackend.dto.request.UpdateProfileRequest;
-import com.example.hotelsmartbookingbackend.dto.response.UserProfileDTO;
+import com.example.hotelsmartbookingbackend.dto.response.UserProfileResponse;
 import com.example.hotelsmartbookingbackend.entity.User;
 import com.example.hotelsmartbookingbackend.repository.UserRepository;
 import com.example.hotelsmartbookingbackend.service.SupabaseStorageService;
 import com.example.hotelsmartbookingbackend.service.UserService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +17,6 @@ import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
@@ -27,7 +25,7 @@ public class UserServiceImpl implements UserService {
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
     @Override
-    public UserProfileDTO getUserProfile(String email) {
+    public UserProfileResponse getUserProfile(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin người dùng với email: " + email));
         return mapToProfileDTO(user);
@@ -35,7 +33,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserProfileDTO updateUserProfile(String email, UpdateProfileRequest request) {
+    public UserProfileResponse updateUserProfile(String email, UpdateProfileRequest request) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin người dùng với email: " + email));
 
@@ -44,7 +42,6 @@ public class UserServiceImpl implements UserService {
         user.setUpdatedat(Instant.now());
 
         userRepository.save(user);
-        log.info("Successfully updated user profile for email: {}", email);
 
         return mapToProfileDTO(user);
     }
@@ -100,7 +97,6 @@ public class UserServiceImpl implements UserService {
 
             // Clean up old avatar from Supabase Storage
             if (oldAvatarUrl != null && !oldAvatarUrl.isBlank()) {
-                log.info("Deleting old avatar: {}", oldAvatarUrl);
                 supabaseStorageService.deleteAvatar(oldAvatarUrl);
             }
 
@@ -109,13 +105,12 @@ public class UserServiceImpl implements UserService {
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Failed to process and upload avatar for email {}: {}", email, e.getMessage(), e);
-            throw new RuntimeException("Có lỗi xảy ra khi tải ảnh đại diện lên: " + e.getMessage());
+            throw new RuntimeException("Có lỗi xảy ra khi tải ảnh đại diện lên: " + e.getMessage(), e);
         }
     }
 
-    private UserProfileDTO mapToProfileDTO(User user) {
-        return UserProfileDTO.builder()
+    private UserProfileResponse mapToProfileDTO(User user) {
+        return UserProfileResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
                 .role(user.getRole() != null ? user.getRole().name() : null)

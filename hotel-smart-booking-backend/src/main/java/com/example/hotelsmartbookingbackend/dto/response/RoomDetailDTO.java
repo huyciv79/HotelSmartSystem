@@ -11,15 +11,16 @@ import java.time.Instant;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserProfileDTO {
+public class RoomDetailDTO {
     private Integer id;
-    private String email;
-    private String role;
-    private String phoneNumber;
-    private String fullName;
-    private String avatar;
-    private String address;
+    private String roomnumber;
+    private Integer floornumber;
     private String status;
+    private String note;
+    private String adminpasscode;
+    private Integer roomtypeid;
+    private String roomtypename;
     private Instant createdAt;
     private Instant updatedAt;
 }
+

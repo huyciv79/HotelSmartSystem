@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class RoomTypeImageDTO {
+public class RoomTypeImageResponse {
     private Integer id;
     private String imageUrl;
     private Boolean primary;

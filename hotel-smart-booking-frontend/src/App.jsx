@@ -21,9 +21,21 @@ import Dashboard from './pages/Dashboard';
 import Booking from './pages/Booking';
 import Payment from './pages/Payment';
 import BookingDetail from './pages/BookingDetail';
+import GroupBooking from './pages/GroupBooking';
+import StaffDashboard from './pages/StaffDashboard';
 
 function DashboardRoute() {
   const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(() => {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  });
+
+  // Keep state in sync with local storage updates
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    setCurrentUser(userStr ? JSON.parse(userStr) : null);
+  }, []);
 
   const setActivePage = useCallback(
     (page) => {
@@ -33,6 +45,10 @@ function DashboardRoute() {
     },
     [navigate],
   );
+
+  if (currentUser && (currentUser.role === 'manager' || currentUser.role === 'receptionist')) {
+    return <StaffDashboard setActivePage={setActivePage} />;
+  }
 
   return <Dashboard setActivePage={setActivePage} />;
 }
@@ -94,6 +110,8 @@ function MainSite() {
         return <Rewards />;
       case 'booking':
         return <Booking setActivePage={setActivePage} />;
+      case 'group-booking':
+        return <GroupBooking setActivePage={setActivePage} />;
       case 'payment':
         return <Payment setActivePage={setActivePage} />;
       case 'booking-detail':

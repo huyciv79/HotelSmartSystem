@@ -19,9 +19,15 @@ public class Feedbackimage {
     @Column(name = "feedbackimageid", nullable = false)
     private Integer id;
 
-    @Size(max = 500)
     @NotNull
-    @Column(name = "imageurl", nullable = false, length = 500)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @org.hibernate.annotations.OnDelete(action = org.hibernate.annotations.OnDeleteAction.CASCADE)
+    @JoinColumn(name = "feedbackid", nullable = false)
+    private Feedback feedbackid;
+
+    @Size(max = 10485760)
+    @NotNull
+    @Column(name = "imageurl", nullable = false, length = 10485760)
     private String imageurl;
 
     @NotNull

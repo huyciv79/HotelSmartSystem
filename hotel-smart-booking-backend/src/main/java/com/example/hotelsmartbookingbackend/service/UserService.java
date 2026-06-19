@@ -1,7 +1,7 @@
 package com.example.hotelsmartbookingbackend.service;
 
 import com.example.hotelsmartbookingbackend.dto.request.UpdateProfileRequest;
-import com.example.hotelsmartbookingbackend.dto.response.UserProfileDTO;
+import com.example.hotelsmartbookingbackend.dto.response.UserProfileResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface UserService {
@@ -11,7 +11,7 @@ public interface UserService {
      * @param email The email of the user.
      * @return UserProfileDTO containing complete details of the user.
      */
-    UserProfileDTO getUserProfile(String email);
+    UserProfileResponse getUserProfile(String email);
 
     /**
      * Update user profile information.
@@ -20,7 +20,7 @@ public interface UserService {
      * @param request The UpdateProfileRequest DTO containing fullName and address.
      * @return Updated UserProfileDTO details.
      */
-    UserProfileDTO updateUserProfile(String email, UpdateProfileRequest request);
+    UserProfileResponse updateUserProfile(String email, UpdateProfileRequest request);
 
     /**
      * Upload and update user's avatar.

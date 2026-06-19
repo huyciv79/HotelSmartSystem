@@ -31,3 +31,18 @@ export const getBookingHistory = async () => {
   const response = await axiosInstance.get('/bookings/history');
   return response.data;
 };
+
+export const getAllBookings = async () => {
+  const response = await axiosInstance.get('/bookings/all');
+  return response.data;
+};
+
+export const checkInBooking = async (bookingId) => {
+  const response = await axiosInstance.post(`/bookings/${bookingId}/check-in`);
+  return response.data;
+};
+
+export const checkOutBooking = async (bookingId) => {
+  const response = await axiosInstance.post(`/bookings/${bookingId}/check-out`);
+  return response.data;
+};

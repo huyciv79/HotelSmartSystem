@@ -26,6 +26,14 @@ public class Feedback {
     @JoinColumn(name = "bookingid")
     private Booking bookingid;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "userid")
+    private User userid;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "roomtypeid")
+    private Roomtype roomtypeid;
+
     @NotNull
     @Column(name = "rating", nullable = false)
     private Integer rating;

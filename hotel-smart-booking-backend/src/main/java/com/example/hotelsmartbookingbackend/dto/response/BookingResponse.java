@@ -32,5 +32,7 @@ public class BookingResponse {
     private BigDecimal depositAmount;
     private String status;
     private String specialRequests;
+    private Instant actualCheckIn;
+    private Instant actualCheckOut;
     private Instant createdAt;
 }
