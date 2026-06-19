@@ -41,11 +41,11 @@ public class BookingServiceImpl implements BookingService {
     private static final int DEFAULT_SINGLE_BOOKING_QUANTITY = 1;
     private static final int DEFAULT_SINGLE_BOOKING_ADULTS = 1;
     private static final int DEFAULT_SINGLE_BOOKING_CHILDREN = 0;
-    private static final List<String> INVENTORY_HOLDING_BOOKING_STATUSES =
-            List.of("Pending", "Confirmed", "Checked In");
+    private static final List<String> INVENTORY_HOLDING_BOOKING_STATUSES = List.of("Pending", "Confirmed",
+            "Checked In");
     private static final List<String> INVENTORY_HOLDING_DETAIL_STATUSES = List.of("Active");
-    private static final DateTimeFormatter BOOKING_REFERENCE_TIME_FORMAT =
-            DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(HOTEL_ZONE);
+    private static final DateTimeFormatter BOOKING_REFERENCE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
+            .withZone(HOTEL_ZONE);
     private static final DateTimeFormatter DISPLAY_DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final BookingRepository bookingRepository;
@@ -176,7 +176,8 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     public BookingResponse getBookingDetail(Integer bookingId, String customerEmail) {
         Bookingdetail detail = bookingdetailRepository.findBookingDetail(bookingId, customerEmail)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đặt phòng hoặc bạn không có quyền xem đặt phòng này"));
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy đặt phòng hoặc bạn không có quyền xem đặt phòng này"));
 
         return mapToResponse(detail.getBookingid(), detail, detail.getRoomtypeid());
     }

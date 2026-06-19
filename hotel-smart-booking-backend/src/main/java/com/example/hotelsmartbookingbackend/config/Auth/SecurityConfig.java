@@ -49,7 +49,6 @@ public class SecurityConfig {
                         }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/payments/paypal/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/room-types", "/api/room-types/**").permitAll()
                         .requestMatchers("/api/room-types", "/api/room-types/**").hasRole("MANAGER")
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()

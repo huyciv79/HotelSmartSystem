@@ -62,7 +62,8 @@ public class PaymentServiceImpl implements PaymentService {
         if (chargeAmount == null) {
             if ("DEPOSIT".equalsIgnoreCase(option)) {
                 // Deposit 30% of final amount
-                chargeAmount = booking.getFinalamount().multiply(new BigDecimal("0.30")).setScale(2, RoundingMode.HALF_UP);
+                chargeAmount = booking.getFinalamount().multiply(new BigDecimal("0.30")).setScale(2,
+                        RoundingMode.HALF_UP);
             } else {
                 chargeAmount = remainingBalance;
             }
@@ -79,14 +80,18 @@ public class PaymentServiceImpl implements PaymentService {
         BigDecimal paypalAmount = chargeAmount;
         if (conversionRate != null && conversionRate.compareTo(BigDecimal.ONE) > 0) {
             paypalAmount = chargeAmount.divide(conversionRate, 2, RoundingMode.HALF_UP);
-            log.info("Converted local amount {} to {} USD (Conversion Rate: {})", chargeAmount, paypalAmount, conversionRate);
+            log.info("Converted local amount {} to {} USD (Conversion Rate: {})", chargeAmount, paypalAmount,
+                    conversionRate);
         }
 
-        PaypalOrderResponse paypalOrder = paypalService.createPaypalOrder(booking.getId(), paypalAmount, idempotencyKey);
+        PaypalOrderResponse paypalOrder = paypalService.createPaypalOrder(booking.getId(), paypalAmount,
+                idempotencyKey);
 
-        // Store the mapping of PayPal Order ID -> Booking ID, Original Charge Amount, and Option in Redis for 24h
+        // Store the mapping of PayPal Order ID -> Booking ID, Original Charge Amount,
+        // and Option in Redis for 24h
         String redisKey = ORDER_BOOKING_PREFIX + paypalOrder.getPaypalOrderId();
-        redisTemplate.opsForValue().set(redisKey, booking.getId() + ":" + chargeAmount + ":" + option, Duration.ofDays(1));
+        redisTemplate.opsForValue().set(redisKey, booking.getId() + ":" + chargeAmount + ":" + option,
+                Duration.ofDays(1));
 
         return paypalOrder;
     }
@@ -99,7 +104,7 @@ public class PaymentServiceImpl implements PaymentService {
         // 1. Fetch booking reference and charge amount from Redis
         String redisKey = ORDER_BOOKING_PREFIX + paypalOrderId;
         String cachedValue = (String) redisTemplate.opsForValue().get(redisKey);
-        
+
         Integer bookingId = null;
         BigDecimal expectedChargeAmount = null;
         String paymentOption = "FULL";
@@ -133,7 +138,8 @@ public class PaymentServiceImpl implements PaymentService {
         if (expectedChargeAmount == null) {
             // Fallback: convert captured USD back using conversion rate
             if (conversionRate != null && conversionRate.compareTo(BigDecimal.ONE) > 0) {
-                expectedChargeAmount = captureResponse.getAmount().multiply(conversionRate).setScale(2, RoundingMode.HALF_UP);
+                expectedChargeAmount = captureResponse.getAmount().multiply(conversionRate).setScale(2,
+                        RoundingMode.HALF_UP);
             } else {
                 expectedChargeAmount = captureResponse.getAmount();
             }
@@ -202,12 +208,13 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setBookingid(booking);
         payment.setAmount(chargeAmount);
         payment.setPaymentmethod("Bank Transfer");
-        
+
         boolean isFirstPayment = booking.getPaidamount().compareTo(BigDecimal.ZERO) == 0;
         boolean isPartial = chargeAmount.compareTo(booking.getFinalamount()) < 0;
 
         payment.setPaymenttype(isFirstPayment && isPartial ? "Deposit" : "Booking Payment");
-        payment.setTransactioncode(request.getTransactionCode() != null ? request.getTransactionCode() : "BANK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        payment.setTransactioncode(request.getTransactionCode() != null ? request.getTransactionCode()
+                : "BANK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         payment.setStatus("Completed");
         payment.setRefundedamount(BigDecimal.ZERO);
         payment.setPaymentdate(Instant.now());
