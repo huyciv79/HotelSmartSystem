@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Offers() {
+  const { t } = useLanguage();
   const [currentPage, setCurrentPage] = useState(3);
   const totalPages = 7;
 
@@ -21,22 +23,22 @@ export default function Offers() {
       id: 1,
       image: "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&q=80",
       badge: "SAVE UP TO 15%",
-      title: "Ưu Đãi 15% Mừng Năm Mới",
-      description: "Khởi đầu năm 2026 trọn vẹn tại Elysian với chương trình ưu đãi đặc biệt giảm giá lên đến 15% khi đặt phòng trực tiếp."
+      title: t('offer1_title'),
+      description: t('offer1_desc')
     },
     {
       id: 2,
       image: "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=800&q=80",
       badge: null,
-      title: "Kỳ Nghỉ Golf Trọn Gói (All-in-One)",
-      description: "Gói golf độc quyền mang đến trải nghiệm hoàn hảo, kết nối nhu cầu lưu trú sang trọng, những vòng golf đầy thử thách, cùng hệ thống tiện ích đa dạng..."
+      title: t('offer2_title'),
+      description: t('offer2_desc')
     },
     {
       id: 3,
       image: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=800&q=80",
       badge: null,
-      title: "Tặng Voucher Ăn Uống Cho Mỗi Đêm Lưu Trú",
-      description: "Nhận ngay 100K F&B credit hàng ngày để thoải mái khám phá từ cocktail nghệ thuật đến những món ăn tinh tế tại Elysian Bar."
+      title: t('offer3_title'),
+      description: t('offer3_desc')
     }
   ];
 
@@ -45,10 +47,10 @@ export default function Offers() {
       <main className="pt-24 pb-stack-lg text-left">
         {/* Hero Title Section */}
         <header className="px-margin-mobile md:px-margin-desktop mb-stack-lg text-center">
-          <h1 className="font-headline-xl text-headline-xl md:text-headline-xl mb-stack-sm text-on-surface">Ưu đãi</h1>
+          <h1 className="font-headline-xl text-headline-xl md:text-headline-xl mb-stack-sm text-on-surface">{t('offers_title')}</h1>
           <div className="flex flex-col md:flex-row justify-between items-center max-w-7xl mx-auto border-t border-outline-variant pt-8">
             <p className="font-body-lg text-body-lg text-secondary max-w-2xl text-center md:text-left">
-              Khám phá ngay những ưu đãi cực "hot" tại Elysian Hotels!
+              {t('offers_sub')}
             </p>
             <div className="flex items-center gap-6 mt-6 md:mt-0">
               <button 
@@ -59,7 +61,7 @@ export default function Offers() {
                 } transition-colors`}
               >
                 <span className="material-symbols-outlined" style={{ fontVariationSettings: "'wght' 700" }}>chevron_left</span>
-                <span className="font-label-bold text-label-bold uppercase">TRƯỚC</span>
+                <span className="font-label-bold text-label-bold uppercase">{t('offers_prev')}</span>
               </button>
               
               <span className="font-label-bold text-label-bold">{currentPage}/{totalPages}</span>
@@ -71,7 +73,7 @@ export default function Offers() {
                   currentPage === totalPages ? 'opacity-30 cursor-not-allowed' : 'hover:text-primary cursor-pointer'
                 } transition-colors`}
               >
-                <span className="font-label-bold text-label-bold uppercase">TIẾP</span>
+                <span className="font-label-bold text-label-bold uppercase">{t('offers_next')}</span>
                 <span className="material-symbols-outlined" style={{ fontVariationSettings: "'wght' 700" }}>chevron_right</span>
               </button>
             </div>
@@ -108,7 +110,7 @@ export default function Offers() {
                     </p>
                   </div>
                   <a className="inline-flex items-center gap-2 font-label-bold text-label-bold text-on-surface hover:text-primary group/link transition-colors uppercase no-underline font-bold text-sm" href="#">
-                    XEM THÊM 
+                    {t('offers_view_more')}
                     <span className="material-symbols-outlined group-hover/link:translate-x-1 transition-transform">arrow_forward</span>
                   </a>
                 </div>
@@ -122,13 +124,13 @@ export default function Offers() {
           <div className="bg-inverse-surface text-white p-12 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="absolute right-0 top-0 w-1/2 h-full bg-primary opacity-10 -skew-x-12 translate-x-1/4 pointer-events-none"></div>
             <div className="relative z-10 text-left">
-              <h3 className="font-headline-lg text-headline-lg mb-2 m-0">Trở thành Elysian Member ngay!</h3>
+              <h3 className="font-headline-lg text-headline-lg mb-2 m-0">{t('offers_cta_title')}</h3>
               <p className="font-body-lg text-secondary-fixed opacity-80 m-0">
-                Nhận thêm 10% giảm giá và nhiều đặc quyền ưu đãi khác chỉ dành cho thành viên.
+                {t('offers_cta_desc')}
               </p>
             </div>
             <button className="relative z-10 bg-primary text-white px-12 py-5 font-label-bold uppercase tracking-widest hover:bg-white hover:text-primary transition-all duration-300 cursor-pointer border-none">
-              ĐĂNG KÝ MIỄN PHÍ
+              {t('offers_btn_register')}
             </button>
           </div>
         </section>

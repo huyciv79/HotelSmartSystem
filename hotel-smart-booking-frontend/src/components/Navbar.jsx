@@ -6,11 +6,12 @@ import { useToast, ToastContainer } from './Toast';
 import { getUserProfile } from '../services/userService';
 import { getRoomTypes, getRoomTypeDetail } from '../services/roomService';
 import RoomDetailModern from './room/RoomDetailModern';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, setIsMobileMenuOpen }) {
+  const { language, setLanguage, t } = useLanguage();
   const [menuState, setMenuState] = useState('idle'); // 'idle' | 'open' | 'closed'
   const [isScrolled, setIsScrolled] = useState(false);
-  const [lang, setLang] = useState('VN');
   const [hoveredId, setHoveredId] = useState(null);
   const [underlineStyle, setUnderlineStyle] = useState({ left: 0, width: 0, opacity: 0 });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -25,14 +26,28 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
 
   const navContainerRef = useRef(null);
   const dropdownRef = useRef(null);
+  const langDropdownRef = useRef(null);
   const itemRefs = useRef({});
   const navigate = useNavigate();
   const { toasts, showToast, dismissToast } = useToast();
+
+  const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
+
+  const languagesList = [
+    { code: 'VN', label: 'Tiếng Việt', flag: 'https://flagcdn.com/w40/vn.png' },
+    { code: 'EN', label: 'English', flag: 'https://flagcdn.com/w40/us.png' },
+    { code: 'JP', label: '日本語', flag: 'https://flagcdn.com/w40/jp.png' },
+    { code: 'KR', label: '한국어', flag: 'https://flagcdn.com/w40/kr.png' },
+    { code: 'CN', label: '简体中文', flag: 'https://flagcdn.com/w40/cn.png' }
+  ];
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsDropdownOpen(false);
+      }
+      if (langDropdownRef.current && !langDropdownRef.current.contains(event.target)) {
+        setIsLangDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -140,11 +155,11 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
   };
 
   const navItems = [
-    { id: 'home', label: 'KHÁCH SẠN' },
-    { id: 'residences', label: 'ELYSIAN RESIDENCES' },
-    { id: 'experiences', label: 'TRẢI NGHIỆM ELYSIAN' },
-    { id: 'events', label: 'HỘI NGHỊ & SỰ KIỆN' },
-    { id: 'offers', label: 'ƯU ĐÃI' }
+    { id: 'home', label: t('nav_hotels') },
+    { id: 'residences', label: t('nav_residences') },
+    { id: 'experiences', label: t('nav_experiences') },
+    { id: 'events', label: t('nav_events') },
+    { id: 'offers', label: t('nav_offers') }
   ];
 
   const handleNavClick = (id) => {
@@ -249,30 +264,51 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
           </button>
           <span className="text-[6.5px] tracking-[0.25em] opacity-60 uppercase font-semibold leading-none mt-0.5">HOTELS</span>
         </div>
-        {/* Language selector on the right (flag and arrow dropdown, no text) */}
-        <div className="flex-1 flex justify-end">
-          <button 
-            onClick={() => setLang(lang === 'VN' ? 'EN' : 'VN')}
-            className="flex items-center gap-1 text-white hover:text-primary cursor-pointer bg-transparent border-none"
-          >
-            <span className="w-5 h-3.5 flex items-center overflow-hidden border border-white/20">
-              {lang === 'VN' ? (
-                <span className="w-full h-full bg-[#da251d] relative flex items-center justify-center">
-                  <span className="text-[8px] text-[#ffff00] leading-none">★</span>
-                </span>
-              ) : (
-                <span className="w-full h-full bg-[#0a3161] relative flex flex-wrap">
-                  <span className="w-1/2 h-full bg-[#0a3161] text-[6px] text-white flex items-center justify-center leading-none">*</span>
-                  <span className="w-1/2 h-full bg-white flex flex-col">
-                    <span className="h-1/3 bg-[#b31942]"></span>
-                    <span className="h-1/3 bg-white"></span>
-                    <span className="h-1/3 bg-[#b31942]"></span>
-                  </span>
-                </span>
-              )}
-            </span>
-            <span className="material-symbols-outlined text-sm leading-none opacity-80">arrow_drop_down</span>
-          </button>
+        {/* Language selector on the right with multi-language flag dropdown */}
+        <div className="flex-1 flex justify-end relative" ref={langDropdownRef}>
+          {(() => {
+            const activeLangObj = languagesList.find(l => l.code === language) || languagesList[0];
+            return (
+              <>
+                <button 
+                  onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
+                  className="flex items-center gap-1.5 text-white hover:text-primary cursor-pointer bg-transparent border-none py-1 px-2 hover:bg-white/10 transition-colors"
+                >
+                  <img 
+                    src={activeLangObj.flag} 
+                    alt={activeLangObj.label} 
+                    className="w-5 h-3.5 object-cover border border-white/20"
+                  />
+                  <span className="text-[10px] font-bold tracking-wider opacity-85 uppercase">{activeLangObj.code}</span>
+                  <span className="material-symbols-outlined text-sm leading-none opacity-80">arrow_drop_down</span>
+                </button>
+
+                {isLangDropdownOpen && (
+                  <div className="absolute right-0 top-10 w-40 bg-[#0a0a0c] border border-neutral-900 shadow-2xl z-50 py-1.5 font-['Montserrat']">
+                    {languagesList.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => {
+                          setLanguage(lang.code);
+                          setIsLangDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider transition-colors hover:bg-white/5 border-none bg-transparent cursor-pointer ${
+                          language === lang.code ? 'text-primary' : 'text-slate-300'
+                        }`}
+                      >
+                        <img 
+                          src={lang.flag} 
+                          alt={lang.label} 
+                          className="w-5 h-3.5 object-cover border border-white/10"
+                        />
+                        <span>{lang.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
 
@@ -402,7 +438,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
               onClick={() => handleNavClick('login')}
               className="parallelogram-btn bg-primary-container text-on-primary h-full px-14 font-bold text-xs uppercase tracking-wider active:scale-98 transition-all duration-150 cursor-pointer border-none flex items-center justify-center"
             >
-              ĐẶT NGAY
+              {t('nav_book_now')}
             </button>
           )}
         </div>
@@ -433,7 +469,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                   <span className={`relative pb-1 transition-colors duration-300 font-extrabold ${
                     (showRoomTypes || activePage === 'home') ? 'text-primary' : 'text-slate-800 group-hover:text-primary'
                   }`}>
-                    LOẠI PHÒNG
+                    {t('nav_room_types')}
                     <span className={`absolute bottom-0 left-0 right-0 h-[2.5px] bg-primary transition-transform duration-300 origin-left ${
                       (showRoomTypes || activePage === 'home') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
                     }`} />
@@ -495,13 +531,13 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
 
             {/* Bottom Left Secondary Links */}
             <div className="grid grid-cols-2 gap-y-3.5 gap-x-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-12 select-none border-t border-slate-200 pt-6">
-              <button onClick={() => handleNavClick('group-booking')} className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider text-primary">ĐẶT PHÒNG ĐOÀN</button>
-              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">VỀ ELYSIAN HOTELS</button>
-              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">NGHỀ NGHIỆP</button>
-              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">ELYSIAN + MÔI TRƯỜNG</button>
-              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">ƯU ĐÃI</button>
-              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">BLOGS</button>
-              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">LIÊN HỆ</button>
+              <button onClick={() => handleNavClick('group-booking')} className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider text-primary">{t('nav_group_booking')}</button>
+              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_about')}</button>
+              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_careers')}</button>
+              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_environment')}</button>
+              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_offers')}</button>
+              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_blogs')}</button>
+              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_contact')}</button>
             </div>
           </div>
 
@@ -561,7 +597,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                       className="bg-transparent text-white/95 hover:text-white transition-all duration-300 text-base border-b border-white/40 pb-1 cursor-pointer hover:border-white whitespace-nowrap"
                       style={{ fontFamily: "'Playfair Display', serif" }}
                     >
-                      Chi tiết
+                      {t('nav_detail')}
                     </button>
                   </div>
                 )}
@@ -647,7 +683,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
         {isLoadingRoomDetail ? (
           <div className="bg-white rounded-none p-12 max-w-md w-full text-center flex flex-col items-center justify-center border border-outline-variant shadow-2xl animate-fade-in">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary mb-4"></div>
-            <p className="text-xs uppercase font-bold tracking-widest text-slate-500 font-['Montserrat']">Đang tải thông tin chi tiết phòng...</p>
+            <p className="text-xs uppercase font-bold tracking-widest text-slate-500 font-['Montserrat']">{t('nav_loading_room_detail', 'Đang tải thông tin chi tiết phòng...')}</p>
           </div>
         ) : (
           <RoomDetailModern
@@ -664,7 +700,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                 handleNavClick('booking');
               } else {
                 sessionStorage.setItem('pendingBookingRoom', JSON.stringify(room));
-                showToast('Vui lòng đăng nhập để tiến hành đặt phòng!', 'info');
+                showToast(t('nav_toast_login_required', 'Vui lòng đăng nhập để tiến hành đặt phòng!'), 'info');
                 handleNavClick('login');
               }
             }}
@@ -676,7 +712,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                 handleNavClick('group-booking');
               } else {
                 sessionStorage.setItem('pendingBookingRoom', JSON.stringify(room));
-                showToast('Vui lòng đăng nhập để tiến hành đặt phòng nhóm!', 'info');
+                showToast(t('nav_toast_login_required_group', 'Vui lòng đăng nhập để tiến hành đặt phòng nhóm!'), 'info');
                 handleNavClick('login');
               }
             }}

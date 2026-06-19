@@ -5,6 +5,7 @@ import * as z from 'zod';
 import OtpInput from '../components/OtpInput';
 import { registerUser, verifyOTP } from '../services/authService';
 import { useToast, ToastContainer } from '../components/Toast';
+import { useLanguage } from '../context/LanguageContext';
 
 const registerSchema = z
   .object({
@@ -42,6 +43,7 @@ const registerSchema = z
   });
 
 export default function Register({ setActivePage }) {
+  const { t } = useLanguage();
   const [step, setStep] = useState(1); // 1: Personal Info, 2: OTP, 3: Success
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
@@ -90,13 +92,13 @@ export default function Register({ setActivePage }) {
     } catch (err) {
       const status = err?.response?.status;
       if (status === 409) {
-        const msg = 'Email này đã được đăng ký. Vui lòng sử dụng email khác.';
+        const msg = t('register_err_conflict', 'Email này đã được đăng ký. Vui lòng sử dụng email khác.');
         setApiError(msg);
         showToast(msg, 'error');
       } else {
         const msg =
           err?.response?.data?.message ||
-          'Đăng ký thất bại. Vui lòng thử lại sau.';
+          t('register_err_failed', 'Đăng ký thất bại. Vui lòng thử lại sau.');
         setApiError(msg);
         showToast(msg, 'error');
       }
@@ -110,7 +112,7 @@ export default function Register({ setActivePage }) {
     e.preventDefault();
 
     if (otp.length < 6) {
-      setApiError('Vui lòng nhập đầy đủ mã xác thực OTP 6 chữ số.');
+      setApiError(t('register_err_otp_length', 'Vui lòng nhập đầy đủ mã xác thực OTP 6 chữ số.'));
       return;
     }
 
@@ -126,11 +128,11 @@ export default function Register({ setActivePage }) {
       if (status === 400) {
         setApiError(
           err?.response?.data?.message ||
-            'Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.'
+            t('register_err_otp_invalid', 'Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.')
         );
       } else {
         setApiError(
-          err?.response?.data?.message || 'Xác thực thất bại. Vui lòng thử lại sau.'
+          err?.response?.data?.message || t('register_err_otp_failed', 'Xác thực thất bại. Vui lòng thử lại sau.')
         );
       }
     } finally {
@@ -149,10 +151,10 @@ export default function Register({ setActivePage }) {
       const formData = getValues();
       await registerUser(formData);
       setCountdown(60);
-      showToast('Mã OTP mới đã được gửi thành công.', 'success');
+      showToast(t('register_otp_resent_success', 'Mã OTP mới đã được gửi thành công.'), 'success');
     } catch (err) {
       showToast(
-        err?.response?.data?.message || 'Không thể gửi lại OTP. Vui lòng thử lại.',
+        err?.response?.data?.message || t('register_otp_resent_failed', 'Không thể gửi lại OTP. Vui lòng thử lại.'),
         'error'
       );
     } finally {
@@ -171,7 +173,7 @@ export default function Register({ setActivePage }) {
           onClick={() => setActivePage('login')}
           className="absolute top-6 left-6 text-xs text-secondary hover:text-primary uppercase tracking-widest font-bold flex items-center gap-1 cursor-pointer bg-transparent border-none"
         >
-          <span className="material-symbols-outlined text-sm">arrow_back</span> Quay lại
+          <span className="material-symbols-outlined text-sm">arrow_back</span> {t('booking_btn_cancel_back', 'Quay lại')}
         </button>
 
         {/* Step Indicator */}
@@ -183,7 +185,7 @@ export default function Register({ setActivePage }) {
               }`}>1</span>
               <span className={`text-xs font-bold uppercase tracking-wider ${
                 step === 1 ? 'text-primary' : 'text-secondary'
-              }`}>Thông tin</span>
+              }`}>{t('booking_step1_label', 'Thông tin')}</span>
             </div>
             <div className="w-12 h-[1px] bg-outline-variant flex-grow mx-4"></div>
             <div className="flex items-center gap-2">
@@ -192,7 +194,7 @@ export default function Register({ setActivePage }) {
               }`}>2</span>
               <span className={`text-xs font-bold uppercase tracking-wider ${
                 step === 2 ? 'text-primary' : 'text-secondary'
-              }`}>Xác thực OTP</span>
+              }`}>{t('register_otp_indicator', 'Xác thực OTP')}</span>
             </div>
           </div>
         )}
@@ -200,14 +202,14 @@ export default function Register({ setActivePage }) {
         {/* Title */}
         <div className="mb-8">
           <h2 className="font-headline-lg text-headline-md text-primary uppercase italic m-0">
-            {step === 1 && 'ĐĂNG KÝ HỘI VIÊN'}
-            {step === 2 && 'XÁC THỰC TÀI KHOẢN'}
-            {step === 3 && 'ĐĂNG KÝ THÀNH CÔNG'}
+            {step === 1 && t('register_title', 'ĐĂNG KÝ HỘI VIÊN')}
+            {step === 2 && t('register_otp_title', 'XÁC THỰC TÀI KHOẢN')}
+            {step === 3 && t('register_success_title', 'ĐĂNG KÝ THÀNH CÔNG')}
           </h2>
           <p className="text-secondary text-sm mt-2">
-            {step === 1 && 'Gia nhập cộng đồng Elysian Rewards để nhận ngay các ưu đãi đặc quyền.'}
-            {step === 2 && 'Mã xác thực OTP đã được gửi tới số điện thoại/email của bạn.'}
-            {step === 3 && 'Chúc mừng! Bạn đã chính thức trở thành thành viên Elysian VIP.'}
+            {step === 1 && t('register_subtitle', 'Gia nhập cộng đồng Elysian Rewards để nhận ngay các ưu đãi đặc quyền.')}
+            {step === 2 && t('register_otp_subtitle', 'Mã xác thực OTP đã được gửi tới số điện thoại/email của bạn.')}
+            {step === 3 && t('register_success_subtitle', 'Chúc mừng! Bạn đã chính thức trở thành thành viên Elysian VIP.')}
           </p>
         </div>
 
@@ -223,7 +225,7 @@ export default function Register({ setActivePage }) {
         {step === 1 && (
           <form onSubmit={handleSubmit(onRegisterSubmit)} className="space-y-6">
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Họ và tên</label>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('register_fullname_label', 'Họ và tên')}</label>
               <input 
                 {...register('fullName')}
                 type="text" 
@@ -237,7 +239,7 @@ export default function Register({ setActivePage }) {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Email</label>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('register_email_label', 'Email')}</label>
               <input 
                 {...register('email')}
                 type="email" 
@@ -251,7 +253,7 @@ export default function Register({ setActivePage }) {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Số điện thoại</label>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('register_phone_label', 'Số điện thoại')}</label>
               <input 
                 {...register('phone')}
                 type="text" 
@@ -265,7 +267,7 @@ export default function Register({ setActivePage }) {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Mật khẩu</label>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('register_password_label', 'Mật khẩu')}</label>
               <input 
                 {...register('password')}
                 type="password" 
@@ -279,7 +281,7 @@ export default function Register({ setActivePage }) {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Xác nhận mật khẩu</label>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('register_confirm_label', 'Xác nhận mật khẩu')}</label>
               <input 
                 {...register('confirm')}
                 type="password" 
@@ -300,9 +302,9 @@ export default function Register({ setActivePage }) {
               {isLoading ? (
                 <>
                   <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                  ĐANG XỬ LÝ...
+                  {t('register_btn_loading', 'ĐANG XỬ LÝ...')}
                 </>
-              ) : 'TIẾP TỤC'}
+              ) : t('register_btn', 'TIẾP TỤC')}
             </button>
           </form>
         )}
@@ -312,7 +314,7 @@ export default function Register({ setActivePage }) {
           <form onSubmit={handleOtpSubmit} className="space-y-8">
             <div className="space-y-4">
               <label className="block text-center text-xs font-bold text-secondary uppercase tracking-widest">
-                Nhập mã xác thực 6 chữ số
+                {t('register_otp_enter', 'Nhập mã xác thực 6 chữ số')}
               </label>
               <OtpInput value={otp} onChange={setOtp} disabled={isLoading} />
             </div>
@@ -321,7 +323,7 @@ export default function Register({ setActivePage }) {
             <div className="flex flex-col items-center gap-3">
               {countdown > 0 ? (
                 <p className="text-sm text-secondary font-semibold">
-                  Mã xác thực hết hạn sau <span className="text-primary font-bold">{countdown}s</span>
+                  {t('register_otp_expires', 'Mã xác thực hết hạn sau')} <span className="text-primary font-bold">{countdown}s</span>
                 </p>
               ) : (
                 <button
@@ -330,7 +332,7 @@ export default function Register({ setActivePage }) {
                   disabled={isLoading}
                   className="text-xs text-primary font-bold uppercase tracking-widest hover:underline cursor-pointer bg-transparent border-none disabled:opacity-30 disabled:no-underline"
                 >
-                  GỬI LẠI MÃ OTP
+                  {t('register_otp_resend', 'GỬI LẠI MÃ OTP')}
                 </button>
               )}
             </div>
@@ -343,9 +345,9 @@ export default function Register({ setActivePage }) {
               {isLoading ? (
                 <>
                   <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                  ĐANG XÁC THỰC...
+                  {t('register_otp_confirm_loading', 'ĐANG XÁC THỰC...')}
                 </>
-              ) : 'XÁC THỰC ĐĂNG KÝ'}
+              ) : t('register_otp_confirm', 'XÁC THỰC ĐĂNG KÝ')}
             </button>
           </form>
         )}
@@ -358,9 +360,9 @@ export default function Register({ setActivePage }) {
             </div>
             
             <div className="space-y-2">
-              <h3 className="font-bold text-xl text-on-surface uppercase">Đăng ký tài khoản thành công</h3>
+              <h3 className="font-bold text-xl text-on-surface uppercase">{t('register_success_box_title', 'Đăng ký tài khoản thành công')}</h3>
               <p className="text-sm text-secondary max-w-sm mx-auto leading-relaxed">
-                Tài khoản hội viên của bạn đã được kích hoạt. Hãy trải nghiệm kỳ nghỉ dưỡng trọn vẹn tại các khách sạn của Elysian Hotels.
+                {t('register_success_box_desc', 'Tài khoản hội viên của bạn đã được kích hoạt. Hãy trải nghiệm kỳ nghỉ dưỡng trọn vẹn tại các khách sạn của Elysian Hotels.')}
               </p>
             </div>
 
@@ -368,8 +370,8 @@ export default function Register({ setActivePage }) {
               <div className="flex gap-3">
                 <span className="material-symbols-outlined text-primary text-2xl">card_membership</span>
                 <div>
-                  <h4 className="font-bold text-sm text-on-surface m-0 uppercase">Hội viên VIP Elysian</h4>
-                  <p className="text-xs text-secondary mt-1 m-0">Thẻ thành viên điện tử đã được liên kết với số điện thoại của bạn.</p>
+                  <h4 className="font-bold text-sm text-on-surface m-0 uppercase">{t('register_success_vip_label', 'Hội viên VIP Elysian')}</h4>
+                  <p className="text-xs text-secondary mt-1 m-0">{t('register_success_vip_desc', 'Thẻ thành viên điện tử đã được liên kết với số điện thoại của bạn.')}</p>
                 </div>
               </div>
             </div>
@@ -378,7 +380,7 @@ export default function Register({ setActivePage }) {
               onClick={() => setActivePage('home')}
               className="w-full max-w-xs bg-primary text-on-primary font-bold py-4 uppercase tracking-widest hover:brightness-110 active:scale-98 transition-all cursor-pointer border-none mx-auto block h-12 flex items-center justify-center"
             >
-              QUAY LẠI TRANG CHỦ
+              {t('register_btn_home', 'QUAY LẠI TRANG CHỦ')}
             </button>
           </div>
         )}

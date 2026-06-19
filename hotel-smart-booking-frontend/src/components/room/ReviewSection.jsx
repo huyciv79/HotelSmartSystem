@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Star, AlertCircle, Filter, ChevronDown, Image, MessageSquare } from 'lucide-react';
 import { getReviews } from '../../services/reviewService';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function ReviewSection({ roomId }) {
+  const { t, language } = useLanguage();
   const [reviews, setReviews] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -95,7 +97,7 @@ export default function ReviewSection({ roomId }) {
   return (
     <div className="mt-12 border-t border-slate-200 pt-10 font-['Montserrat'] text-slate-800">
       <h3 className="text-xl font-black uppercase tracking-wider text-slate-900 mb-8 flex items-center gap-2">
-        <span>Xem Đánh Giá</span>
+        <span>{t('review_title', 'Xem Đánh Giá')}</span>
         <span className="text-sm font-bold bg-primary/10 text-primary px-2.5 py-0.5 rounded-full">
           {totalReviews}
         </span>
@@ -114,7 +116,7 @@ export default function ReviewSection({ roomId }) {
               />
             ))}
           </div>
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Đánh giá trung bình</span>
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('review_average_rating', 'Đánh giá trung bình')}</span>
         </div>
 
         <div className="md:col-span-8 flex flex-col justify-center space-y-2">
@@ -142,10 +144,10 @@ export default function ReviewSection({ roomId }) {
         </div>
         <div>
           <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-1">
-            Muốn chia sẻ trải nghiệm của bạn?
+            {t('review_how_to_write_title', 'Muốn chia sẻ trải nghiệm của bạn?')}
           </h4>
           <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide leading-relaxed">
-            Để đảm bảo tính xác thực, chỉ những khách hàng đã đặt phòng và hoàn tất thủ tục trả phòng (Checked Out) mới có thể gửi đánh giá dịch vụ. Hãy vào mục <strong className="text-primary font-black">Lịch sử đặt phòng</strong> trong Dashboard của bạn để gửi phản hồi cho chuyến đi.
+            {t('review_how_to_write_desc', 'Để đảm bảo tính xác thực, chỉ những khách hàng đã đặt phòng và hoàn tất thủ tục trả phòng (Checked Out) mới có thể gửi đánh giá dịch vụ. Hãy vào mục Lịch sử đặt phòng trong Dashboard của bạn để gửi phản hồi cho chuyến đi.')}
           </p>
         </div>
       </div>
@@ -162,7 +164,7 @@ export default function ReviewSection({ roomId }) {
               }`}
           >
             <Filter size={14} />
-            <span>Bộ lọc</span>
+            <span>{t('review_filter_btn', 'Bộ lọc')}</span>
             {(filterRating !== 'all' || filterHasImages) && (
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
             )}
@@ -174,10 +176,10 @@ export default function ReviewSection({ roomId }) {
             <div className="absolute left-0 mt-2 w-72 bg-white border border-slate-200 shadow-xl p-4 z-30 animate-scale-in font-['Montserrat']">
               {/* Star Rating Section */}
               <div className="mb-4">
-                <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Số sao</span>
+                <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">{t('review_filter_stars', 'Số sao')}</span>
                 <div className="grid grid-cols-2 gap-1.5">
                   {[
-                    { id: 'all', label: 'Tất cả' },
+                    { id: 'all', label: t('review_filter_all', 'Tất cả') },
                     { id: 5, label: '5 Sao' },
                     { id: 4, label: '4 Sao' },
                     { id: 3, label: '3 Sao' },
@@ -201,7 +203,7 @@ export default function ReviewSection({ roomId }) {
 
               {/* Image Toggle Section */}
               <div className="border-t border-slate-100 pt-3 flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Hình ảnh</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('review_filter_has_images', 'Hình ảnh')}</span>
                 <button
                   type="button"
                   onClick={() => setFilterHasImages(prev => !prev)}
@@ -210,7 +212,7 @@ export default function ReviewSection({ roomId }) {
                       : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                     }`}
                 >
-                  Có ảnh ({reviews.filter(r => r.images && r.images.length > 0).length})
+                  {t('review_filter_has_images', 'Có ảnh')} ({reviews.filter(r => r.images && r.images.length > 0).length})
                 </button>
               </div>
 
@@ -225,7 +227,7 @@ export default function ReviewSection({ roomId }) {
                     }}
                     className="text-[9px] font-black uppercase tracking-widest text-red-600 hover:text-red-700 transition-colors bg-transparent border-none cursor-pointer"
                   >
-                    Xóa bộ lọc
+                    {t('review_filter_clear', 'Xóa bộ lọc')}
                   </button>
                 </div>
               )}
@@ -234,7 +236,7 @@ export default function ReviewSection({ roomId }) {
         </div>
 
         <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-          {filteredReviews.length} Đánh giá phù hợp
+          {filteredReviews.length} {t('review_filter_matching', 'Đánh giá phù hợp')}
         </div>
       </div>
 
@@ -243,12 +245,12 @@ export default function ReviewSection({ roomId }) {
         {isLoading ? (
           <div className="text-center py-10">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary mx-auto mb-2"></div>
-            <p className="text-xs uppercase font-bold tracking-widest text-slate-400">Đang tải đánh giá...</p>
+            <p className="text-xs uppercase font-bold tracking-widest text-slate-400">{t('review_loading', 'Đang tải đánh giá...')}</p>
           </div>
         ) : filteredReviews.length === 0 ? (
           <div className="text-center py-10 border border-dashed border-slate-300">
             <AlertCircle className="mx-auto text-slate-400 mb-2" size={24} />
-            <p className="text-xs uppercase font-bold tracking-wider text-slate-400">Không tìm thấy đánh giá nào.</p>
+            <p className="text-xs uppercase font-bold tracking-wider text-slate-400">{t('review_empty', 'Không tìm thấy đánh giá nào.')}</p>
           </div>
         ) : (
           filteredReviews.map((review) => (
@@ -275,11 +277,14 @@ export default function ReviewSection({ roomId }) {
                     </div>
 
                     <span className="text-[10px] font-bold text-slate-400">
-                      {review.createdAt ? new Date(review.createdAt).toLocaleDateString('vi-VN', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      }) : ''}
+                      {review.createdAt ? new Date(review.createdAt).toLocaleDateString(
+                        language === 'VN' ? 'vi-VN' : language === 'EN' ? 'en-US' : language === 'JP' ? 'ja-JP' : language === 'KR' ? 'ko-KR' : 'zh-CN',
+                        {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        }
+                      ) : ''}
                     </span>
                   </div>
 
@@ -292,13 +297,13 @@ export default function ReviewSection({ roomId }) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2 bg-slate-50 p-3 border border-slate-150 text-[11px] font-medium leading-relaxed mb-3">
                       {review.pros && (
                         <div>
-                          <span className="text-green-700 font-extrabold block mb-0.5 uppercase text-[9px] tracking-wider">✓ Ưu điểm:</span>
+                          <span className="text-green-700 font-extrabold block mb-0.5 uppercase text-[9px] tracking-wider">✓ {t('review_pros', 'Ưu điểm:')}</span>
                           <span className="text-slate-600">{review.pros}</span>
                         </div>
                       )}
                       {review.cons && (
                         <div>
-                          <span className="text-red-700 font-extrabold block mb-0.5 uppercase text-[9px] tracking-wider">✗ Nhược điểm:</span>
+                          <span className="text-red-700 font-extrabold block mb-0.5 uppercase text-[9px] tracking-wider">✗ {t('review_cons', 'Nhược điểm:')}</span>
                           <span className="text-slate-600">{review.cons}</span>
                         </div>
                       )}
@@ -374,7 +379,7 @@ export default function ReviewSection({ roomId }) {
 
           {/* Caption / Page Counter */}
           <div className="mt-4 text-xs font-bold text-white/70 uppercase tracking-widest">
-            Ảnh {lightbox.index + 1} / {lightbox.images.length}
+            {t('review_lightbox_counter', 'Ảnh')} {lightbox.index + 1} / {lightbox.images.length}
           </div>
         </div>
       )}

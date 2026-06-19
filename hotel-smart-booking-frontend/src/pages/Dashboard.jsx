@@ -10,50 +10,52 @@ import Profile from './Profile';
 import { getUserProfile } from '../services/userService';
 import { getBookingHistory } from '../services/bookingService';
 import { useToast, ToastContainer } from '../components/Toast';
+import { useLanguage } from '../context/LanguageContext';
 import {
   USER_PROFILE,
   CURRENT_BOOKING,
   BOOKING_HISTORY,
 } from '../data/dashboardData';
 
-const mapRealToCurrentBooking = (bk) => {
-  if (!bk) return null;
-  return {
-    suiteName: bk.roomType,
-    refCode: bk.bookingNumber || `BK-${bk.bookingId}`,
-    status: bk.status === 'Cancelled' ? 'Đã Hủy' : bk.status === 'Checked-in' || bk.status === 'Checked In' ? 'Đã nhận phòng' : bk.status === 'Checked-out' || bk.status === 'Checked Out' ? 'Đã trả phòng' : 'Đã xác nhận',
-    checkIn: {
-      date: bk.checkInDate,
-      dayTime: 'Từ 2:00 PM (14:00)',
-    },
-    checkOut: {
-      date: bk.checkOutDate,
-      dayTime: 'Trước 12:00 PM (12:00)',
-    },
-    guests: {
-      count: '01 Phòng',
-      bedInfo: `${bk.nights} đêm`,
-    },
-    bookingId: bk.bookingId,
-  };
-};
-
-const mapRealToBookingHistory = (bookings) =>
-  bookings.map((bk) => ({
-    id: bk.bookingId,
-    name: bk.roomType,
-    roomType: bk.bookingNumber || `BK-${bk.bookingId}`,
-    period: `${bk.checkInDate} đến ${bk.checkOutDate} (${bk.nights} đêm)`,
-    amount: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(bk.totalAmount),
-    status: bk.status,
-  }));
-
 export default function Dashboard({ setActivePage }) {
+  const { t } = useLanguage();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => location.state?.tab ?? 'overview');
   const [profile, setProfile] = useState(USER_PROFILE);
   const [realBookings, setRealBookings] = useState([]);
   const { toasts, showToast, dismissToast } = useToast();
+
+  const mapRealToCurrentBooking = (bk) => {
+    if (!bk) return null;
+    return {
+      suiteName: bk.roomType,
+      refCode: bk.bookingNumber || `BK-${bk.bookingId}`,
+      status: bk.status === 'Cancelled' ? t('status_cancelled', 'Đã Hủy') : bk.status === 'Checked-in' || bk.status === 'Checked In' ? t('status_checked_in', 'Đã nhận phòng') : bk.status === 'Checked-out' || bk.status === 'Checked Out' ? t('status_checked_out', 'Đã trả phòng') : t('status_confirmed', 'Đã xác nhận'),
+      checkIn: {
+        date: bk.checkInDate,
+        dayTime: t('db_booking_checkin_time_default', 'Từ 2:00 PM (14:00)'),
+      },
+      checkOut: {
+        date: bk.checkOutDate,
+        dayTime: t('db_booking_checkout_time_default', 'Trước 12:00 PM (12:00)'),
+      },
+      guests: {
+        count: t('db_booking_room_count_1', '01 Phòng'),
+        bedInfo: `${bk.nights} ${t('booking_summary_nights', 'đêm')}`,
+      },
+      bookingId: bk.bookingId,
+    };
+  };
+
+  const mapRealToBookingHistory = (bookings) =>
+    bookings.map((bk) => ({
+      id: bk.bookingId,
+      name: bk.roomType,
+      roomType: bk.bookingNumber || `BK-${bk.bookingId}`,
+      period: `${bk.checkInDate} ${t('booking_summary_date_to', 'đến')} ${bk.checkOutDate} (${bk.nights} ${t('booking_summary_nights', 'đêm')})`,
+      amount: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(bk.totalAmount),
+      status: bk.status,
+    }));
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -122,10 +124,10 @@ export default function Dashboard({ setActivePage }) {
 
   const nextStayDate = currentBooking 
     ? new Date(currentBooking.checkInDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    : 'Chưa có lịch trình';
+    : t('db_stays_none', 'Chưa có lịch trình');
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex text-slate-800">
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       
       <DashboardSidebar
@@ -149,35 +151,35 @@ export default function Dashboard({ setActivePage }) {
           ) : activeTab === 'stays' ? (
             <div className="bg-white border border-outline-variant shadow-lg p-8 md:p-10 flex flex-col font-['Montserrat']">
               <h2 className="font-headline-lg text-headline-md text-primary uppercase italic tracking-wider m-0 mb-1">
-                LỊCH SỬ ĐẶT PHÒNG CỦA TÔI
+                {t('db_stays_title', 'LỊCH SỬ ĐẶT PHÒNG CỦA TÔI')}
               </h2>
               <p className="text-secondary text-[10px] font-bold uppercase tracking-widest border-b border-gray-100 pb-4 mb-6">
-                Danh sách các phòng nghỉ bạn đã đăng ký lưu trú tại Elysian
+                {t('db_stays_subtitle', 'Danh sách các phòng nghỉ bạn đã đăng ký lưu trú tại Elysian')}
               </p>
 
               {realBookings.length === 0 ? (
                 <div className="text-center py-16">
                   <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">hotel</span>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Bạn chưa có phòng nào được đặt.</p>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('db_stays_empty', 'Bạn chưa có phòng nào được đặt.')}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {realBookings.map((bk) => (
                     <div key={bk.bookingId} className="border border-slate-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:border-primary transition-all duration-150 bg-white">
                       <div>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Mã đặt phòng</span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('booking_ref_code_label', 'Mã đặt phòng')}</span>
                         <span className="text-sm font-black text-slate-900 uppercase tracking-widest">{bk.bookingNumber || bk.bookingReference || `BK-${bk.bookingId}`}</span>
                         <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider mt-1.5">{bk.roomType}</h4>
-                        <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wide">Thời gian: {bk.checkInDate} đến {bk.checkOutDate} ({bk.nights} đêm)</p>
+                        <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wide">{t('booking_summary_duration', 'Thời gian')}: {bk.checkInDate} {t('booking_summary_date_to', 'đến')} {bk.checkOutDate} ({bk.nights} {t('booking_summary_nights', 'đêm')})</p>
                       </div>
 
                       <div className="flex items-center gap-6 self-stretch md:self-auto justify-between md:justify-end">
                         <div className="text-right">
-                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Tổng chi phí</span>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('db_total_cost_label', 'Tổng chi phí')}</span>
                           <span className="text-xs font-black text-primary">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(bk.totalAmount)}</span>
                         </div>
                         <div className="text-right">
-                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Trạng thái</span>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('db_status_label', 'Trạng thái')}</span>
                           <span className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest ${
                             bk.status === 'Cancelled'
                               ? 'bg-red-100 text-red-700'
@@ -187,14 +189,14 @@ export default function Dashboard({ setActivePage }) {
                               ? 'bg-slate-250 text-slate-700'
                               : 'bg-green-100 text-green-700'
                           }`}>
-                            {bk.status}
+                            {bk.status === 'Cancelled' ? t('status_cancelled', 'Đã Hủy') : bk.status === 'Checked-in' || bk.status === 'Checked In' ? t('status_checked_in', 'Đã nhận phòng') : bk.status === 'Checked-out' || bk.status === 'Checked Out' ? t('status_checked_out', 'Đã trả phòng') : t('status_confirmed', 'Đã xác nhận')}
                           </span>
                         </div>
                         <button
                           onClick={() => handleViewBookingDetail(bk.bookingId)}
                           className="bg-primary hover:bg-slate-900 text-white font-bold py-3 px-8 uppercase text-[10px] tracking-widest transition-all cursor-pointer border-none flex items-center justify-center h-10 parallelogram-btn"
                         >
-                          Xem Chi Tiết
+                          {t('db_btn_view_detail', 'Xem Chi Tiết')}
                         </button>
                       </div>
                     </div>
@@ -222,13 +224,13 @@ export default function Dashboard({ setActivePage }) {
                   ) : (
                     <div className="bg-white border border-outline-variant shadow-lg p-8 text-center font-['Montserrat'] flex flex-col items-center justify-center min-h-[220px]">
                       <span className="material-symbols-outlined text-4xl text-slate-300 mb-3">hotel</span>
-                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-2">Bạn không có đặt phòng nào sắp tới</h3>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-5 max-w-md leading-relaxed">Hãy khám phá các ưu đãi và đặt phòng nghỉ sang trọng tại Elysian ngay hôm nay.</p>
+                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-2">{t('db_no_upcoming_title', 'Bạn không có đặt phòng nào sắp tới')}</h3>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-5 max-w-md leading-relaxed">{t('db_no_upcoming_desc', 'Hãy khám phá các ưu đãi và đặt phòng nghỉ sang trọng tại Elysian ngay hôm nay.')}</p>
                       <button
                         onClick={() => setActivePage('home')}
                         className="bg-primary hover:bg-slate-950 text-white font-bold py-3 px-8 uppercase text-[10px] tracking-widest transition-all cursor-pointer border-none parallelogram-btn h-10"
                       >
-                        Khám phá ngay
+                        {t('db_btn_discover_now', 'Khám phá ngay')}
                       </button>
                     </div>
                   )}

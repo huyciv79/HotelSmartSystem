@@ -1,4 +1,8 @@
+import { useLanguage } from '../context/LanguageContext';
+
 export default function Residences() {
+  const { t } = useLanguage();
+
   return (
     <div className="w-full">
       <main className="pt-24 pb-stack-lg text-left">
@@ -6,7 +10,7 @@ export default function Residences() {
           <h1 className="font-headline-xl text-headline-xl md:text-headline-xl mb-stack-sm text-on-surface">Elysian Residences</h1>
           <div className="max-w-4xl mx-auto border-t border-outline-variant pt-8">
             <p className="font-body-lg text-body-lg text-secondary">
-              Không gian sống và làm việc hiện đại, năng động dành cho các nhà sáng tạo nội dung, doanh nhân và cư dân đô thị thế hệ mới.
+              {t('residences_desc')}
             </p>
           </div>
         </header>
@@ -14,22 +18,22 @@ export default function Residences() {
         <section className="px-margin-mobile md:px-margin-desktop max-w-[1440px] mx-auto py-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="font-headline-lg text-headline-lg text-primary mb-6">Định nghĩa lại Co-Living</h2>
+              <h2 className="font-headline-lg text-headline-lg text-primary mb-6">{t('residences_coliving')}</h2>
               <p className="font-body-lg text-body-lg text-secondary mb-6">
-                Elysian Residences kết hợp sự sang trọng riêng tư của căn hộ cao cấp với sự kết nối năng động của không gian sinh hoạt chung.
+                {t('residences_coliving_desc')}
               </p>
               <ul className="space-y-4 font-label-bold text-label-bold text-on-surface list-none p-0">
                 <li className="flex items-center gap-3">
                   <span className="material-symbols-outlined text-primary">check_circle</span>
-                  TIỆN NGHI CAO CẤP 24/7
+                  {t('residences_benefit1')}
                 </li>
                 <li className="flex items-center gap-3">
                   <span className="material-symbols-outlined text-primary">check_circle</span>
-                  CỘNG ĐỒNG BẢN ĐỊA NĂNG ĐỘNG
+                  {t('residences_benefit2')}
                 </li>
                 <li className="flex items-center gap-3">
                   <span className="material-symbols-outlined text-primary">check_circle</span>
-                  THỦ TỤC THUÊ NHANH GỌN, LINH HOẠT
+                  {t('residences_benefit3')}
                 </li>
               </ul>
             </div>

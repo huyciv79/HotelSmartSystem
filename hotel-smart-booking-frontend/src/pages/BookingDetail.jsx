@@ -8,8 +8,10 @@ import {
   deleteReview
 } from '../services/reviewService';
 import { Star, Camera, X, Edit3, Trash2, MessageSquare, Plus, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function BookingDetail({ setActivePage }) {
+  const { t } = useLanguage();
   const { toasts, showToast, dismissToast } = useToast();
 
   const [booking, setBooking] = useState(null);
@@ -42,7 +44,7 @@ export default function BookingDetail({ setActivePage }) {
       // Find selected booking ID from sessionStorage
       const selectedBookingId = sessionStorage.getItem('selectedBookingId');
       if (!selectedBookingId) {
-        showToast('Không tìm thấy thông tin đặt phòng cần xem.', 'error');
+        showToast(t('bd_toast_error_load', 'Không tìm thấy thông tin đặt phòng cần xem.'), 'error');
         setTimeout(() => {
           setActivePage('dashboard');
         }, 1500);
@@ -70,7 +72,7 @@ export default function BookingDetail({ setActivePage }) {
         }
       } catch (err) {
         console.error('Lỗi khi tải chi tiết đặt phòng:', err);
-        showToast('Không thể tải chi tiết đặt phòng', 'error');
+        showToast(t('bd_toast_error_load', 'Không thể tải chi tiết đặt phòng'), 'error');
         // Fallback: mock booking data for safety if api fails
         setBooking({
           bookingId: parseInt(selectedBookingId),
@@ -94,23 +96,23 @@ export default function BookingDetail({ setActivePage }) {
     };
 
     fetchBookingDetail();
-  }, [setActivePage, showToast]);
+  }, [setActivePage, showToast, t]);
 
   const handleCopyCode = () => {
     if (!booking) return;
     navigator.clipboard.writeText(booking.bookingReference);
     setCopied(true);
-    showToast('Đã sao chép mã đặt phòng vào Clipboard!', 'success');
+    showToast(t('bd_btn_copied', 'Đã sao chép mã đặt phòng vào Clipboard!'), 'success');
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleCancelBooking = () => {
-    showToast('Gửi yêu cầu hủy đặt phòng thành công. Nhân viên sẽ liên hệ xác nhận trong vòng ít phút!', 'success');
+    showToast(t('bd_toast_cancel_success', 'Gửi yêu cầu hủy đặt phòng thành công. Nhân viên sẽ liên hệ xác nhận trong vòng ít phút!'), 'success');
     setBooking(prev => ({ ...prev, status: 'Cancelled' }));
   };
 
   const handleRequestService = () => {
-    showToast('Đã chuyển tiếp yêu cầu Concierge của bạn tới quầy lễ tân!', 'success');
+    showToast(t('bd_toast_service_success', 'Đã chuyển tiếp yêu cầu Concierge của bạn tới quầy lễ tân!'), 'success');
   };
 
   // Open Feedback Form for Writing
@@ -140,7 +142,7 @@ export default function BookingDetail({ setActivePage }) {
   const handleSubmitFeedback = async (e) => {
     e.preventDefault();
     if (!feedbackComment.trim()) {
-      showToast('Vui lòng nhập bình luận đánh giá.', 'error');
+      showToast(t('bd_toast_comment_required', 'Vui lòng nhập bình luận đánh giá.'), 'error');
       return;
     }
 
@@ -158,18 +160,18 @@ export default function BookingDetail({ setActivePage }) {
         // Update
         data.bookingId = booking.bookingId;
         await updateReview(feedback.id, data);
-        showToast('Cập nhật đánh giá dịch vụ thành công!', 'success');
+        showToast(t('bd_toast_fb_update_success', 'Cập nhật đánh giá dịch vụ thành công!'), 'success');
       } else {
         // Create
         await createReview(booking.bookingId, data);
-        showToast('Cảm ơn bạn đã gửi đánh giá dịch vụ!', 'success');
+        showToast(t('bd_toast_fb_create_success', 'Cảm ơn bạn đã gửi đánh giá dịch vụ!'), 'success');
       }
 
       await fetchFeedback(booking.bookingId);
       setIsFeedbackOpen(false);
     } catch (err) {
       console.error('Error submitting feedback:', err);
-      const errMsg = err.response?.data?.message || 'Có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại.';
+      const errMsg = err.response?.data?.message || t('bd_toast_error_submit', 'Có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại.');
       showToast(errMsg, 'error');
     } finally {
       setIsSubmittingFeedback(false);
@@ -179,14 +181,14 @@ export default function BookingDetail({ setActivePage }) {
   // Delete Feedback
   const handleDeleteFeedback = async () => {
     if (!feedback) return;
-    if (window.confirm('Bạn có chắc chắn muốn xóa đánh giá này không?')) {
+    if (window.confirm(t('bd_toast_fb_delete_confirm', 'Bạn có chắc chắn muốn xóa đánh giá này không?'))) {
       try {
         await deleteReview(feedback.id);
         setFeedback(null);
-        showToast('Đã xóa đánh giá của bạn.', 'success');
+        showToast(t('bd_toast_fb_delete_success', 'Đã xóa đánh giá của bạn.'), 'success');
       } catch (err) {
         console.error('Error deleting feedback:', err);
-        showToast('Không thể xóa đánh giá lúc này.', 'error');
+        showToast(t('bd_toast_fb_delete_error', 'Không thể xóa đánh giá lúc này.'), 'error');
       }
     }
   };
@@ -197,7 +199,7 @@ export default function BookingDetail({ setActivePage }) {
     if (!files.length) return;
 
     if (feedbackImages.length + files.length > 5) {
-      showToast('Bạn chỉ có thể đính kèm tối đa 5 hình ảnh.', 'error');
+      showToast(t('bd_toast_images_limit', 'Bạn chỉ có thể đính kèm tối đa 5 hình ảnh.'), 'error');
       return;
     }
 
@@ -216,7 +218,7 @@ export default function BookingDetail({ setActivePage }) {
       })
       .catch(err => {
         console.error('Error uploading images:', err);
-        showToast('Lỗi khi tải ảnh lên.', 'error');
+        showToast(t('bd_toast_images_error', 'Lỗi khi tải ảnh lên.'), 'error');
       });
   };
 
@@ -230,7 +232,7 @@ export default function BookingDetail({ setActivePage }) {
       <div className="w-full min-h-screen pt-36 pb-24 bg-gray-50 flex items-center justify-center font-['Montserrat']">
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary mx-auto mb-4"></div>
-          <p className="text-xs uppercase font-bold tracking-widest text-slate-500">Đang tải chi tiết đặt phòng...</p>
+          <p className="text-xs uppercase font-bold tracking-widest text-slate-500">{t('bd_loading_text', 'Đang tải chi tiết đặt phòng...')}</p>
         </div>
       </div>
     );
@@ -240,10 +242,10 @@ export default function BookingDetail({ setActivePage }) {
 
   // Determine timeline status steps and timestamps
   const statuses = [
-    { key: 'Created', label: 'Yêu cầu Đặt phòng', desc: 'Đã tiếp nhận yêu cầu' },
-    { key: 'Confirmed', label: 'Đã xác nhận', desc: 'Đã xác thực thông tin' },
-    { key: 'Checked-in', label: 'Đã nhận phòng', desc: 'Sử dụng phòng tại Elysian' },
-    { key: 'Checked-out', label: 'Đã trả phòng', desc: 'Hoàn tất thời gian lưu trú' }
+    { key: 'Created', label: t('bd_timeline_step0_title', 'Yêu cầu Đặt phòng'), desc: t('bd_timeline_step0_desc', 'Đã tiếp nhận yêu cầu') },
+    { key: 'Confirmed', label: t('bd_timeline_step1_title', 'Đã xác nhận'), desc: t('bd_timeline_step1_desc', 'Đã xác thực thông tin') },
+    { key: 'Checked-in', label: t('bd_timeline_step2_title', 'Đã nhận phòng'), desc: t('bd_timeline_step2_desc', 'Sử dụng phòng tại Elysian') },
+    { key: 'Checked-out', label: t('bd_timeline_step3_title', 'Đã trả phòng'), desc: t('bd_timeline_step3_desc', 'Hoàn tất thời gian lưu trú') }
   ];
 
   const getStatusIndex = (statusStr) => {
@@ -259,7 +261,7 @@ export default function BookingDetail({ setActivePage }) {
 
   // Formatting date/time helper
   const formatDateTime = (isoString) => {
-    if (!isoString) return 'Chờ cập nhật';
+    if (!isoString) return t('bd_dt_waiting', 'Chờ cập nhật');
     const date = new Date(isoString);
     return date.toLocaleString('vi-VN', {
       hour: '2-digit',
@@ -272,7 +274,7 @@ export default function BookingDetail({ setActivePage }) {
 
   // Mock timestamp logs relative to booking creation time
   const getStatusTimestamp = (idx) => {
-    if (idx > currentStatusIdx) return 'Chưa diễn ra';
+    if (idx > currentStatusIdx) return t('bd_dt_no_event', 'Chưa diễn ra');
     const createdTime = new Date(booking.createdAt || new Date());
     if (idx === 0) return formatDateTime(createdTime);
     if (idx === 1) return formatDateTime(new Date(createdTime.getTime() + 10 * 60 * 1000)); // Confirmed 10m later
@@ -284,7 +286,7 @@ export default function BookingDetail({ setActivePage }) {
       const actualTime = booking.actualCheckOut || localStorage.getItem(`booking_actualcheckout_${booking.bookingId}`);
       return formatDateTime(actualTime || new Date(booking.checkOutDate + 'T12:00:00').toISOString());
     }
-    return 'Chờ cập nhật';
+    return t('bd_dt_waiting', 'Chờ cập nhật');
   };
 
   const finalAmount = booking.finalAmount || booking.totalAmount || 0;
@@ -302,17 +304,17 @@ export default function BookingDetail({ setActivePage }) {
                 onClick={() => setActivePage('dashboard')}
                 className="mb-4 w-fit text-xs text-secondary hover:text-primary uppercase tracking-widest font-bold flex items-center gap-1 cursor-pointer bg-transparent border-none"
               >
-                <span className="material-symbols-outlined text-sm">arrow_back</span> Trở lại Dashboard
+                <span className="material-symbols-outlined text-sm">arrow_back</span> {t('bd_back_dashboard', 'Trở lại Dashboard')}
               </button>
 
               <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-xl md:text-2xl font-black text-slate-950 uppercase tracking-wider m-0">Đặt phòng: {booking.bookingReference}</h2>
+                <h2 className="text-xl md:text-2xl font-black text-slate-950 uppercase tracking-wider m-0">{t('bd_title', 'Đặt phòng:')} {booking.bookingReference}</h2>
                 <button
                   onClick={handleCopyCode}
                   className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold px-2 py-1 uppercase tracking-wider border-none cursor-pointer transition-all"
                 >
                   <span className="material-symbols-outlined text-sm">{copied ? 'check' : 'content_copy'}</span>
-                  {copied ? 'Đã copy' : 'Copy mã'}
+                  {copied ? t('bd_btn_copied', 'Đã copy') : t('bd_btn_copy', 'Copy mã')}
                 </button>
               </div>
               <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{booking.roomTypeName}</p>
@@ -320,7 +322,7 @@ export default function BookingDetail({ setActivePage }) {
 
             {/* Current Status Badge */}
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest block mb-1">Trạng thái</span>
+              <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest block mb-1">{t('db_status_label', 'Trạng thái')}</span>
               <span className={`px-4 py-2 text-xs font-black uppercase tracking-widest ${booking.status === 'Cancelled'
                   ? 'bg-red-100 text-red-700'
                   : booking.status === 'Checked-in' || booking.status === 'Checked In'
@@ -329,7 +331,7 @@ export default function BookingDetail({ setActivePage }) {
                       ? 'bg-slate-200 text-slate-700'
                       : 'bg-green-100 text-green-700'
                 }`}>
-                {booking.status === 'Cancelled' ? 'Đã Hủy' : booking.status === 'Checked-in' || booking.status === 'Checked In' ? 'Đã nhận phòng' : booking.status === 'Checked-out' || booking.status === 'Checked Out' ? 'Đã trả phòng' : 'Đã xác nhận'}
+                {booking.status === 'Cancelled' ? t('status_cancelled', 'Đã Hủy') : booking.status === 'Checked-in' || booking.status === 'Checked In' ? t('status_checked_in', 'Đã nhận phòng') : booking.status === 'Checked-out' || booking.status === 'Checked Out' ? t('status_checked_out', 'Đã trả phòng') : t('status_confirmed', 'Đã xác nhận')}
               </span>
             </div>
           </div>
@@ -342,12 +344,12 @@ export default function BookingDetail({ setActivePage }) {
 
               {/* Vertical Timeline */}
               <div>
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest border-b border-gray-100 pb-3 mb-6">Tiến trình trạng thái (Timeline)</h3>
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest border-b border-gray-100 pb-3 mb-6">{t('bd_timeline_title', 'Tiến trình trạng thái (Timeline)')}</h3>
 
                 {booking.status === 'Cancelled' ? (
                   <div className="bg-red-50 border border-red-200 p-4 flex items-center gap-3 text-red-700 font-bold text-xs">
                     <span className="material-symbols-outlined text-2xl">cancel</span>
-                    <span>Đặt phòng này đã bị hủy bỏ. Vui lòng liên hệ bộ phận hỗ trợ khách hàng Elysian nếu cần trợ giúp.</span>
+                    <span>{t('bd_cancel_notice', 'Đặt phòng này đã bị hủy bỏ. Vui lòng liên hệ bộ phận hỗ trợ khách hàng Elysian nếu cần trợ giúp.')}</span>
                   </div>
                 ) : (
                   <div className="relative pl-6 border-l border-slate-200 ml-3 space-y-8">
@@ -386,39 +388,39 @@ export default function BookingDetail({ setActivePage }) {
 
               {/* Room Details Info */}
               <div className="border-t border-gray-100 pt-6">
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest pb-3 mb-4">Chi tiết phòng nghỉ & Thời gian</h3>
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest pb-3 mb-4">{t('bd_detail_title', 'Chi tiết phòng nghỉ & Thời gian')}</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 text-xs font-bold text-slate-700">
                   <div>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Ngày Nhận Phòng</span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('payment_invoice_checkin_date', 'Ngày Nhận Phòng')}</span>
                     <span className="text-slate-900 font-black tracking-wide block mt-1">{booking.checkInDate}</span>
-                    <span className="text-[9px] text-slate-500 uppercase tracking-wider">Từ 2h trưa (14:00)</span>
+                    <span className="text-[9px] text-slate-500 uppercase tracking-wider">{t('db_booking_checkin_time_default', 'Từ 2h trưa (14:00)')}</span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Ngày Trả Phòng</span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('payment_invoice_checkout_date', 'Ngày Trả Phòng')}</span>
                     <span className="text-slate-900 font-black tracking-wide block mt-1">{booking.checkOutDate}</span>
-                    <span className="text-[9px] text-slate-500 uppercase tracking-wider">Trước 12h trưa (12:00)</span>
+                    <span className="text-[9px] text-slate-500 uppercase tracking-wider">{t('db_booking_checkout_time_default', 'Trước 12h trưa (12:00)')}</span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Số lượng khách</span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('booking_guests_stepper_label', 'Số lượng khách')}</span>
                     <span className="text-slate-900 font-black tracking-wide block mt-1">
-                      {booking.numberOfAdults || 1} Người lớn
-                      {booking.numberOfChildren ? `, ${booking.numberOfChildren} Trẻ em` : ''}
+                      {booking.numberOfAdults || 1} {t('booking_summary_nl', 'Người lớn')}
+                      {booking.numberOfChildren ? `, ${booking.numberOfChildren} ${t('booking_summary_te', 'Trẻ em')}` : ''}
                     </span>
                     <span className="text-[9px] text-slate-500 uppercase tracking-wider">
-                      {booking.quantity ? `Số lượng: ${booking.quantity} phòng` : 'Số lượng: 1 phòng'}
+                      {booking.quantity ? `${t('booking_summary_quantity', 'Số lượng')}: ${booking.quantity} ${t('booking_summary_rooms_unit', 'phòng')}` : `${t('booking_summary_quantity', 'Số lượng')}: 1 ${t('booking_summary_rooms_unit', 'phòng')}`}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Hình thức nhận phòng</span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('payment_invoice_checkin_method', 'Hình thức nhận phòng')}</span>
                     <span className="text-primary font-black uppercase tracking-wider block mt-1">
-                      {booking.checkInMethod === 'FaceID' || booking.checkInMethod === 'Face Recognition' ? 'FaceID eKYC' : booking.checkInMethod === 'QR Code' ? 'Mã QR Code' : 'Tại quầy lễ tân'}
+                      {booking.checkInMethod === 'FaceID' || booking.checkInMethod === 'Face Recognition' ? 'FaceID eKYC' : booking.checkInMethod === 'QR Code' ? t('booking_checkin_qr_option', 'Mã QR') : t('booking_checkin_manual_option', 'Quầy lễ tân')}
                     </span>
                   </div>
                 </div>
 
                 {booking.specialRequests && (
                   <div className="mt-6 p-4 bg-slate-50 border border-slate-200">
-                    <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-1">Yêu cầu đặc biệt:</span>
+                    <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-1">{t('booking_special_requests_label', 'Yêu cầu đặc biệt:')}</span>
                     <p className="text-xs text-slate-700 font-bold tracking-wide m-0">{booking.specialRequests}</p>
                   </div>
                 )}
@@ -433,7 +435,7 @@ export default function BookingDetail({ setActivePage }) {
                     className="bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-1.5 h-11"
                   >
                     <span className="material-symbols-outlined text-lg">cancel</span>
-                    Hủy đặt phòng
+                    {t('bd_btn_cancel', 'Hủy đặt phòng')}
                   </button>
                 )}
 
@@ -444,7 +446,7 @@ export default function BookingDetail({ setActivePage }) {
                     className="bg-slate-900 hover:bg-primary text-white text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-1.5 h-11"
                   >
                     <span className="material-symbols-outlined text-lg">room_service</span>
-                    Yêu cầu Dịch vụ phòng
+                    {t('bd_btn_service', 'Yêu cầu Dịch vụ phòng')}
                   </button>
                 )}
 
@@ -455,7 +457,7 @@ export default function BookingDetail({ setActivePage }) {
                     className="bg-primary text-white hover:bg-opacity-95 text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-2 h-11"
                   >
                     <MessageSquare size={16} />
-                    <span>Đánh giá dịch vụ</span>
+                    <span>{t('bd_btn_service_review', 'Đánh giá dịch vụ')}</span>
                   </button>
                 )}
               </div>
@@ -464,21 +466,21 @@ export default function BookingDetail({ setActivePage }) {
               {feedback && (
                 <div className="border-t border-gray-100 pt-6">
                   <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest pb-3 mb-4 flex items-center justify-between">
-                    <span>Đánh giá dịch vụ của bạn</span>
+                    <span>{t('bd_feedback_title', 'Đánh giá dịch vụ của bạn')}</span>
                     <div className="flex gap-2">
                       <button
                         onClick={handleOpenEditFeedback}
                         className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-primary border-none bg-transparent cursor-pointer"
                       >
                         <Edit3 size={12} />
-                        <span>Sửa</span>
+                        <span>{t('bd_btn_edit', 'Sửa')}</span>
                       </button>
                       <button
                         onClick={handleDeleteFeedback}
                         className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-red-600 border-none bg-transparent cursor-pointer"
                       >
                         <Trash2 size={12} />
-                        <span>Xóa</span>
+                        <span>{t('bd_btn_delete', 'Xóa')}</span>
                       </button>
                     </div>
                   </h3>
@@ -495,7 +497,7 @@ export default function BookingDetail({ setActivePage }) {
                         ))}
                       </div>
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                        Đã gửi lúc {new Date(feedback.createdAt).toLocaleDateString('vi-VN')}
+                        {t('bd_submitted_at', 'Đã gửi lúc')} {new Date(feedback.createdAt).toLocaleDateString('vi-VN')}
                       </span>
                     </div>
 
@@ -508,13 +510,13 @@ export default function BookingDetail({ setActivePage }) {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-bold text-slate-700 bg-white p-3 border border-slate-100 mb-4">
                         {feedback.pros && (
                           <div>
-                            <span className="text-green-700 text-[9px] font-black uppercase tracking-wider block mb-0.5">✓ Ưu điểm:</span>
+                            <span className="text-green-700 text-[9px] font-black uppercase tracking-wider block mb-0.5">✓ {t('review_pros', 'Ưu điểm:')}</span>
                             <span className="text-slate-600 font-medium">{feedback.pros}</span>
                           </div>
                         )}
                         {feedback.cons && (
                           <div>
-                            <span className="text-red-700 text-[9px] font-black uppercase tracking-wider block mb-0.5">✗ Nhược điểm:</span>
+                            <span className="text-red-700 text-[9px] font-black uppercase tracking-wider block mb-0.5">✗ {t('review_cons', 'Nhược điểm:')}</span>
                             <span className="text-slate-600 font-medium">{feedback.cons}</span>
                           </div>
                         )}
@@ -539,48 +541,48 @@ export default function BookingDetail({ setActivePage }) {
             {/* Right Column: Booking Summary Card (col-span-4) */}
             <div className="lg:col-span-4 bg-white border border-outline-variant shadow-md p-6 md:p-8 flex flex-col justify-between h-fit">
               <div>
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest border-b border-gray-100 pb-3 mb-4">Tóm tắt đặt phòng</h3>
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest border-b border-gray-100 pb-3 mb-4">{t('bd_summary_title', 'Tóm tắt đặt phòng')}</h3>
 
                 <div className="space-y-4">
                   {/* Room Info */}
                   <div>
                     <span className="text-[9px] text-primary font-black uppercase tracking-widest block mb-0.5">ELYSIAN HOTELS</span>
                     <h4 className="text-sm font-black text-slate-950 uppercase tracking-wider">{booking.roomTypeName}</h4>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 block">Mã: {booking.bookingReference}</span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 block">{t('booking_ref_code_label', 'Mã')}: {booking.bookingReference}</span>
                   </div>
 
                   {/* Detail items */}
                   <div className="space-y-2.5 border-t border-b border-gray-100 py-4 text-xs font-bold text-slate-700">
                     <div className="flex justify-between gap-4">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Thời gian:</span>
-                      <span className="text-right">{booking.checkInDate} đến {booking.checkOutDate} ({booking.nights} đêm)</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('booking_summary_duration', 'Thời gian:')}</span>
+                      <span className="text-right">{booking.checkInDate} {t('booking_summary_date_to', 'đến')} {booking.checkOutDate} ({booking.nights} {t('booking_summary_nights', 'đêm')})</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Số phòng đặt:</span>
-                      <span>{booking.quantity || 1} phòng</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('bd_summary_rooms', 'Số phòng đặt:')}</span>
+                      <span>{booking.quantity || 1} {t('booking_summary_rooms_unit', 'phòng')}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Số lượng khách:</span>
-                      <span>{booking.numberOfAdults || 1} NL {booking.numberOfChildren ? `• ${booking.numberOfChildren} TE` : ''}</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('booking_guests_stepper_label', 'Số lượng khách:')}</span>
+                      <span>{booking.numberOfAdults || 1} {t('booking_summary_nl', 'NL')} {booking.numberOfChildren ? `• ${booking.numberOfChildren} ${t('booking_summary_te', 'TE')}` : ''}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Check-in:</span>
-                      <span className="text-primary uppercase">{booking.checkInMethod === 'FaceID' || booking.checkInMethod === 'Face Recognition' ? 'FaceID eKYC' : booking.checkInMethod === 'QR Code' ? 'Mã QR' : 'Quầy lễ tân'}</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('payment_invoice_checkin_method', 'Check-in:')}</span>
+                      <span className="text-primary uppercase">{booking.checkInMethod === 'FaceID' || booking.checkInMethod === 'Face Recognition' ? 'FaceID eKYC' : booking.checkInMethod === 'QR Code' ? t('booking_checkin_qr_option', 'Mã QR') : t('booking_checkin_manual_option', 'Quầy lễ tân')}</span>
                     </div>
                   </div>
 
                   {/* Price breakdown */}
                   <div className="space-y-2 text-xs font-bold text-slate-700">
                     <div className="flex justify-between gap-4">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Tạm tính (chưa thuế):</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('booking_summary_subtotal', 'Tạm tính (chưa thuế):')}</span>
                       <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(booking.totalAmount || (finalAmount / 1.1))}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Thuế VAT (10%):</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('booking_summary_vat', 'Thuế VAT (10%):')}</span>
                       <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(finalAmount - (booking.totalAmount || (finalAmount / 1.1)))}</span>
                     </div>
                     <div className="flex justify-between border-t border-slate-950 pt-3 text-sm gap-4">
-                      <span className="font-black text-slate-900 uppercase tracking-wider">TỔNG CỘNG:</span>
+                      <span className="font-black text-slate-900 uppercase tracking-wider">{t('booking_summary_total', 'TỔNG CỘNG:')}</span>
                       <span className="font-black text-primary text-base">
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(finalAmount)}
                       </span>
@@ -589,9 +591,9 @@ export default function BookingDetail({ setActivePage }) {
 
                   {/* Policy instruction box */}
                   <div className="bg-slate-50 border border-slate-200 p-4 text-[9px] text-slate-500 font-semibold leading-relaxed uppercase tracking-wider mt-4">
-                    <span className="block font-black text-slate-700 mb-1">Quy định nhận/trả phòng:</span>
-                    <p className="mb-1">Check-in: 2h trưa (14:00)</p>
-                    <p>Check-out: 12h trưa (12:00)</p>
+                    <span className="block font-black text-slate-700 mb-1">{t('bd_rules_title', 'Quy định nhận/trả phòng:')}</span>
+                    <p className="mb-1">{t('booking_step2_label', 'Check-in')}: {t('db_booking_checkin_time_default', 'Từ 2h trưa (14:00)')}</p>
+                    <p>{t('booking_step2_label', 'Check-in')}-out: {t('db_booking_checkout_time_default', 'Trước 12h trưa (12:00)')}</p>
                   </div>
                 </div>
               </div>
@@ -616,7 +618,7 @@ export default function BookingDetail({ setActivePage }) {
             </button>
 
             <div className="bg-primary text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 absolute top-0 left-0">
-              {isEditingFeedback ? 'Chỉnh sửa đánh giá dịch vụ' : 'Đánh giá dịch vụ của bạn'}
+              {isEditingFeedback ? t('fm_edit_title', 'Chỉnh sửa đánh giá dịch vụ') : t('bd_feedback_title', 'Đánh giá dịch vụ của bạn')}
             </div>
 
             <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mt-4 mb-1">

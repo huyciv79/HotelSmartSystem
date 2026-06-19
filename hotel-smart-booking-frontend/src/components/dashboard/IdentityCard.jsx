@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { ShieldCheck, ShieldAlert, ShieldX, Clock, CreditCard, Smartphone, Loader2 } from "lucide-react";
 import { getEkycProfile } from "../../services/ekycService";
+import { useLanguage } from "../../context/LanguageContext";
 
 const IdentityCard = ({ onNavigate }) => {
+  const { t } = useLanguage();
   const [ekyc, setEkyc] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -39,61 +41,61 @@ const IdentityCard = ({ onNavigate }) => {
     switch (status) {
       case "VERIFIED":
         return {
-          title: "ĐÃ XÁC MINH DANH TÍNH",
-          desc: "Đã kích hoạt FaceID Express Check-in và khóa phòng kỹ thuật số.",
+          title: t("ekyc_status_verified_title", "ĐÃ XÁC MINH DANH TÍNH"),
+          desc: t("ekyc_status_verified_desc", "Đã kích hoạt FaceID Express Check-in và khóa phòng kỹ thuật số."),
           icon: <ShieldCheck className="text-emerald-500 size-6 animate-pulse" />,
           border: "border-l-emerald-500",
           footer: verifiedAt
-            ? `ĐÃ XÁC MINH VÀO ${new Date(verifiedAt).toLocaleDateString("vi-VN")}`
-            : "ĐÃ XÁC MINH THÀNH CÔNG",
+            ? `${t("ekyc_status_verified_at", "ĐÃ XÁC MINH VÀO")} ${new Date(verifiedAt).toLocaleDateString("vi-VN")}`
+            : t("ekyc_status_verified_success", "ĐÃ XÁC MINH THÀNH CÔNG"),
           button: null,
         };
       case "PENDING":
         return {
-          title: "HỒ SƠ CHỜ DUYỆT",
-          desc: "Hồ sơ xác minh eKYC đang được xử lý. Vui lòng chờ trong giây lát.",
+          title: t("ekyc_status_pending_title", "HỒ SƠ CHỜ DUYỆT"),
+          desc: t("ekyc_status_pending_desc", "Hồ sơ xác minh eKYC đang được xử lý. Vui lòng chờ trong giây lát."),
           icon: <Clock className="text-amber-500 size-6" />,
           border: "border-l-amber-500",
-          footer: "ĐANG CHỜ HỆ THỐNG XÁC THỰC",
+          footer: t("ekyc_status_pending_footer", "ĐANG CHỜ HỆ THỐNG XÁC THỰC"),
           button: (
             <button
               onClick={onNavigate}
               className="mt-2 w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold uppercase text-[9px] tracking-widest transition-all cursor-pointer rounded-none"
             >
-              Xem Tiến Trình
+              {t("ekyc_btn_view_progress", "Xem Tiến Trình")}
             </button>
           ),
         };
       case "REJECTED":
         return {
-          title: "XÁC MINH THẤT BẠI",
-          desc: "Hồ sơ eKYC bị từ chối do hình ảnh mờ hoặc thông tin không trùng khớp.",
+          title: t("ekyc_status_rejected_title", "XÁC MINH THẤT BẠI"),
+          desc: t("ekyc_status_rejected_desc", "Hồ sơ eKYC bị từ chối do hình ảnh mờ hoặc thông tin không trùng khớp."),
           icon: <ShieldX className="text-red-500 size-6" />,
           border: "border-l-red-500",
-          footer: ekyc?.rejectionReason?.toUpperCase() || "HỒ SƠ BỊ TỪ CHỐI",
+          footer: ekyc?.rejectionReason?.toUpperCase() || t("ekyc_status_rejected_footer", "HỒ SƠ BỊ TỪ CHỐI"),
           button: (
             <button
               onClick={onNavigate}
               className="mt-2 w-full py-2 bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 font-bold uppercase text-[9px] tracking-widest transition-all cursor-pointer rounded-none"
             >
-              Cập nhật eKYC ngay
+              {t("ekyc_btn_update_now", "Cập nhật eKYC ngay")}
             </button>
           ),
         };
       case "NOT_FOUND":
       default:
         return {
-          title: "CHƯA XÁC MINH DANH TÍNH",
-          desc: "Hãy hoàn thành eKYC để kích hoạt FaceID và check-in không cần quầy lễ tân.",
+          title: t("ekyc_status_not_found_title", "CHƯA XÁC MINH DANH TÍNH"),
+          desc: t("ekyc_status_not_found_desc", "Hãy hoàn thành eKYC để kích hoạt FaceID và check-in không cần quầy lễ tân."),
           icon: <ShieldAlert className="text-neutral-500 size-6" />,
           border: "border-l-primary",
-          footer: "THƯỜNG MẤT DƯỚI 2 PHÚT",
+          footer: t("ekyc_status_not_found_footer", "THƯỜNG MẤT DƯỚI 2 PHÚT"),
           button: (
             <button
               onClick={onNavigate}
               className="mt-2 w-full py-3 bg-primary hover:bg-white hover:text-black text-white font-black uppercase text-[10px] tracking-widest transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 parallelogram-btn"
             >
-              Xác minh eKYC ngay
+              {t("ekyc_btn_verify_now", "Xác minh eKYC ngay")}
             </button>
           ),
         };
@@ -122,11 +124,11 @@ const IdentityCard = ({ onNavigate }) => {
           <div className="flex gap-3">
             <div className="w-24 h-16 bg-white/5 rounded-none border border-white/10 flex flex-col items-center justify-center hover:border-emerald-500/50 transition-colors gap-1.5">
               <CreditCard className="text-white/60 size-5" />
-              <span className="text-[7px] text-white/40 font-bold tracking-widest uppercase">SMART KEY</span>
+              <span className="text-[7px] text-white/40 font-bold tracking-widest uppercase">{t("ekyc_label_smart_key", "SMART KEY")}</span>
             </div>
             <div className="w-24 h-16 bg-white/5 rounded-none border border-white/10 flex flex-col items-center justify-center hover:border-emerald-500/50 transition-colors gap-1.5">
               <Smartphone className="text-white/60 size-5" />
-              <span className="text-[7px] text-white/40 font-bold tracking-widest uppercase">E-CHECKIN</span>
+              <span className="text-[7px] text-white/40 font-bold tracking-widest uppercase">{t("ekyc_label_e_checkin", "E-CHECKIN")}</span>
             </div>
           </div>
         )}
