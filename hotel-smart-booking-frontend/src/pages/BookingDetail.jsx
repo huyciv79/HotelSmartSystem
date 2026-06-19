@@ -102,7 +102,7 @@ export default function BookingDetail({ setActivePage }) {
     if (normalized === 'cancelled') return -1;
     if (normalized === 'checkedout' || normalized === 'completed') return 3;
     if (normalized === 'checkedin') return 2;
-    if (normalized === 'confirmed' || normalized === 'active') return 1;
+    if (normalized === 'confirmed' || normalized === 'active' || normalized === 'partiallypaid' || normalized === 'paid') return 1;
     return 0; // Created/Pending
   };
 
@@ -175,6 +175,8 @@ export default function BookingDetail({ setActivePage }) {
                   ? 'bg-slate-200 text-slate-700'
                   : booking.status === 'Paid'
                   ? 'bg-green-100 text-green-700'
+                  : booking.status === 'Partially Paid'
+                  ? 'bg-indigo-100 text-indigo-700'
                   : 'bg-yellow-100 text-yellow-700'
               }`}>
                 {booking.status === 'Cancelled' 
@@ -185,6 +187,8 @@ export default function BookingDetail({ setActivePage }) {
                   ? 'Đã trả phòng' 
                   : booking.status === 'Paid' 
                   ? 'Đã thanh toán' 
+                  : booking.status === 'Partially Paid'
+                  ? 'Đã cọc 30%'
                   : 'Chờ thanh toán'}
               </span>
             </div>
@@ -273,8 +277,8 @@ export default function BookingDetail({ setActivePage }) {
 
               {/* ACTION BUTTONS BASED ON STATUS */}
               <div className="border-t border-gray-100 pt-6 flex flex-wrap gap-4">
-                {/* Pay Now button (available when unpaid/confirmed) */}
-                {booking.status === 'Confirmed' && (
+                {/* Pay Now button (available when unpaid/confirmed/partially paid) */}
+                {(booking.status === 'Confirmed' || booking.status === 'Partially Paid') && (
                   <button
                     onClick={handlePaymentRedirect}
                     className="bg-primary hover:brightness-110 text-on-primary text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-1.5 h-11"

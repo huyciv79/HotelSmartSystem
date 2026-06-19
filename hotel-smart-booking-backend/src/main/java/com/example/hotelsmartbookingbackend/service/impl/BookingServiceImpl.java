@@ -292,6 +292,8 @@ public class BookingServiceImpl implements BookingService {
                 .nights(ChronoUnit.DAYS.between(checkInDate, checkOutDate))
                 .totalAmount(booking.getTotalamount())
                 .finalAmount(booking.getFinalamount())
+                .paidAmount(booking.getPaidamount())
+                .depositAmount(booking.getDepositamount())
                 .status(booking.getStatus())
                 .specialRequests(booking.getSpecialrequests())
                 .createdAt(booking.getCreatedat())

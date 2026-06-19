@@ -15,4 +15,12 @@ public class CreateOrderRequest {
     private Integer bookingId;
 
     private BigDecimal amount; // Optional, defaults to remaining unpaid balance
+
+    private String paymentOption; // "DEPOSIT" or "FULL"
+
+    public CreateOrderRequest(Integer bookingId, BigDecimal amount) {
+        this.bookingId = bookingId;
+        this.amount = amount;
+        this.paymentOption = "FULL";
+    }
 }

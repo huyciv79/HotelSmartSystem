@@ -7,6 +7,8 @@ export default function Payment({ setActivePage }) {
   
   const [booking, setBooking] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('card'); // 'card' | 'qr' | 'bank'
+  const [payOption, setPayOption] = useState('deposit'); // 'deposit' | 'full'
+  const [paidThisTime, setPaidThisTime] = useState(0);
   const [cardNumber, setCardNumber] = useState('');
   const [cardName, setCardName] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
@@ -51,6 +53,8 @@ export default function Payment({ setActivePage }) {
       const result = response.data;
       if (result.success) {
         setIsSuccess(true);
+        const amountVndPaid = result.data.amount * 25000;
+        setPaidThisTime(amountVndPaid);
         const savedBookingStr = sessionStorage.getItem('currentBooking');
         if (savedBookingStr) {
           setBooking(JSON.parse(savedBookingStr));
@@ -61,7 +65,7 @@ export default function Payment({ setActivePage }) {
             checkInDate: 'N/A',
             checkOutDate: 'N/A',
             nights: 0,
-            finalAmount: result.data.amount * 25000,
+            finalAmount: amountVndPaid,
             checkInMethod: 'FaceID'
           });
         }
@@ -82,17 +86,6 @@ export default function Payment({ setActivePage }) {
     }
   };
 
-  if (!booking) {
-    return (
-      <div className="w-full min-h-screen pt-36 pb-24 bg-gray-50 flex items-center justify-center font-['Montserrat']">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary mx-auto mb-4"></div>
-          <p className="text-xs uppercase font-bold tracking-widest text-slate-500">Đang tải thông tin thanh toán...</p>
-        </div>
-      </div>
-    );
-  }
-
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
     
@@ -106,12 +99,11 @@ export default function Payment({ setActivePage }) {
     if (paymentMethod === 'paypal') {
       setIsProcessing(true);
       try {
-        const amountVnd = booking.finalAmount || (booking.totalAmount * 1.1) || 0;
-        const amountUsd = (amountVnd / 25000).toFixed(2);
         const idempotencyKey = `create-${Date.now()}`;
         const response = await axiosInstance.post('/payments/paypal/create-order', {
           bookingId: booking.bookingId || booking.id || 1,
-          amount: parseFloat(amountUsd)
+          amount: parseFloat(payAmountVnd),
+          paymentOption: paidAmountVnd > 0 ? 'FULL' : (payOption === 'deposit' ? 'DEPOSIT' : 'FULL')
         }, {
           headers: {
             'Idempotency-Key': idempotencyKey
@@ -135,19 +127,19 @@ export default function Payment({ setActivePage }) {
     // Call real backend endpoint for Card, Bank Transfer, and QR Pay to make them fully functional
     setIsProcessing(true);
     try {
-      const amountVnd = booking.finalAmount || (booking.totalAmount * 1.1) || 0;
       const prefix = paymentMethod === 'card' ? 'CARD' : 'BANK';
       const randomTx = `${prefix}-${Math.floor(10000000 + Math.random() * 90000000)}`;
       
       const response = await axiosInstance.post('/payments/paypal/bank-transfer', {
         bookingId: booking.bookingId || booking.id || 1,
-        amount: amountVnd,
+        amount: payAmountVnd,
         transactionCode: randomTx
       });
 
       const result = response.data;
       if (result.success) {
         setIsSuccess(true);
+        setPaidThisTime(payAmountVnd);
         showToast('Thanh toán thành công!', 'success');
         sessionStorage.removeItem('currentBooking');
       } else {
@@ -160,6 +152,28 @@ export default function Payment({ setActivePage }) {
       setIsProcessing(false);
     }
   };
+
+  if (!booking) {
+    return (
+      <div className="w-full min-h-screen pt-36 pb-24 bg-gray-50 flex items-center justify-center font-['Montserrat']">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary mx-auto mb-4"></div>
+          <p className="text-xs uppercase font-bold tracking-widest text-slate-500">Đang tải thông tin thanh toán...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const totalAmountVnd = booking.finalAmount || (booking.totalAmount * 1.1) || 0;
+  const paidAmountVnd = booking.paidAmount || 0;
+  const remainingAmountVnd = totalAmountVnd - paidAmountVnd;
+
+  // If already paid some amount, they pay the remaining. Otherwise, pay option determines the amount.
+  const payAmountVnd = paidAmountVnd > 0 
+    ? remainingAmountVnd 
+    : (payOption === 'deposit' ? totalAmountVnd * 0.3 : totalAmountVnd);
+
+
 
   const checkInMethodText = (method) => {
     switch(method) {
@@ -230,9 +244,9 @@ export default function Payment({ setActivePage }) {
                   <span className="text-primary uppercase">{checkInMethodText(booking.checkInMethod)}</span>
                 </div>
                 <div className="flex justify-between border-t border-dashed border-slate-300 pt-3 text-sm">
-                  <span className="font-black text-slate-900 uppercase tracking-wider">Tổng số tiền thanh toán:</span>
+                  <span className="font-black text-slate-900 uppercase tracking-wider">Số tiền vừa thanh toán:</span>
                   <span className="font-black text-primary text-base">
-                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(booking.finalAmount || (booking.totalAmount * 1.1))}
+                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(paidThisTime)}
                   </span>
                 </div>
               </div>
@@ -328,6 +342,46 @@ export default function Payment({ setActivePage }) {
                 </button>
               </div>
 
+              {/* Payment Option Selection (Deposit 30% vs Full 100%) */}
+              {paidAmountVnd > 0 ? (
+                <div className="bg-primary/5 border-l-2 border-primary p-4 mb-6 text-xs text-slate-700 font-bold uppercase tracking-wider">
+                  Bạn đã đặt cọc thành công: <span className="text-primary font-black">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(paidAmountVnd)}</span>. 
+                  Tiến hành thanh toán nốt số tiền còn lại: <span className="text-primary font-black">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(remainingAmountVnd)}</span>.
+                </div>
+              ) : (
+                <div className="bg-slate-50 border border-slate-200 p-4 mb-6 text-left">
+                  <span className="block text-xs font-black text-slate-900 uppercase tracking-widest mb-3">Lựa chọn hình thức thanh toán</span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div 
+                      onClick={() => setPayOption('deposit')}
+                      className={`border p-4 flex flex-col justify-between cursor-pointer transition-all duration-350 ${
+                        payOption === 'deposit' 
+                          ? 'border-primary bg-primary/5 text-primary shadow-sm' 
+                          : 'border-slate-200 hover:border-primary/50 text-slate-700 bg-white'
+                      }`}
+                    >
+                      <span className="text-[12px] font-black uppercase tracking-wider block">Đặt cọc trước 30%</span>
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1 block">
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalAmountVnd * 0.3)}
+                      </span>
+                    </div>
+                    <div 
+                      onClick={() => setPayOption('full')}
+                      className={`border p-4 flex flex-col justify-between cursor-pointer transition-all duration-350 ${
+                        payOption === 'full' 
+                          ? 'border-primary bg-primary/5 text-primary shadow-sm' 
+                          : 'border-slate-200 hover:border-primary/50 text-slate-700 bg-white'
+                      }`}
+                    >
+                      <span className="text-[12px] font-black uppercase tracking-wider block">Thanh toán 100%</span>
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1 block">
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalAmountVnd)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Payment Form Submission */}
               <form onSubmit={handlePaymentSubmit} className="space-y-6">
                 {paymentMethod === 'card' && (
@@ -393,7 +447,7 @@ export default function Payment({ setActivePage }) {
                   <div className="space-y-4 text-center py-6 bg-slate-50 border border-slate-200 rounded-lg p-4">
                     <div className="w-full max-w-[280px] bg-white border border-slate-200 shadow-md rounded-lg mx-auto p-4 flex flex-col items-center justify-center">
                       <img 
-                        src={`https://img.vietqr.io/image/MB-98899399999-compact.png?amount=${Math.round(booking.finalAmount || (booking.totalAmount * 1.1))}&addInfo=${booking.bookingReference}&accountName=LUONG%20THE%20KIET`}
+                        src={`https://img.vietqr.io/image/MB-98899399999-compact.png?amount=${Math.round(payAmountVnd)}&addInfo=${booking.bookingReference}&accountName=LUONG%20THE%20KIET`}
                         alt="VietQR MB Bank LUONG THE KIET"
                         className="w-full h-auto object-contain rounded"
                       />
@@ -425,7 +479,7 @@ export default function Payment({ setActivePage }) {
                         <div className="flex justify-between">
                           <span className="text-slate-400 font-bold uppercase tracking-wider">Số tiền:</span>
                           <span className="text-primary font-black">
-                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(booking.finalAmount || (booking.totalAmount * 1.1))}
+                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(payAmountVnd)}
                           </span>
                         </div>
                         <div className="flex justify-between border-t border-slate-200 pt-3">
@@ -435,7 +489,7 @@ export default function Payment({ setActivePage }) {
                       </div>
                       <div className="md:col-span-5 flex flex-col items-center justify-center border-l border-dashed border-slate-300 pl-4">
                         <img 
-                          src={`https://img.vietqr.io/image/MB-98899399999-qr_only.png?amount=${Math.round(booking.finalAmount || (booking.totalAmount * 1.1))}&addInfo=${booking.bookingReference}&accountName=LUONG%20THE%20KIET`}
+                          src={`https://img.vietqr.io/image/MB-98899399999-qr_only.png?amount=${Math.round(payAmountVnd)}&addInfo=${booking.bookingReference}&accountName=LUONG%20THE%20KIET`}
                           alt="VietQR MB Bank Quick Scan"
                           className="w-24 h-24 border border-slate-200 rounded bg-white p-1"
                         />
@@ -467,11 +521,11 @@ export default function Payment({ setActivePage }) {
                   className="w-full bg-primary text-on-primary font-bold py-4 uppercase tracking-widest hover:brightness-110 active:scale-98 transition-all cursor-pointer border-none flex items-center justify-center gap-2 h-12"
                 >
                   {paymentMethod === 'card' 
-                    ? 'XÁC NHẬN THANH TOÁN THẺ' 
+                    ? `XÁC NHẬN THANH TOÁN THẺ (${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(payAmountVnd)})` 
                     : paymentMethod === 'qr' 
                     ? 'TÔI ĐÃ QUÉT MÃ QR THÀNH CÔNG' 
                     : paymentMethod === 'paypal'
-                    ? 'THANH TOÁN QUA PAYPAL'
+                    ? `THANH TOÁN QUA PAYPAL (${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(payAmountVnd)})`
                     : 'TÔI ĐÃ CHUYỂN KHOẢN THÀNH CÔNG'}
                 </button>
               </form>
@@ -511,10 +565,40 @@ export default function Payment({ setActivePage }) {
 
                   {/* Payment totals */}
                   <div className="space-y-2 pt-2 text-xs font-bold text-slate-700">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">Tổng giá trị đặt phòng:</span>
+                      <span>
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalAmountVnd)}
+                      </span>
+                    </div>
+                    {paidAmountVnd > 0 && (
+                      <>
+                        <div className="flex justify-between text-green-600">
+                          <span className="font-bold uppercase tracking-wider">Đã đặt cọc / thanh toán:</span>
+                          <span>
+                            -{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(paidAmountVnd)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider">Số tiền còn lại:</span>
+                          <span>
+                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(remainingAmountVnd)}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    {paidAmountVnd === 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider">Lựa chọn thanh toán:</span>
+                        <span className="text-primary font-black uppercase tracking-wider">
+                          {payOption === 'deposit' ? 'Đặt cọc 30%' : 'Thanh toán 100%'}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between border-t border-slate-900 pt-3 text-sm">
-                      <span className="font-black text-slate-900 uppercase tracking-wider">TỔNG CỘNG CẦN THANH TOÁN:</span>
+                      <span className="font-black text-slate-900 uppercase tracking-wider">TIỀN THANH TOÁN KỲ NÀY:</span>
                       <span className="font-black text-primary text-base">
-                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(booking.finalAmount || (booking.totalAmount * 1.1))}
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(payAmountVnd)}
                       </span>
                     </div>
                   </div>

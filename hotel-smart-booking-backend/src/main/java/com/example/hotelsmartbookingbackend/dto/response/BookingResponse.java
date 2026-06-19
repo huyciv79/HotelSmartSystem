@@ -28,6 +28,8 @@ public class BookingResponse {
     private Long nights;
     private BigDecimal totalAmount;
     private BigDecimal finalAmount;
+    private BigDecimal paidAmount;
+    private BigDecimal depositAmount;
     private String status;
     private String specialRequests;
     private Instant createdAt;

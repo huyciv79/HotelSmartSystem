@@ -78,7 +78,7 @@ class PaymentServiceTest {
         assertEquals("https://paypal.com/approve", response.getApproveUrl());
 
         verify(bookingRepository).findById(1);
-        verify(valueOperations).set(eq("paypal:order_booking:PAY-12345"), eq("1:100.00"), any());
+        verify(valueOperations).set(eq("paypal:order_booking:PAY-12345"), eq("1:100.00:FULL"), any());
     }
 
     @Test

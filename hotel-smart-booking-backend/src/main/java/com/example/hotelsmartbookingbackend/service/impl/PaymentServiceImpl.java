@@ -35,7 +35,7 @@ public class PaymentServiceImpl implements PaymentService {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PaymentServiceImpl.class);
     private static final String ORDER_BOOKING_PREFIX = "paypal:order_booking:";
 
-    @Value("${paypal.conversion-rate:1.0}")
+    @Value("${paypal.conversion-rate:25000.0}")
     private BigDecimal conversionRate;
 
     @Override
@@ -54,8 +54,18 @@ public class PaymentServiceImpl implements PaymentService {
         BigDecimal remainingBalance = booking.getFinalamount().subtract(booking.getPaidamount());
         BigDecimal chargeAmount = request.getAmount();
 
+        String option = request.getPaymentOption();
+        if (option == null) {
+            option = "FULL";
+        }
+
         if (chargeAmount == null) {
-            chargeAmount = remainingBalance;
+            if ("DEPOSIT".equalsIgnoreCase(option)) {
+                // Deposit 30% of final amount
+                chargeAmount = booking.getFinalamount().multiply(new BigDecimal("0.30")).setScale(2, RoundingMode.HALF_UP);
+            } else {
+                chargeAmount = remainingBalance;
+            }
         } else {
             if (chargeAmount.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new RuntimeException("Payment amount must be greater than zero");
@@ -74,9 +84,9 @@ public class PaymentServiceImpl implements PaymentService {
 
         PaypalOrderResponse paypalOrder = paypalService.createPaypalOrder(booking.getId(), paypalAmount, idempotencyKey);
 
-        // Store the mapping of PayPal Order ID -> Booking ID & Original Charge Amount in Redis for 24h
+        // Store the mapping of PayPal Order ID -> Booking ID, Original Charge Amount, and Option in Redis for 24h
         String redisKey = ORDER_BOOKING_PREFIX + paypalOrder.getPaypalOrderId();
-        redisTemplate.opsForValue().set(redisKey, booking.getId() + ":" + chargeAmount, Duration.ofDays(1));
+        redisTemplate.opsForValue().set(redisKey, booking.getId() + ":" + chargeAmount + ":" + option, Duration.ofDays(1));
 
         return paypalOrder;
     }
@@ -92,11 +102,15 @@ public class PaymentServiceImpl implements PaymentService {
         
         Integer bookingId = null;
         BigDecimal expectedChargeAmount = null;
+        String paymentOption = "FULL";
 
         if (cachedValue != null) {
             String[] parts = cachedValue.split(":");
             bookingId = Integer.parseInt(parts[0]);
             expectedChargeAmount = new BigDecimal(parts[1]);
+            if (parts.length > 2) {
+                paymentOption = parts[2];
+            }
         }
 
         // 2. Call PayPal to capture the order
@@ -130,7 +144,7 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setBookingid(booking);
         payment.setAmount(expectedChargeAmount);
         payment.setPaymentmethod("PayPal");
-        payment.setPaymenttype("Booking Payment");
+        payment.setPaymenttype("DEPOSIT".equalsIgnoreCase(paymentOption) ? "Deposit" : "Booking Payment");
         payment.setTransactioncode(captureResponse.getTransactionId());
         payment.setStatus("Completed");
         payment.setRefundedamount(BigDecimal.ZERO);
@@ -141,10 +155,15 @@ public class PaymentServiceImpl implements PaymentService {
 
         // 5. Update Booking paid amount and status
         booking.setPaidamount(booking.getPaidamount().add(expectedChargeAmount));
+        if ("DEPOSIT".equalsIgnoreCase(paymentOption)) {
+            booking.setDepositamount(expectedChargeAmount);
+        }
         booking.setUpdatedat(Instant.now());
 
         if (booking.getPaidamount().compareTo(booking.getFinalamount()) >= 0) {
             booking.setStatus("Paid");
+        } else if (booking.getPaidamount().compareTo(BigDecimal.ZERO) > 0) {
+            booking.setStatus("Partially Paid");
         }
 
         bookingRepository.save(booking);
@@ -183,7 +202,11 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setBookingid(booking);
         payment.setAmount(chargeAmount);
         payment.setPaymentmethod("Bank Transfer");
-        payment.setPaymenttype("Booking Payment");
+        
+        boolean isFirstPayment = booking.getPaidamount().compareTo(BigDecimal.ZERO) == 0;
+        boolean isPartial = chargeAmount.compareTo(booking.getFinalamount()) < 0;
+
+        payment.setPaymenttype(isFirstPayment && isPartial ? "Deposit" : "Booking Payment");
         payment.setTransactioncode(request.getTransactionCode() != null ? request.getTransactionCode() : "BANK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         payment.setStatus("Completed");
         payment.setRefundedamount(BigDecimal.ZERO);
@@ -194,10 +217,15 @@ public class PaymentServiceImpl implements PaymentService {
 
         // 2. Update Booking paid amount and status
         booking.setPaidamount(booking.getPaidamount().add(chargeAmount));
+        if (isFirstPayment && isPartial) {
+            booking.setDepositamount(chargeAmount);
+        }
         booking.setUpdatedat(Instant.now());
 
         if (booking.getPaidamount().compareTo(booking.getFinalamount()) >= 0) {
             booking.setStatus("Paid");
+        } else if (booking.getPaidamount().compareTo(BigDecimal.ZERO) > 0) {
+            booking.setStatus("Partially Paid");
         }
 
         bookingRepository.save(booking);
