@@ -21,7 +21,7 @@ const mapRealToCurrentBooking = (bk) => {
   return {
     suiteName: bk.roomType,
     refCode: bk.bookingNumber || `BK-${bk.bookingId}`,
-    status: bk.status === 'Cancelled' ? 'Đã Hủy' : bk.status === 'Checked-in' || bk.status === 'Checked In' ? 'Đã nhận phòng' : bk.status === 'Checked-out' || bk.status === 'Checked Out' ? 'Đã trả phòng' : 'Đã xác nhận',
+    status: bk.status === 'Cancelled' ? 'Đã Hủy' : bk.status === 'Checked-in' || bk.status === 'Checked In' ? 'Đã nhận phòng' : bk.status === 'Checked-out' || bk.status === 'Checked Out' ? 'Đã trả phòng' : bk.status === 'Paid' ? 'Đã thanh toán' : bk.status === 'Partially Paid' ? 'Đã cọc 30%' : 'Chờ thanh toán',
     checkIn: {
       date: bk.checkInDate,
       dayTime: 'Từ 2:00 PM (14:00)',
@@ -184,10 +184,24 @@ export default function Dashboard({ setActivePage }) {
                               : bk.status === 'Checked-in' || bk.status === 'Checked In'
                               ? 'bg-blue-100 text-blue-700'
                               : bk.status === 'Checked-out' || bk.status === 'Checked Out'
-                              ? 'bg-slate-250 text-slate-700'
-                              : 'bg-green-100 text-green-700'
+                              ? 'bg-slate-200 text-slate-700'
+                              : bk.status === 'Paid'
+                              ? 'bg-green-100 text-green-700'
+                              : bk.status === 'Partially Paid'
+                              ? 'bg-indigo-100 text-indigo-700'
+                              : 'bg-yellow-100 text-yellow-700'
                           }`}>
-                            {bk.status}
+                            {bk.status === 'Cancelled'
+                              ? 'Đã Hủy'
+                              : bk.status === 'Checked-in' || bk.status === 'Checked In'
+                              ? 'Đã nhận phòng'
+                              : bk.status === 'Checked-out' || bk.status === 'Checked Out'
+                              ? 'Đã trả phòng'
+                              : bk.status === 'Paid'
+                              ? 'Đã thanh toán'
+                              : bk.status === 'Partially Paid'
+                              ? 'Đã cọc 30%'
+                              : 'Chờ thanh toán'}
                           </span>
                         </div>
                         <button
