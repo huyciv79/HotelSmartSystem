@@ -7,11 +7,10 @@ import lombok.NoArgsConstructor;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
-public class RoomTypeImageDTO {
-    private Integer id;
-    private String imageUrl;
-    private Boolean primary;
-    private Integer displayOrder;
+@AllArgsConstructor
+public class PaypalOrderResponse {
+    private String paypalOrderId;
+    private String approveUrl;
+    private String status;
 }

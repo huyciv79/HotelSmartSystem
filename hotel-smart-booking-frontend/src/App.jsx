@@ -62,7 +62,10 @@ function MainSite() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (location.state?.page) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('token') && params.get('PayerID')) {
+      setActivePageState('payment');
+    } else if (location.state?.page) {
       const page = location.state.page;
       navigate('/', { replace: true });
       // Schedule state update to avoid synchronous setState inside render/effect cascade

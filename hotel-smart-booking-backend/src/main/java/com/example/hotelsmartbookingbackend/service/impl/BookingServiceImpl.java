@@ -39,13 +39,11 @@ public class BookingServiceImpl implements BookingService {
     private static final String BOOKING_STATUS_CONFIRMED = "Confirmed";
     private static final String DETAIL_STATUS_ACTIVE = "Active";
     private static final int DEFAULT_SINGLE_BOOKING_QUANTITY = 1;
-    private static final int DEFAULT_SINGLE_BOOKING_ADULTS = 1;
-    private static final int DEFAULT_SINGLE_BOOKING_CHILDREN = 0;
     private static final List<String> INVENTORY_HOLDING_BOOKING_STATUSES =
             List.of("Pending", "Confirmed", "Checked In");
     private static final List<String> INVENTORY_HOLDING_DETAIL_STATUSES = List.of("Active");
-    private static final DateTimeFormatter BOOKING_REFERENCE_TIME_FORMAT =
-            DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(HOTEL_ZONE);
+    private static final DateTimeFormatter BOOKING_REFERENCE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
+            .withZone(HOTEL_ZONE);
     private static final DateTimeFormatter DISPLAY_DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final BookingRepository bookingRepository;
@@ -58,6 +56,7 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponse createBooking(CreateBookingRequest request, String customerEmail) {
         validateDates(request.getCheckInDate(), request.getCheckOutDate());
+        validateGuestCounts(request.getNumberOfAdults(), request.getNumberOfChildren());
 
         return createBookingInternal(
                 customerEmail,
@@ -65,8 +64,8 @@ public class BookingServiceImpl implements BookingService {
                 request.getCheckInDate(),
                 request.getCheckOutDate(),
                 DEFAULT_SINGLE_BOOKING_QUANTITY,
-                DEFAULT_SINGLE_BOOKING_ADULTS,
-                DEFAULT_SINGLE_BOOKING_CHILDREN,
+                request.getNumberOfAdults(),
+                request.getNumberOfChildren(),
                 request.getSpecialRequests(),
                 request.getCheckInMethod(),
                 BOOKING_TYPE_ONLINE);
@@ -121,6 +120,9 @@ public class BookingServiceImpl implements BookingService {
                 .multiply(BigDecimal.valueOf(quantity))
                 .multiply(BigDecimal.valueOf(nights));
 
+        BigDecimal taxAmount = totalAmount.multiply(new BigDecimal("0.10")).setScale(2, java.math.RoundingMode.HALF_UP);
+        BigDecimal finalAmount = totalAmount.add(taxAmount).setScale(2, java.math.RoundingMode.HALF_UP);
+
         Booking booking = new Booking();
         booking.setUserid(customer);
         booking.setBookingreference(generateBookingReference(now));
@@ -130,9 +132,9 @@ public class BookingServiceImpl implements BookingService {
         booking.setPaidamount(BigDecimal.ZERO);
         booking.setDepositamount(BigDecimal.ZERO);
         booking.setDiscountamount(BigDecimal.ZERO);
-        booking.setTaxamount(BigDecimal.ZERO);
+        booking.setTaxamount(taxAmount);
         booking.setServicechargeamount(BigDecimal.ZERO);
-        booking.setFinalamount(totalAmount);
+        booking.setFinalamount(finalAmount);
         booking.setStatus(BOOKING_STATUS_CONFIRMED);
         booking.setSpecialrequests(specialRequests);
         booking.setCreatedat(now);
@@ -173,7 +175,8 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     public BookingResponse getBookingDetail(Integer bookingId, String customerEmail) {
         Bookingdetail detail = bookingdetailRepository.findBookingDetail(bookingId, customerEmail)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đặt phòng hoặc bạn không có quyền xem đặt phòng này"));
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy đặt phòng hoặc bạn không có quyền xem đặt phòng này"));
 
         return mapToResponse(detail.getBookingid(), detail, detail.getRoomtypeid());
     }
@@ -202,11 +205,15 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Số lượng phòng cho đặt nhóm phải ít nhất là 2");
         }
 
-        if (request.getNumberOfAdults() == null || request.getNumberOfAdults() <= 0) {
+        validateGuestCounts(request.getNumberOfAdults(), request.getNumberOfChildren());
+    }
+
+    private void validateGuestCounts(Integer numberOfAdults, Integer numberOfChildren) {
+        if (numberOfAdults == null || numberOfAdults <= 0) {
             throw new RuntimeException("Số người lớn phải lớn hơn 0");
         }
 
-        if (request.getNumberOfChildren() == null || request.getNumberOfChildren() < 0) {
+        if (numberOfChildren == null || numberOfChildren < 0) {
             throw new RuntimeException("Số trẻ em không được âm");
         }
     }
@@ -289,6 +296,8 @@ public class BookingServiceImpl implements BookingService {
                 .nights(ChronoUnit.DAYS.between(checkInDate, checkOutDate))
                 .totalAmount(booking.getTotalamount())
                 .finalAmount(booking.getFinalamount())
+                .paidAmount(booking.getPaidamount())
+                .depositAmount(booking.getDepositamount())
                 .status(booking.getStatus())
                 .specialRequests(booking.getSpecialrequests())
                 .actualCheckIn(detail.getActualcheckin())
@@ -316,7 +325,7 @@ public class BookingServiceImpl implements BookingService {
                 .checkInDate(checkInDate)
                 .checkOutDate(checkOutDate)
                 .nights(ChronoUnit.DAYS.between(checkInDate, checkOutDate))
-                .totalAmount(booking.getTotalamount())
+                .totalAmount(booking.getFinalamount())
                 .status(booking.getStatus())
                 .guestName(booking.getUserid() != null ? booking.getUserid().getFullname() : "Khách hàng Elysian")
                 .guestEmail(booking.getUserid() != null ? booking.getUserid().getEmail() : "")

@@ -186,7 +186,7 @@ export default function Booking({ setActivePage }) {
 
       const response = await createBooking(bookingPayload);
       if (response && response.data) {
-        showToast('Đặt phòng thành công!', 'success');
+        showToast('Đặt phòng thành công! Đang chuyển hướng sang trang thanh toán...', 'success');
         
         try {
           const existing = JSON.parse(localStorage.getItem('hotel_all_bookings') || '[]');
@@ -204,9 +204,10 @@ export default function Booking({ setActivePage }) {
 
         sessionStorage.removeItem('bookingRoom');
         sessionStorage.setItem('selectedBookingId', response.data.bookingId);
+        sessionStorage.setItem('currentBooking', JSON.stringify(response.data));
         
         setTimeout(() => {
-          setActivePage('booking-detail');
+          setActivePage('payment');
         }, 1500);
       }
     } catch (err) {

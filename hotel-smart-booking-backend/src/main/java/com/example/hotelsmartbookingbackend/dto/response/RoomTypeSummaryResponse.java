@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class RoomTypeSummaryDTO {
+public class RoomTypeSummaryResponse {
     private Integer id;
     private String name;
     private String description;

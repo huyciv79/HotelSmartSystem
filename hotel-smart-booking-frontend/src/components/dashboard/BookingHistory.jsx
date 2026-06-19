@@ -39,9 +39,15 @@ const BookingHistory = ({ bookings, onViewDetail, onViewAll }) => {
             } else if (normalizedStatus === 'checkedin') {
               statusText = t("status_checked_in", "Đã nhận phòng");
               statusClass = 'bg-blue-100 text-blue-700';
-            } else {
-              statusText = t("status_confirmed", "Đã xác nhận");
+            } else if (normalizedStatus === 'paid') {
+              statusText = 'Đã thanh toán';
               statusClass = 'bg-green-100 text-green-700';
+            } else if (normalizedStatus === 'partiallypaid' || normalizedStatus === 'depositpaid') {
+              statusText = 'Đã cọc 30%';
+              statusClass = 'bg-indigo-100 text-indigo-700';
+            } else {
+              statusText = 'Chờ thanh toán';
+              statusClass = 'bg-yellow-100 text-yellow-700';
             }
 
             return (

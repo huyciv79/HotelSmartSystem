@@ -17,6 +17,38 @@ import {
   BOOKING_HISTORY,
 } from '../data/dashboardData';
 
+const mapRealToCurrentBooking = (bk) => {
+  if (!bk) return null;
+  return {
+    suiteName: bk.roomType,
+    refCode: bk.bookingNumber || `BK-${bk.bookingId}`,
+    status: bk.status === 'Cancelled' ? 'Đã Hủy' : bk.status === 'Checked-in' || bk.status === 'Checked In' ? 'Đã nhận phòng' : bk.status === 'Checked-out' || bk.status === 'Checked Out' ? 'Đã trả phòng' : bk.status === 'Paid' ? 'Đã thanh toán' : bk.status === 'Partially Paid' ? 'Đã cọc 30%' : 'Chờ thanh toán',
+    checkIn: {
+      date: bk.checkInDate,
+      dayTime: 'Từ 2:00 PM (14:00)',
+    },
+    checkOut: {
+      date: bk.checkOutDate,
+      dayTime: 'Trước 12:00 PM (12:00)',
+    },
+    guests: {
+      count: '01 Phòng',
+      bedInfo: `${bk.nights} đêm`,
+    },
+    bookingId: bk.bookingId,
+  };
+};
+
+const mapRealToBookingHistory = (bookings) =>
+  bookings.map((bk) => ({
+    id: bk.bookingId,
+    name: bk.roomType,
+    roomType: bk.bookingNumber || `BK-${bk.bookingId}`,
+    period: `${bk.checkInDate} đến ${bk.checkOutDate} (${bk.nights} đêm)`,
+    amount: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(bk.totalAmount),
+    status: bk.status,
+  }));
+
 export default function Dashboard({ setActivePage }) {
   const { t } = useLanguage();
   const location = useLocation();
@@ -186,10 +218,24 @@ export default function Dashboard({ setActivePage }) {
                               : bk.status === 'Checked-in' || bk.status === 'Checked In'
                               ? 'bg-blue-100 text-blue-700'
                               : bk.status === 'Checked-out' || bk.status === 'Checked Out'
-                              ? 'bg-slate-250 text-slate-700'
-                              : 'bg-green-100 text-green-700'
+                              ? 'bg-slate-200 text-slate-700'
+                              : bk.status === 'Paid'
+                              ? 'bg-green-100 text-green-700'
+                              : bk.status === 'Partially Paid'
+                              ? 'bg-indigo-100 text-indigo-700'
+                              : 'bg-yellow-100 text-yellow-700'
                           }`}>
-                            {bk.status === 'Cancelled' ? t('status_cancelled', 'Đã Hủy') : bk.status === 'Checked-in' || bk.status === 'Checked In' ? t('status_checked_in', 'Đã nhận phòng') : bk.status === 'Checked-out' || bk.status === 'Checked Out' ? t('status_checked_out', 'Đã trả phòng') : t('status_confirmed', 'Đã xác nhận')}
+                            {bk.status === 'Cancelled'
+                              ? 'Đã Hủy'
+                              : bk.status === 'Checked-in' || bk.status === 'Checked In'
+                              ? 'Đã nhận phòng'
+                              : bk.status === 'Checked-out' || bk.status === 'Checked Out'
+                              ? 'Đã trả phòng'
+                              : bk.status === 'Paid'
+                              ? 'Đã thanh toán'
+                              : bk.status === 'Partially Paid'
+                              ? 'Đã cọc 30%'
+                              : 'Chờ thanh toán'}
                           </span>
                         </div>
                         <button

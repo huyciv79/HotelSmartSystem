@@ -11,7 +11,7 @@ import java.time.Instant;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserProfileDTO {
+public class UserProfileResponse {
     private Integer id;
     private String email;
     private String role;
