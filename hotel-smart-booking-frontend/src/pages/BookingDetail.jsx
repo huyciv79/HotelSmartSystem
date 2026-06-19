@@ -115,6 +115,13 @@ export default function BookingDetail({ setActivePage }) {
     showToast(t('bd_toast_service_success', 'Đã chuyển tiếp yêu cầu Concierge của bạn tới quầy lễ tân!'), 'success');
   };
 
+  const handlePaymentRedirect = () => {
+    if (!booking) return;
+    sessionStorage.setItem('selectedBookingId', booking.bookingId);
+    sessionStorage.setItem('currentBooking', JSON.stringify(booking));
+    setActivePage('payment');
+  };
+
   // Open Feedback Form for Writing
   const handleOpenWriteFeedback = () => {
     setFeedbackRating(5);
@@ -336,22 +343,16 @@ export default function BookingDetail({ setActivePage }) {
                   : 'bg-yellow-100 text-yellow-700'
               }`}>
                 {booking.status === 'Cancelled' 
-                  ? 'Đã Hủy' 
+                  ? t('status_cancelled', 'Đã Hủy') 
                   : booking.status === 'Checked-in' || booking.status === 'Checked In' 
-                  ? 'Đã nhận phòng' 
+                  ? t('status_checked_in', 'Đã nhận phòng') 
                   : booking.status === 'Checked-out' || booking.status === 'Checked Out' 
-                  ? 'Đã trả phòng' 
+                  ? t('status_checked_out', 'Đã trả phòng') 
                   : booking.status === 'Paid' 
-                  ? 'Đã thanh toán' 
+                  ? t('status_paid', 'Đã thanh toán') 
                   : booking.status === 'Partially Paid'
-                  ? 'Đã cọc 30%'
-                  : 'Chờ thanh toán'}
-                    ? 'bg-blue-100 text-blue-700'
-                    : booking.status === 'Checked-out' || booking.status === 'Checked Out'
-                      ? 'bg-slate-200 text-slate-700'
-                      : 'bg-green-100 text-green-700'
-                }`}>
-                {booking.status === 'Cancelled' ? t('status_cancelled', 'Đã Hủy') : booking.status === 'Checked-in' || booking.status === 'Checked In' ? t('status_checked_in', 'Đã nhận phòng') : booking.status === 'Checked-out' || booking.status === 'Checked Out' ? t('status_checked_out', 'Đã trả phòng') : t('status_confirmed', 'Đã xác nhận')}
+                  ? t('status_partially_paid', 'Đã cọc 30%')
+                  : t('status_confirmed', 'Đã xác nhận')}
               </span>
             </div>
           </div>
