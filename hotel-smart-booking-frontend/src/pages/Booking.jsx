@@ -181,6 +181,8 @@ export default function Booking({ setActivePage }) {
         checkInDate: formatDateString(startDate),
         checkOutDate: formatDateString(endDate),
         checkInMethod: checkInMethod === 'FaceID' ? 'Face Recognition' : checkInMethod,
+        numberOfAdults: adults,
+        numberOfChildren: childrenCount,
         specialRequests
       };
 

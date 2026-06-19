@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToast, ToastContainer } from '../components/Toast';
 import { useLanguage } from '../context/LanguageContext';
+import axiosInstance from '../services/axiosInstance';
 
 export default function Payment({ setActivePage }) {
   const { t } = useLanguage();
