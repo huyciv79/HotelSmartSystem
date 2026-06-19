@@ -4,8 +4,10 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { getRoomTypes } from '../services/roomService';
 import { createGroupBooking } from '../services/groupBookingService';
 import { useToast, ToastContainer } from '../components/Toast';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function GroupBooking({ setActivePage }) {
+  const { t } = useLanguage();
   const { toasts, showToast, dismissToast } = useToast();
   
   const [currentStep, setCurrentStep] = useState(1);
@@ -58,12 +60,12 @@ export default function GroupBooking({ setActivePage }) {
         }
       } catch (err) {
         console.error('Lỗi khi tải danh sách loại phòng:', err);
-        showToast('Không thể tải danh sách loại phòng', 'error');
+        showToast(t('group_toast_error_rooms', 'Không thể tải danh sách loại phòng'), 'error');
       }
     };
     
     fetchRooms();
-  }, [showToast]);
+  }, [showToast, t]);
 
   // Reset availability status when dates or room changes
   useEffect(() => {
@@ -88,12 +90,12 @@ export default function GroupBooking({ setActivePage }) {
       setChildrenCount(maxChildren);
     }
     
-    showToast(`Đã chọn loại phòng: ${room.name}`, 'info');
+    showToast(`${t('group_toast_room_selected', 'Đã chọn loại phòng:')} ${room.name}`, 'info');
   };
 
   const handleQuantityChange = (newQty) => {
     if (newQty < 2) {
-      showToast('Đặt phòng nhóm yêu cầu tối thiểu là 2 phòng.', 'warning');
+      showToast(t('group_toast_min_qty', 'Đặt phòng nhóm yêu cầu tối thiểu là 2 phòng.'), 'warning');
       return;
     }
     setQuantity(newQty);
@@ -117,11 +119,11 @@ export default function GroupBooking({ setActivePage }) {
 
   const checkAvailability = () => {
     if (!startDate || !endDate) {
-      showToast('Vui lòng chọn khoảng ngày lưu trú trước.', 'error');
+      showToast(t('group_toast_error_dates', 'Vui lòng chọn khoảng ngày lưu trú trước.'), 'error');
       return;
     }
     if (!selectedRoom) {
-      showToast('Vui lòng chọn một loại phòng từ danh sách.', 'error');
+      showToast(t('group_toast_error_select_room', 'Vui lòng chọn một loại phòng từ danh sách.'), 'error');
       return;
     }
     
@@ -130,7 +132,7 @@ export default function GroupBooking({ setActivePage }) {
     setTimeout(() => {
       setIsCheckingAvailability(false);
       setIsAvailable(true);
-      showToast(`Chúc mừng! Đủ số lượng ${quantity} phòng trống cho loại ${selectedRoom.name}!`, 'success');
+      showToast(`${t('group_toast_available_success_prefix', 'Chúc mừng! Đủ số lượng')} ${quantity} ${t('group_toast_available_success_suffix', 'phòng trống cho loại')} ${selectedRoom.name}!`, 'success');
     }, 1000);
   };
 
@@ -162,13 +164,13 @@ export default function GroupBooking({ setActivePage }) {
   const handleStep1Submit = () => {
     const tempErrors = {};
     if (!startDate || !endDate) {
-      tempErrors.dates = 'Vui lòng chọn khoảng ngày nhận và trả phòng';
+      tempErrors.dates = t('group_error_dates_required', 'Vui lòng chọn khoảng ngày nhận và trả phòng');
     }
     if (!selectedRoom) {
-      tempErrors.room = 'Vui lòng chọn một loại phòng';
+      tempErrors.room = t('group_error_room_required', 'Vui lòng chọn một loại phòng');
     }
     if (quantity < 2) {
-      tempErrors.quantity = 'Số lượng phòng cho đặt nhóm phải từ 2 trở lên';
+      tempErrors.quantity = t('group_error_qty_required', 'Số lượng phòng cho đặt nhóm phải từ 2 trở lên');
     }
     
     if (selectedRoom) {
@@ -176,13 +178,13 @@ export default function GroupBooking({ setActivePage }) {
       const maxChildren = getChildCapacity(selectedRoom) * quantity;
       
       if (adults <= 0) {
-        tempErrors.guests = 'Số người lớn phải lớn hơn 0';
+        tempErrors.guests = t('group_error_adults_zero', 'Số người lớn phải lớn hơn 0');
       }
       if (adults > maxAdults) {
-        tempErrors.guests = `Số người lớn (${adults}) vượt quá sức chứa tối đa cho ${quantity} phòng (${maxAdults} người)`;
+        tempErrors.guests = `${t('group_error_adults_max_1', 'Số người lớn')} (${adults}) ${t('group_error_adults_max_2', 'vượt quá sức chứa tối đa cho')} ${quantity} ${t('group_error_adults_max_3', 'phòng')} (${maxAdults} ${t('group_error_adults_max_4', 'người')})`;
       }
       if (childrenCount > maxChildren) {
-        tempErrors.guests = `Số trẻ em (${childrenCount}) vượt quá sức chứa tối đa cho ${quantity} phòng (${maxChildren} người)`;
+        tempErrors.guests = `${t('group_error_children_max_1', 'Số trẻ em')} (${childrenCount}) ${t('group_error_children_max_2', 'vượt quá sức chứa tối đa cho')} ${quantity} ${t('group_error_children_max_3', 'phòng')} (${maxChildren} ${t('group_error_children_max_4', 'người')})`;
       }
     }
 
@@ -193,14 +195,14 @@ export default function GroupBooking({ setActivePage }) {
       }
       setCurrentStep(2);
     } else {
-      showToast('Vui lòng kiểm tra lại thông tin bước 1.', 'error');
+      showToast(t('group_toast_error_step1', 'Vui lòng kiểm tra lại thông tin bước 1.'), 'error');
     }
   };
 
   const handleStep2Submit = () => {
     const tempErrors = {};
     if (!checkInMethod) {
-      tempErrors.checkInMethod = 'Vui lòng chọn phương thức nhận phòng';
+      tempErrors.checkInMethod = t('group_error_checkin_required', 'Vui lòng chọn phương thức nhận phòng');
     }
     setErrors(tempErrors);
     if (Object.keys(tempErrors).length === 0) {
@@ -210,7 +212,7 @@ export default function GroupBooking({ setActivePage }) {
 
   const handleBookingSubmit = async () => {
     if (!agreedToTerms) {
-      showToast('Bạn phải đồng ý với Điều khoản & Điều kiện để tiếp tục.', 'error');
+      showToast(t('group_toast_error_terms', 'Bạn phải đồng ý với Điều khoản & Điều kiện để tiếp tục.'), 'error');
       return;
     }
 
@@ -229,7 +231,7 @@ export default function GroupBooking({ setActivePage }) {
 
       const response = await createGroupBooking(payload);
       if (response && response.data) {
-        showToast('Đặt phòng nhóm thành công!', 'success');
+        showToast(t('group_toast_booking_success', 'Đặt phòng nhóm thành công!'), 'success');
         
         try {
           const existing = JSON.parse(localStorage.getItem('hotel_all_bookings') || '[]');
@@ -253,7 +255,7 @@ export default function GroupBooking({ setActivePage }) {
         }, 1500);
       }
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Có lỗi xảy ra khi tạo đặt phòng nhóm. Vui lòng thử lại.';
+      const msg = err?.response?.data?.message || t('group_toast_booking_error', 'Có lỗi xảy ra khi tạo đặt phòng nhóm. Vui lòng thử lại.');
       showToast(msg, 'error');
     } finally {
       setIsLoading(false);
@@ -326,15 +328,16 @@ export default function GroupBooking({ setActivePage }) {
       <div className="w-full bg-slate-950 text-white pt-32 pb-16 px-4 md:px-margin-desktop text-center relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(162,5,19,0.15)_0%,transparent_100%)] pointer-events-none" />
         <div className="max-w-4xl mx-auto relative z-10 animate-fade-in-up">
-          <span className="text-[10px] font-black tracking-[0.4em] uppercase text-primary mb-2 block">DÀNH CHO ĐOÀN & DOANH NGHIỆP</span>
+          <span className="text-[10px] font-black tracking-[0.4em] uppercase text-primary mb-2 block">{t('group_banner_sub', 'DÀNH CHO ĐOÀN & DOANH NGHIỆP')}</span>
           <h1 className="font-headline-xl text-3xl md:text-5xl font-black uppercase tracking-wider mb-4 leading-none">
-            ĐẶT PHÒNG NHÓM ELYSIAN
+            {t('group_banner_title', 'ĐẶT PHÒNG NHÓM ELYSIAN')}
           </h1>
           <p className="text-xs md:text-sm text-slate-300 font-bold uppercase tracking-widest max-w-2xl mx-auto">
-            Trải nghiệm dịch vụ lưu trú thông minh, tiện nghi vượt trội và các chương trình ưu đãi dành riêng cho đoàn từ 2 phòng trở lên.
+            {t('group_banner_desc', 'Trải nghiệm dịch vụ lưu trú thông minh, tiện nghi vượt trội và các chương trình ưu đãi dành riêng cho đoàn từ 2 phòng trở lên.')}
           </p>
         </div>
       </div>
+
 
       <div className="w-full min-h-screen pb-24 bg-gray-50 flex items-start justify-center px-4 font-['Montserrat']">
         <div className="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 text-left -mt-8 relative z-20">
@@ -348,14 +351,14 @@ export default function GroupBooking({ setActivePage }) {
                   onClick={() => setActivePage('home')}
                   className="mb-6 w-fit text-xs text-secondary hover:text-primary uppercase tracking-widest font-bold flex items-center gap-1 cursor-pointer bg-transparent border-none"
                 >
-                  <span className="material-symbols-outlined text-sm">arrow_back</span> Hủy & Quay lại
+                  <span className="material-symbols-outlined text-sm">arrow_back</span> {t('booking_btn_cancel_back', 'Hủy & Quay lại')}
                 </button>
               ) : (
                 <button 
                   onClick={() => setCurrentStep(prev => prev - 1)}
                   className="mb-6 w-fit text-xs text-secondary hover:text-primary uppercase tracking-widest font-bold flex items-center gap-1 cursor-pointer bg-transparent border-none"
                 >
-                  <span className="material-symbols-outlined text-sm">arrow_back</span> Quay lại bước {currentStep - 1}
+                  <span className="material-symbols-outlined text-sm">arrow_back</span> {t('booking_btn_back_step', 'Quay lại bước')} {currentStep - 1}
                 </button>
               )}
 
@@ -364,31 +367,31 @@ export default function GroupBooking({ setActivePage }) {
                 <div className="flex items-center gap-4 md:gap-6">
                   <div className="flex items-center gap-2">
                     <span className={`w-6 h-6 flex items-center justify-center text-[10px] font-black border ${currentStep >= 1 ? 'bg-primary border-primary text-white' : 'border-slate-300 text-slate-400'}`}>1</span>
-                    <span className={`text-[10px] font-black uppercase tracking-wider hidden sm:inline ${currentStep === 1 ? 'text-primary' : 'text-slate-400'}`}>Thông tin & Chọn phòng</span>
+                    <span className={`text-[10px] font-black uppercase tracking-wider hidden sm:inline ${currentStep === 1 ? 'text-primary' : 'text-slate-400'}`}>{t('group_step1_label', 'Thông tin & Chọn phòng')}</span>
                   </div>
                   <span className="h-px w-6 bg-slate-350 hidden sm:inline" />
                   <div className="flex items-center gap-2">
                     <span className={`w-6 h-6 flex items-center justify-center text-[10px] font-black border ${currentStep >= 2 ? 'bg-primary border-primary text-white' : 'border-slate-300 text-slate-400'}`}>2</span>
-                    <span className={`text-[10px] font-black uppercase tracking-wider hidden sm:inline ${currentStep === 2 ? 'text-primary' : 'text-slate-400'}`}>Hình thức Check-in</span>
+                    <span className={`text-[10px] font-black uppercase tracking-wider hidden sm:inline ${currentStep === 2 ? 'text-primary' : 'text-slate-400'}`}>{t('booking_step2_label', 'Hình thức Check-in')}</span>
                   </div>
                   <span className="h-px w-6 bg-slate-350 hidden sm:inline" />
                   <div className="flex items-center gap-2">
                     <span className={`w-6 h-6 flex items-center justify-center text-[10px] font-black border ${currentStep >= 3 ? 'bg-primary border-primary text-white' : 'border-slate-300 text-slate-400'}`}>3</span>
-                    <span className={`text-[10px] font-black uppercase tracking-wider hidden sm:inline ${currentStep === 3 ? 'text-primary' : 'text-slate-400'}`}>Xác nhận</span>
+                    <span className={`text-[10px] font-black uppercase tracking-wider hidden sm:inline ${currentStep === 3 ? 'text-primary' : 'text-slate-400'}`}>{t('booking_step3_label', 'Xác nhận')}</span>
                   </div>
                 </div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bước {currentStep} / 3</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('booking_step_progress_text', 'Bước')} {currentStep} / 3</div>
               </div>
 
               {/* STEP 1: Date & Dynamic Room list */}
               {currentStep === 1 && (
                 <div className="space-y-8 animate-scale-in">
-                  <h3 className="font-headline-lg text-lg text-primary uppercase italic tracking-wider m-0">Bước 1: Thông tin lưu trú & Chọn loại phòng</h3>
+                  <h3 className="font-headline-lg text-lg text-primary uppercase italic tracking-wider m-0">{t('group_step1_title', 'Bước 1: Thông tin lưu trú & Chọn loại phòng')}</h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Stay Dates */}
                     <div className="space-y-2">
-                      <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Thời gian lưu trú (Check-in - Check-out)</label>
+                      <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('booking_duration_label', 'Thời gian lưu trú (Check-in - Check-out)')}</label>
                       <DatePicker
                         selectsRange={true}
                         startDate={startDate}
@@ -399,7 +402,7 @@ export default function GroupBooking({ setActivePage }) {
                           setEndDate(end);
                         }}
                         minDate={new Date()}
-                        placeholderText="Chọn khoảng ngày nhận và trả phòng"
+                        placeholderText={t('booking_dates_placeholder', 'Chọn khoảng ngày nhận và trả phòng')}
                         isClearable={true}
                         className="w-full bg-transparent border-b border-on-surface py-2 font-bold text-sm outline-none focus:border-primary"
                       />
@@ -408,7 +411,7 @@ export default function GroupBooking({ setActivePage }) {
 
                     {/* Quantity of Rooms (Min 2) */}
                     <div className="space-y-2">
-                      <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Số lượng phòng đặt (Tối thiểu 2)</label>
+                      <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('group_qty_label', 'Số lượng phòng đặt (Tối thiểu 2)')}</label>
                       <div className="flex items-center gap-3 border border-slate-200 p-2.5 w-full md:w-48 bg-slate-50/50">
                         <button
                           type="button"
@@ -434,9 +437,9 @@ export default function GroupBooking({ setActivePage }) {
                   <div className="space-y-4 pt-4 border-t border-gray-100">
                     <div className="flex justify-between items-center">
                       <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">
-                        Danh Sách Loại Phòng Khả Dụng (Dynamic Room List)
+                        {t('group_room_list_title', 'Danh Sách Loại Phòng Khả Dụng (Dynamic Room List)')}
                       </h4>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Chọn 1 loại phòng phù hợp</span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('group_room_list_subtitle', 'Chọn 1 loại phòng phù hợp')}</span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -462,11 +465,11 @@ export default function GroupBooking({ setActivePage }) {
                                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                               />
                               <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm px-2.5 py-1 text-[9px] font-black uppercase text-white tracking-widest">
-                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(room.basePrice || room.baseprice || 0)} / Đêm
+                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(room.basePrice || room.baseprice || 0)} / {t('booking_summary_nights', 'Đêm')}
                               </div>
                               {isSelected && (
                                 <div className="absolute top-3 left-3 bg-primary px-2.5 py-1 text-[9px] font-black uppercase text-white tracking-widest flex items-center gap-1 shadow-md">
-                                  <span className="material-symbols-outlined text-[10px] font-bold">check</span> Đang chọn
+                                  <span className="material-symbols-outlined text-[10px] font-bold">check</span> {t('group_room_selected_badge', 'Đang chọn')}
                                 </div>
                               )}
                             </div>
@@ -481,17 +484,17 @@ export default function GroupBooking({ setActivePage }) {
                                 </p>
                                 <div className="flex flex-wrap gap-2 mb-4">
                                   <span className="bg-slate-100 text-slate-600 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5">
-                                    NL/Phòng: {adultCap}
+                                    {t('group_capacity_adults_prefix', 'NL/Phòng:')} {adultCap}
                                   </span>
                                   <span className="bg-slate-100 text-slate-600 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5">
-                                    TE/Phòng: {childCap}
+                                    {t('group_capacity_children_prefix', 'TE/Phòng:')} {childCap}
                                   </span>
                                 </div>
                               </div>
 
                               {/* Capacity information dynamically calculated */}
                               <div className="border-t border-slate-100 pt-3 flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                <span>Tối đa ({quantity} phòng):</span>
+                                <span>{t('group_max_capacity_prefix', 'Tối đa (')} {quantity} {t('group_max_capacity_rooms', 'phòng):')}</span>
                                 <span className="text-slate-800">
                                   {adultCap * quantity} NL / {childCap * quantity} TE
                                 </span>
@@ -509,10 +512,10 @@ export default function GroupBooking({ setActivePage }) {
                     <div className="space-y-4 border-t border-gray-100 pt-6">
                       <div className="flex justify-between items-center">
                         <label className="block text-xs font-bold text-secondary uppercase tracking-widest">
-                          Tổng số khách của đoàn ({quantity} phòng)
+                          {t('group_guests_total_label', 'Tổng số khách của đoàn')} ({quantity} {t('group_max_capacity_rooms', 'phòng')})
                         </label>
                         <span className="text-[10px] font-black text-primary uppercase tracking-wider bg-primary/5 px-2.5 py-1">
-                          Sức chứa đoàn: {getAdultCapacity(selectedRoom) * quantity} người lớn, {getChildCapacity(selectedRoom) * quantity} trẻ em
+                          {t('group_guests_capacity_prefix', 'Sức chứa đoàn:')} {getAdultCapacity(selectedRoom) * quantity} {t('booking_summary_nl', 'NL')}, {getChildCapacity(selectedRoom) * quantity} {t('booking_summary_te', 'TE')}
                         </span>
                       </div>
 
@@ -520,8 +523,8 @@ export default function GroupBooking({ setActivePage }) {
                         {/* Adults */}
                         <div className="flex justify-between items-center border border-slate-200 p-3 bg-slate-50/30">
                           <div>
-                            <span className="text-xs font-extrabold uppercase text-slate-700 block">Người lớn đoàn</span>
-                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Yêu cầu từ {quantity} người trở lên</span>
+                            <span className="text-xs font-extrabold uppercase text-slate-700 block">{t('group_guests_adults_label', 'Người lớn đoàn')}</span>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('group_guests_adults_desc', 'Yêu cầu từ 2 người trở lên')}</span>
                           </div>
                           <div className="flex items-center gap-3">
                             <button
@@ -539,7 +542,7 @@ export default function GroupBooking({ setActivePage }) {
                                 if (adults < max) {
                                   setAdults(prev => prev + 1);
                                 } else {
-                                  showToast(`Sức chứa tối đa của ${quantity} phòng là ${max} người lớn.`, 'warning');
+                                  showToast(`${t('group_error_adults_limit', 'Sức chứa tối đa của')} ${quantity} ${t('group_error_adults_limit_2', 'phòng là')} ${max} ${t('group_error_adults_limit_3', 'người lớn.')}`, 'warning');
                                 }
                               }}
                               className="w-8 h-8 border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 font-black flex items-center justify-center cursor-pointer"
@@ -552,14 +555,14 @@ export default function GroupBooking({ setActivePage }) {
                         {/* Children */}
                         <div className="flex justify-between items-center border border-slate-200 p-3 bg-slate-50/30">
                           <div>
-                            <span className="text-xs font-extrabold uppercase text-slate-700 block">Trẻ em đoàn</span>
-                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Dưới 12 tuổi</span>
+                            <span className="text-xs font-extrabold uppercase text-slate-700 block">{t('group_guests_children_label', 'Trẻ em đoàn')}</span>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('booking_children_sub', 'Dưới 12 tuổi')}</span>
                           </div>
                           <div className="flex items-center gap-3">
                             <button
                               type="button"
                               onClick={() => setChildrenCount(prev => Math.max(0, prev - 1))}
-                              className="w-8 h-8 border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 font-black flex items-center justify-center cursor-pointer"
+                              className="w-8 h-8 border border-slate-350 bg-white text-slate-700 hover:bg-slate-100 font-black flex items-center justify-center cursor-pointer"
                             >
                               -
                             </button>
@@ -571,10 +574,10 @@ export default function GroupBooking({ setActivePage }) {
                                 if (childrenCount < max) {
                                   setChildrenCount(prev => prev + 1);
                                 } else {
-                                  showToast(`Sức chứa tối đa của ${quantity} phòng là ${max} trẻ em.`, 'warning');
+                                  showToast(`${t('group_error_children_limit', 'Sức chứa tối đa của')} ${quantity} ${t('group_error_children_limit_2', 'phòng là')} ${max} ${t('group_error_children_limit_3', 'trẻ em.')}`, 'warning');
                                 }
                               }}
-                              className="w-8 h-8 border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 font-black flex items-center justify-center cursor-pointer"
+                              className="w-8 h-8 border border-slate-350 bg-white text-slate-800 hover:bg-slate-100 font-black flex items-center justify-center cursor-pointer"
                             >
                               +
                             </button>
@@ -589,17 +592,17 @@ export default function GroupBooking({ setActivePage }) {
                   {startDate && endDate && selectedRoom && (
                     <div className="bg-slate-50 border border-slate-200 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                       <div>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Tình trạng quỹ phòng trống đoàn</span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('group_availability_status_label', 'Tình trạng quỹ phòng trống đoàn')}</span>
                         {isCheckingAvailability ? (
                           <span className="text-xs font-bold text-slate-600 flex items-center gap-1.5 mt-1">
-                            <span className="w-3.5 h-3.5 border border-slate-400 border-t-slate-800 rounded-full animate-spin"></span> Đang xác thực quỹ phòng trống...
+                            <span className="w-3.5 h-3.5 border border-slate-400 border-t-slate-800 rounded-full animate-spin"></span> {t('booking_checking_availability', 'Đang kiểm tra phòng trống...')}
                           </span>
                         ) : isAvailable ? (
                           <span className="text-xs font-bold text-green-600 flex items-center gap-1 mt-1">
-                            <span className="material-symbols-outlined text-base">check_circle</span> Đủ phòng trống cho đoàn ({quantity} phòng khả dụng)
+                            <span className="material-symbols-outlined text-base">check_circle</span> {t('group_available_success_status', 'Đủ phòng trống cho đoàn')} ({quantity} {t('group_toast_available_success_suffix', 'phòng trống')})
                           </span>
                         ) : (
-                          <span className="text-xs font-bold text-slate-500 mt-1 block">Chưa kiểm tra phòng trống</span>
+                          <span className="text-xs font-bold text-slate-500 mt-1 block">{t('booking_not_checked', 'Chưa kiểm tra')}</span>
                         )}
                       </div>
                       <button
@@ -607,7 +610,7 @@ export default function GroupBooking({ setActivePage }) {
                         onClick={checkAvailability}
                         className="bg-slate-900 hover:bg-primary text-white text-[10px] font-black uppercase tracking-widest px-4 py-2.5 border-none cursor-pointer transition-all duration-200"
                       >
-                        Kiểm tra quỹ phòng trống
+                        {t('group_btn_check_availability', 'Kiểm tra quỹ phòng trống')}
                       </button>
                     </div>
                   )}
@@ -617,7 +620,7 @@ export default function GroupBooking({ setActivePage }) {
                     onClick={handleStep1Submit}
                     className="w-full bg-primary text-on-primary font-bold py-4 uppercase tracking-widest hover:brightness-110 active:scale-98 transition-all cursor-pointer border-none flex items-center justify-center h-12"
                   >
-                    Tiếp tục sang phương thức Check-in
+                    {t('group_btn_continue_checkin', 'Tiếp tục sang phương thức Check-in')}
                   </button>
                 </div>
               )}
@@ -625,9 +628,9 @@ export default function GroupBooking({ setActivePage }) {
               {/* STEP 2: CHECK-IN METHOD */}
               {currentStep === 2 && (
                 <div className="space-y-6 animate-scale-in">
-                  <h3 className="font-headline-lg text-lg text-primary uppercase italic tracking-wider m-0">Bước 2: Phương thức nhận phòng đoàn</h3>
+                  <h3 className="font-headline-lg text-lg text-primary uppercase italic tracking-wider m-0">{t('group_step2_title', 'Bước 2: Phương thức nhận phòng đoàn')}</h3>
                   <p className="text-secondary text-xs font-bold uppercase tracking-widest">
-                    Chọn cách thức làm thủ tục check-in nhanh nhất cho cả đoàn tại Elysian Hotels
+                    {t('group_step2_subtitle', 'Chọn cách thức làm thủ tục check-in nhanh nhất cho cả đoàn tại Elysian Hotels')}
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -641,8 +644,8 @@ export default function GroupBooking({ setActivePage }) {
                       }`}
                     >
                       <span className="material-symbols-outlined text-3xl mb-3">qr_code_2</span>
-                      <span className="text-[12px] font-black uppercase tracking-wider block">Mã QR Đoàn</span>
-                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">Tự động check-in tại Kiosk</span>
+                      <span className="text-[12px] font-black uppercase tracking-wider block">{t('group_checkin_qr_title', 'Mã QR Đoàn')}</span>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">{t('group_checkin_qr_desc', 'Tự động check-in tại Kiosk')}</span>
                     </div>
 
                     {/* FaceID */}
@@ -655,8 +658,8 @@ export default function GroupBooking({ setActivePage }) {
                       }`}
                     >
                       <span className="material-symbols-outlined text-3xl mb-3">face</span>
-                      <span className="text-[12px] font-black uppercase tracking-wider block">Face ID eKYC</span>
-                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">Quét khuôn mặt cả đoàn</span>
+                      <span className="text-[12px] font-black uppercase tracking-wider block">{t('group_checkin_face_title', 'Face ID eKYC')}</span>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">{t('group_checkin_face_desc', 'Quét khuôn mặt cả đoàn')}</span>
                     </div>
 
                     {/* Manual */}
@@ -669,21 +672,21 @@ export default function GroupBooking({ setActivePage }) {
                       }`}
                     >
                       <span className="material-symbols-outlined text-3xl mb-3">hotel_class</span>
-                      <span className="text-[12px] font-black uppercase tracking-wider block">Tại quầy (Manual)</span>
-                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">Hỗ trợ nhận phòng trực tiếp</span>
+                      <span className="text-[12px] font-black uppercase tracking-wider block">{t('group_checkin_manual_title', 'Tại quầy (Manual)')}</span>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">{t('group_checkin_manual_desc', 'Hỗ trợ nhận phòng trực tiếp')}</span>
                     </div>
                   </div>
 
                   {/* Special Requests */}
                   <div className="space-y-2 border-t border-gray-100 pt-6">
                     <label className="block text-xs font-bold text-secondary uppercase tracking-widest">
-                      Yêu cầu đặc biệt cho đoàn (Tùy chọn)
+                      {t('booking_special_requests_label', 'Yêu Cầu Đặc Biệt (Tùy chọn)')}
                     </label>
                     <textarea 
                       rows="4"
                       value={specialRequests}
                       onChange={(e) => setSpecialRequests(e.target.value)}
-                      placeholder="Nhập ghi chú cụ thể: sắp xếp các phòng gần nhau, yêu cầu hóa đơn đỏ cho doanh nghiệp, hỗ trợ tổ chức tiệc nhẹ hoặc phòng hội nghị..."
+                      placeholder={t('group_special_requests_placeholder', 'Nhập ghi chú cụ thể: sắp xếp các phòng gần nhau, yêu cầu hóa đơn đỏ cho doanh nghiệp, hỗ trợ tổ chức tiệc nhẹ hoặc phòng hội nghị...')}
                       className="w-full bg-transparent border border-slate-200 p-3 font-bold text-sm outline-none focus:border-primary resize-none"
                     />
                   </div>
@@ -693,7 +696,7 @@ export default function GroupBooking({ setActivePage }) {
                     onClick={handleStep2Submit}
                     className="w-full bg-primary text-on-primary font-bold py-4 uppercase tracking-widest hover:brightness-110 active:scale-98 transition-all cursor-pointer border-none flex items-center justify-center h-12"
                   >
-                    Tiếp tục sang bước tổng kết
+                    {t('booking_btn_continue_summary', 'Tiếp tục sang bước tổng kết')}
                   </button>
                 </div>
               )}
@@ -701,18 +704,18 @@ export default function GroupBooking({ setActivePage }) {
               {/* STEP 3: SUMMARY & CONFIRM */}
               {currentStep === 3 && (
                 <div className="space-y-6 animate-scale-in">
-                  <h3 className="font-headline-lg text-lg text-primary uppercase italic tracking-wider m-0">Bước 3: Tổng kết & Điều khoản</h3>
+                  <h3 className="font-headline-lg text-lg text-primary uppercase italic tracking-wider m-0">{t('booking_step3_title', 'Bước 3: Tổng kết & Điều khoản')}</h3>
                   
                   {/* Terms & Conditions details box */}
                   <div className="bg-slate-50 border border-slate-200 p-5 space-y-3">
                     <span className="block text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-1.5">
-                      Chính sách đặt phòng nhóm & Sự kiện
+                      {t('group_tc_title', 'Chính sách đặt phòng nhóm & Sự kiện')}
                     </span>
                     <div className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider leading-relaxed max-h-48 overflow-y-auto pr-2">
-                      <p className="mb-2">1. QUY MÔ ĐOÀN: Chương trình áp dụng với đặt phòng từ 2 phòng trở lên cùng ngày lưu trú.</p>
-                      <p className="mb-2">2. XÁC NHẬN ĐẶT PHÒNG: Thông tin đặt phòng sẽ được hệ thống Smart Hotel xử lý và nhân viên chăm sóc khách hàng Elysian sẽ gọi điện hỗ trợ trực tiếp điều phối phòng phù hợp nhất.</p>
-                      <p className="mb-2">3. HỦY / ĐỔI LỊCH: Yêu cầu hủy đặt phòng nhóm miễn phí cần được thông báo trước tối thiểu 7 ngày nhận phòng. Các thay đổi trễ hơn sẽ chịu phụ thu theo thỏa thuận.</p>
-                      <p className="mb-2">4. THANH TOÁN: Các điều khoản thanh toán chiết khấu sẽ được ghi rõ trong hợp đồng đoàn.</p>
+                      <p className="mb-2">{t('group_tc_1', '1. QUY MÔ ĐOÀN: Chương trình áp dụng với đặt phòng từ 2 phòng trở lên cùng ngày lưu trú.')}</p>
+                      <p className="mb-2">{t('group_tc_2', '2. XÁC NHẬN ĐẶT PHÒNG: Thông tin đặt phòng sẽ được hệ thống Smart Hotel xử lý và nhân viên chăm sóc khách hàng Elysian sẽ gọi điện hỗ trợ trực tiếp điều phối phòng phù hợp nhất.')}</p>
+                      <p className="mb-2">{t('group_tc_3', '3. HỦY / ĐỔI LỊCH: Yêu cầu hủy đặt phòng nhóm miễn phí cần được thông báo trước tối thiểu 7 ngày nhận phòng. Các thay đổi trễ hơn sẽ chịu phụ thu theo thỏa thuận.')}</p>
+                      <p className="mb-2">{t('group_tc_4', '4. THANH TOÁN: Các điều khoản thanh toán chiết khấu sẽ được ghi rõ trong hợp đồng đoàn.')}</p>
                     </div>
                   </div>
 
@@ -725,7 +728,7 @@ export default function GroupBooking({ setActivePage }) {
                       className="mt-1 accent-primary w-4 h-4 cursor-pointer"
                     />
                     <span className="text-xs font-bold text-slate-700 leading-tight">
-                      Tôi đại diện cho đoàn đã đọc, hiểu và đồng ý hoàn toàn với Chính sách đặt phòng nhóm của Elysian Hotels.
+                      {t('group_tc_agree_text', 'Tôi đại diện cho đoàn đã đọc, hiểu và đồng ý hoàn toàn với Chính sách đặt phòng nhóm của Elysian Hotels.')}
                     </span>
                   </label>
 
@@ -738,9 +741,9 @@ export default function GroupBooking({ setActivePage }) {
                     {isLoading ? (
                       <>
                         <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                        ĐANG TẠO HỒ SƠ ĐOÀN...
+                        {t('group_btn_processing', 'ĐANG TẠO HỒ SƠ ĐOÀN...')}
                       </>
-                    ) : 'XÁC NHẬN ĐẶT PHÒNG NHÓM'}
+                    ) : t('group_btn_confirm', 'XÁC NHẬN ĐẶT PHÒNG NHÓM')}
                   </button>
                 </div>
               )}
@@ -751,7 +754,7 @@ export default function GroupBooking({ setActivePage }) {
           <div className="lg:col-span-4 bg-white border border-outline-variant shadow-lg p-6 md:p-8 flex flex-col justify-between h-fit">
             <div>
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-4 border-b border-gray-100 pb-2">
-                Tóm Tắt Chi Phí Đoàn
+                {t('group_summary_title', 'Tóm Tắt Chi Phí Đoàn')}
               </h3>
 
               {selectedRoom ? (
@@ -768,7 +771,7 @@ export default function GroupBooking({ setActivePage }) {
                   {/* Room Title */}
                   <div>
                     <span className="text-[9px] font-black text-primary uppercase tracking-widest block mb-0.5">
-                      {selectedRoom.bedType || 'Phòng nghỉ đoàn cao cấp'}
+                      {selectedRoom.bedType || t('group_summary_room_type_default', 'Phòng nghỉ đoàn cao cấp')}
                     </span>
                     <h4 className="text-base font-black text-slate-950 uppercase tracking-wider">
                       {selectedRoom.name}
@@ -778,29 +781,29 @@ export default function GroupBooking({ setActivePage }) {
                   {/* Details list */}
                   <div className="space-y-2.5 border-t border-b border-gray-100 py-4 text-xs font-bold text-slate-700">
                     <div className="flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Giá mỗi phòng/đêm:</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('group_summary_price_per_night', 'Giá mỗi phòng/đêm:')}</span>
                       <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(basePrice)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Số lượng phòng:</span>
-                      <span className="text-primary font-black">{quantity} phòng</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('group_summary_room_qty', 'Số lượng phòng:')}</span>
+                      <span className="text-primary font-black">{quantity} {t('group_max_capacity_rooms', 'phòng')}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Thời gian:</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('booking_summary_duration', 'Thời gian')}:</span>
                       {startDate && endDate ? (
-                        <span>{formatDateString(startDate)} đến {formatDateString(endDate)} ({nights} đêm)</span>
+                        <span>{formatDateString(startDate)} {t('booking_summary_date_to', 'đến')} {formatDateString(endDate)} ({nights} {t('booking_summary_nights', 'đêm')})</span>
                       ) : (
-                        <span className="text-slate-400 italic font-medium">Chưa chọn ngày</span>
+                        <span className="text-slate-400 italic font-medium">{t('booking_summary_no_date', 'Chưa chọn ngày')}</span>
                       )}
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Thành viên đoàn:</span>
-                      <span>{adults} NL • {childrenCount} TE</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('group_summary_members', 'Thành viên đoàn:')}</span>
+                      <span>{adults} {t('booking_summary_nl', 'NL')} • {childrenCount} {t('booking_summary_te', 'TE')}</span>
                     </div>
                     <div className="flex justify-between flex-wrap gap-1">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Nhận phòng:</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('booking_summary_checkin_method', 'Hình thức check-in:')}</span>
                       <span className="text-slate-900 uppercase">
-                        {checkInMethod === 'Manual' ? 'Quầy lễ tân' : checkInMethod === 'Face ID' ? 'Face ID eKYC' : 'Mã QR đoàn'}
+                        {checkInMethod === 'Manual' ? t('booking_checkin_manual_option', 'Quầy lễ tân') : checkInMethod === 'Face ID' ? t('ekyc_status_verified_title', 'Face ID eKYC') : t('booking_checkin_qr_option', 'Mã QR')}
                       </span>
                     </div>
                   </div>
@@ -808,15 +811,15 @@ export default function GroupBooking({ setActivePage }) {
                   {/* Price breakdown */}
                   <div className="space-y-2 pt-2 text-xs font-bold text-slate-700">
                     <div className="flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Tạm tính ({quantity} phòng):</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('group_summary_subtotal_prefix', 'Tạm tính (')} {quantity} {t('group_summary_subtotal_suffix', 'phòng):')}</span>
                       <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalAmount)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Thuế VAT (10%):</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('booking_summary_vat', 'Thuế VAT (10%):')}</span>
                       <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(vatAmount)}</span>
                     </div>
                     <div className="flex justify-between border-t border-slate-900 pt-3 text-xs">
-                      <span className="font-black text-slate-900 uppercase tracking-wider">TỔNG CỘNG:</span>
+                      <span className="font-black text-slate-900 uppercase tracking-wider">{t('booking_summary_total', 'TỔNG CỘNG:')}</span>
                       <span className="font-black text-primary text-sm">
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(finalAmount)}
                       </span>
@@ -825,13 +828,13 @@ export default function GroupBooking({ setActivePage }) {
                 </div>
               ) : (
                 <div className="py-12 text-center text-slate-400 font-bold uppercase text-[10px] tracking-wider">
-                  Vui lòng chọn loại phòng khả dụng
+                  {t('group_summary_empty', 'Vui lòng chọn loại phòng khả dụng')}
                 </div>
               )}
             </div>
 
             <div className="mt-8 bg-slate-50 border border-slate-100 p-4 text-[9px] text-slate-500 font-semibold leading-relaxed uppercase tracking-wider">
-              Elysian hỗ trợ chiết khấu đặc biệt cho doanh nghiệp & sự kiện quy mô lớn. Vui lòng ghi chú trong yêu cầu đặc biệt.
+              {t('group_notice_discount', 'Elysian hỗ trợ chiết khấu đặc biệt cho doanh nghiệp & sự kiện quy mô lớn. Vui lòng ghi chú trong yêu cầu đặc biệt.')}
             </div>
           </div>
           

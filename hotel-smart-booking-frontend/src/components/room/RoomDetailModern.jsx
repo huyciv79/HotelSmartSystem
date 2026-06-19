@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { Maximize, Users, Check, X } from 'lucide-react';
 import ReviewSection from './ReviewSection';
 import { useToast } from '../Toast';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function RoomDetailModern({ roomDetailData, onClose, onBookingPersonal, onBookingGroup }) {
   const { showToast } = useToast();
+  const { t } = useLanguage();
   
   // Extract all images including primary image and secondary ones
   const allImages = [];
@@ -96,7 +98,7 @@ export default function RoomDetailModern({ roomDetailData, onClose, onBookingPer
           <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between border-l border-slate-100">
             <div>
               <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] block mb-1">
-                {roomDetailData.bedType || 'HẠNG PHÒNG THƯỢNG HẠNG'}
+                {roomDetailData.bedType || t('room_detail_premium_class', 'HẠNG PHÒNG THƯỢNG HẠNG')}
               </span>
               <h2 className="text-2xl sm:text-3xl font-black text-slate-900 uppercase tracking-wider leading-tight mb-3">
                 {roomDetailData.name}
@@ -104,7 +106,7 @@ export default function RoomDetailModern({ roomDetailData, onClose, onBookingPer
               <div className="h-0.5 w-16 bg-primary mb-5" />
 
               <p className="text-xs text-slate-500 font-medium leading-relaxed mb-6 whitespace-pre-line text-justify">
-                {roomDetailData.description || 'Hệ thống phòng nghỉ đẳng cấp với các chi tiết kiến trúc độc đáo, mang lại sự sang trọng tinh tế và kỳ nghỉ tuyệt hảo chuẩn Elysian.'}
+                {roomDetailData.description || t('room_detail_default_desc', 'Hệ thống phòng nghỉ đẳng cấp với các chi tiết kiến trúc độc đáo, mang lại sự sang trọng tinh tế và kỳ nghỉ tuyệt hảo chuẩn Elysian.')}
               </p>
 
               {/* Specs Grid */}
@@ -114,8 +116,8 @@ export default function RoomDetailModern({ roomDetailData, onClose, onBookingPer
                     <Maximize size={16} />
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Diện tích</span>
-                    <span className="text-xs font-black text-slate-800 uppercase">{roomDetailData.area ? `${roomDetailData.area} m²` : 'Đang cập nhật'}</span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('room_detail_area', 'Diện tích')}</span>
+                    <span className="text-xs font-black text-slate-800 uppercase">{roomDetailData.area ? `${roomDetailData.area} m²` : t('room_detail_updating', 'Đang cập nhật')}</span>
                   </div>
                 </div>
 
@@ -124,9 +126,9 @@ export default function RoomDetailModern({ roomDetailData, onClose, onBookingPer
                     <Users size={16} />
                   </div>
                   <div>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Sức chứa</span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('room_detail_capacity', 'Sức chứa')}</span>
                     <span className="text-xs font-black text-slate-800 uppercase">
-                      {roomDetailData.totalCapacity || ((roomDetailData.adultCapacity || 0) + (roomDetailData.childCapacity || 0))} khách
+                      {roomDetailData.totalCapacity || ((roomDetailData.adultCapacity || 0) + (roomDetailData.childCapacity || 0))} {t('room_detail_guests_count', 'khách')}
                     </span>
                   </div>
                 </div>
@@ -135,7 +137,7 @@ export default function RoomDetailModern({ roomDetailData, onClose, onBookingPer
               {/* Luxury Amenities List */}
               {roomDetailData.amenities && (
                 <div className="mb-6">
-                  <span className="block text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3">Tiện ích đặc quyền</span>
+                  <span className="block text-[10px] text-slate-400 font-black uppercase tracking-widest mb-3">{t('room_detail_amenities_title', 'Tiện ích đặc quyền')}</span>
                   <div className="grid grid-cols-2 gap-y-2 gap-x-4">
                     {roomDetailData.amenities.split(',').map((amenity, idx) => (
                       <div key={idx} className="flex items-center gap-2 text-xs font-bold text-slate-700">
@@ -151,11 +153,11 @@ export default function RoomDetailModern({ roomDetailData, onClose, onBookingPer
             {/* Base Price Panel */}
             <div className="bg-slate-50 border border-slate-150 p-4 mb-2 flex items-center justify-between">
               <div>
-                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest block">Giá khởi điểm</span>
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest block">{t('room_detail_base_price', 'Giá khởi điểm')}</span>
                 <span className="text-xl font-black text-primary leading-none">
                   {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(roomDetailData.basePrice)}
                 </span>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider"> / đêm</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider"> {t('room_detail_per_night', '/ đêm')}</span>
               </div>
             </div>
           </div>
@@ -165,8 +167,8 @@ export default function RoomDetailModern({ roomDetailData, onClose, onBookingPer
         {/* Booking Buttons Banner */}
         <div className="bg-slate-100 border-y border-slate-200 p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 justify-between">
           <div className="text-center md:text-left">
-            <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-1">Hãy bắt đầu hành trình của bạn</h4>
-            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Lựa chọn hình thức đặt phòng phù hợp nhất</p>
+            <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-1">{t('room_detail_cta_title', 'Hãy bắt đầu hành trình của bạn')}</h4>
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">{t('room_detail_cta_desc', 'Lựa chọn hình thức đặt phòng phù hợp nhất')}</p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
@@ -176,10 +178,10 @@ export default function RoomDetailModern({ roomDetailData, onClose, onBookingPer
                 onClick={() => onBookingPersonal(roomDetailData)}
                 className="parallelogram-btn bg-primary hover:bg-slate-100 text-white hover:text-primary px-8 py-3 text-xs font-black uppercase tracking-widest transition-all duration-500 ease-in-out cursor-pointer border-none flex flex-col items-center justify-center group w-full"
               >
-                <span className="text-white group-hover:text-primary group-hover:translate-y-[-1px] transition-all duration-500 ease-in-out flex items-center gap-1.5">
-                  ĐẶT PHÒNG CÁ NHÂN
+                <span className="text-white group-hover:text-primary group-hover:translate-y-[-1px] transition-all duration-500 ease-in-out flex items-center gap-1.5 font-black">
+                  {t('room_detail_book_personal', 'ĐẶT PHÒNG CÁ NHÂN')}
                 </span>
-                <span className="text-[8.5px] font-bold text-white/90 group-hover:text-slate-500 block mt-0.5 tracking-wider font-sans leading-none transition-all duration-500 ease-in-out">Khách lẻ / Gia đình nhỏ</span>
+                <span className="text-[8.5px] font-bold text-white/90 group-hover:text-slate-500 block mt-0.5 tracking-wider font-sans leading-none transition-all duration-500 ease-in-out">{t('room_detail_book_personal_desc', 'Khách lẻ / Gia đình nhỏ')}</span>
               </button>
             </div>
 
@@ -190,9 +192,9 @@ export default function RoomDetailModern({ roomDetailData, onClose, onBookingPer
                 className="parallelogram-btn bg-slate-100 hover:bg-primary text-primary hover:text-white px-8 py-3 text-xs font-black uppercase tracking-widest transition-all duration-500 ease-in-out cursor-pointer border-none flex flex-col items-center justify-center group w-full"
               >
                 <span className="text-primary group-hover:text-white group-hover:translate-y-[-1px] transition-all duration-500 ease-in-out flex items-center gap-1.5 font-black">
-                  ĐẶT PHÒNG NHÓM
+                  {t('room_detail_book_group', 'ĐẶT PHÒNG NHÓM')}
                 </span>
-                <span className="text-[8.5px] font-bold text-slate-500 group-hover:text-white/90 block mt-0.5 tracking-wider font-sans leading-none transition-all duration-500 ease-in-out">Đoàn khách / Sự kiện lớn</span>
+                <span className="text-[8.5px] font-bold text-slate-500 group-hover:text-white/90 block mt-0.5 tracking-wider font-sans leading-none transition-all duration-500 ease-in-out">{t('room_detail_book_group_desc', 'Đoàn khách / Sự kiện lớn')}</span>
               </button>
             </div>
           </div>

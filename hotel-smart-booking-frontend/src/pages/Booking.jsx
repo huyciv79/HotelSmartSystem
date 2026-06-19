@@ -4,9 +4,11 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { getRoomTypes } from '../services/roomService';
 import { createBooking } from '../services/bookingService';
 import { useToast, ToastContainer } from '../components/Toast';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Booking({ setActivePage }) {
   const { toasts, showToast, dismissToast } = useToast();
+  const { t } = useLanguage();
   
   const [currentStep, setCurrentStep] = useState(1);
   const [roomTypes, setRoomTypes] = useState([]);
@@ -290,14 +292,14 @@ export default function Booking({ setActivePage }) {
                   onClick={() => setActivePage('home')}
                   className="mb-6 w-fit text-xs text-secondary hover:text-primary uppercase tracking-widest font-bold flex items-center gap-1 cursor-pointer bg-transparent border-none"
                 >
-                  <span className="material-symbols-outlined text-sm">arrow_back</span> Hủy & Quay lại
+                  <span className="material-symbols-outlined text-sm">arrow_back</span> {t('booking_btn_cancel_back', 'Hủy & Quay lại')}
                 </button>
               ) : (
                 <button 
                   onClick={() => setCurrentStep(prev => prev - 1)}
                   className="mb-6 w-fit text-xs text-secondary hover:text-primary uppercase tracking-widest font-bold flex items-center gap-1 cursor-pointer bg-transparent border-none"
                 >
-                  <span className="material-symbols-outlined text-sm">arrow_back</span> Quay lại bước {currentStep - 1}
+                  <span className="material-symbols-outlined text-sm">arrow_back</span> {t('booking_btn_back_step', 'Quay lại bước')} {currentStep - 1}
                 </button>
               )}
 
@@ -307,30 +309,30 @@ export default function Booking({ setActivePage }) {
                   {/* Step indicators */}
                   <div className="flex items-center gap-2">
                     <span className={`w-6 h-6 flex items-center justify-center text-[10px] font-black border ${currentStep >= 1 ? 'bg-primary border-primary text-white' : 'border-slate-300 text-slate-400'}`}>1</span>
-                    <span className={`text-[10px] font-black uppercase tracking-wider hidden sm:inline ${currentStep === 1 ? 'text-primary' : 'text-slate-400'}`}>Thông tin</span>
+                    <span className={`text-[10px] font-black uppercase tracking-wider hidden sm:inline ${currentStep === 1 ? 'text-primary' : 'text-slate-400'}`}>{t('booking_step1_label', 'Thông tin')}</span>
                   </div>
                   <span className="h-px w-6 bg-slate-350 hidden sm:inline" />
                   <div className="flex items-center gap-2">
                     <span className={`w-6 h-6 flex items-center justify-center text-[10px] font-black border ${currentStep >= 2 ? 'bg-primary border-primary text-white' : 'border-slate-300 text-slate-400'}`}>2</span>
-                    <span className={`text-[10px] font-black uppercase tracking-wider hidden sm:inline ${currentStep === 2 ? 'text-primary' : 'text-slate-400'}`}>Check-in</span>
+                    <span className={`text-[10px] font-black uppercase tracking-wider hidden sm:inline ${currentStep === 2 ? 'text-primary' : 'text-slate-400'}`}>{t('booking_step2_label', 'Check-in')}</span>
                   </div>
                   <span className="h-px w-6 bg-slate-350 hidden sm:inline" />
                   <div className="flex items-center gap-2">
                     <span className={`w-6 h-6 flex items-center justify-center text-[10px] font-black border ${currentStep >= 3 ? 'bg-primary border-primary text-white' : 'border-slate-300 text-slate-400'}`}>3</span>
-                    <span className={`text-[10px] font-black uppercase tracking-wider hidden sm:inline ${currentStep === 3 ? 'text-primary' : 'text-slate-400'}`}>Xác nhận</span>
+                    <span className={`text-[10px] font-black uppercase tracking-wider hidden sm:inline ${currentStep === 3 ? 'text-primary' : 'text-slate-400'}`}>{t('booking_step3_label', 'Xác nhận')}</span>
                   </div>
                 </div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bước {currentStep} / 3</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('booking_step_progress_text', 'Bước')} {currentStep} / 3</div>
               </div>
 
               {/* WIZARD STEP 1: DATES, AVAILABILITY, GUESTS */}
               {currentStep === 1 && (
                 <div className="space-y-6 animate-fade-in">
-                  <h3 className="font-headline-lg text-lg text-primary uppercase italic tracking-wider m-0">Bước 1: Chọn ngày & Số lượng khách</h3>
+                  <h3 className="font-headline-lg text-lg text-primary uppercase italic tracking-wider m-0">{t('booking_step1_title', 'Bước 1: Chọn ngày & Số lượng khách')}</h3>
                   
                   {/* Room Type */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold text-secondary uppercase tracking-widest font-['Montserrat']">Loại Phòng</label>
+                    <label className="block text-xs font-bold text-secondary uppercase tracking-widest font-['Montserrat']">{t('booking_room_type_label', 'Loại Phòng')}</label>
                     <select 
                       value={selectedRoom ? selectedRoom.id : ''}
                       onChange={(e) => handleRoomChange(e.target.value)}
@@ -338,7 +340,7 @@ export default function Booking({ setActivePage }) {
                     >
                       {roomTypes.map((room) => (
                         <option key={room.id} value={room.id}>
-                          {room.name} - Sức chứa: {room.totalCapacity || ((room.adultCapacity || 2) + (room.childCapacity || 1))} khách
+                          {room.name} - {t('booking_capacity_label', 'Sức chứa')}: {room.totalCapacity || ((room.adultCapacity || 2) + (room.childCapacity || 1))} {t('booking_guests_count', 'khách')}
                         </option>
                       ))}
                     </select>
@@ -346,7 +348,7 @@ export default function Booking({ setActivePage }) {
 
                   {/* React Datepicker Range */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Thời gian lưu trú (Check-in - Check-out)</label>
+                    <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('booking_duration_label', 'Thời gian lưu trú (Check-in - Check-out)')}</label>
                     <div className="relative">
                       <DatePicker
                         selectsRange={true}
@@ -354,7 +356,7 @@ export default function Booking({ setActivePage }) {
                         endDate={endDate}
                         onChange={handleDateChange}
                         minDate={new Date()}
-                        placeholderText="Chọn khoảng ngày nhận và trả phòng"
+                        placeholderText={t('booking_dates_placeholder', 'Chọn khoảng ngày nhận và trả phòng')}
                         isClearable={true}
                         className="w-full bg-transparent border-b border-on-surface py-2 font-bold text-sm outline-none focus:border-primary"
                       />
@@ -366,21 +368,21 @@ export default function Booking({ setActivePage }) {
                   {startDate && endDate && (
                     <div className="bg-slate-50 border border-slate-200 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                       <div>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Trạng thái phòng trống</span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('booking_availability_status_label', 'Trạng thái phòng trống')}</span>
                         {isCheckingAvailability ? (
                           <span className="text-xs font-bold text-slate-600 flex items-center gap-1.5 mt-1">
-                            <span className="w-3 h-3 border border-slate-400 border-t-slate-600 rounded-full animate-spin"></span> Đang kiểm tra phòng trống...
+                            <span className="w-3 h-3 border border-slate-400 border-t-slate-600 rounded-full animate-spin"></span> {t('booking_checking_availability', 'Đang kiểm tra phòng trống...')}
                           </span>
                         ) : isAvailable ? (
                           <span className="text-xs font-bold text-green-600 flex items-center gap-1 mt-1">
-                            <span className="material-symbols-outlined text-base">check_circle</span> Phòng trống sẵn sàng
+                            <span className="material-symbols-outlined text-base">check_circle</span> {t('booking_available_success', 'Phòng trống sẵn sàng')}
                           </span>
                         ) : isAvailable === false ? (
                           <span className="text-xs font-bold text-error flex items-center gap-1 mt-1">
-                            <span className="material-symbols-outlined text-base">cancel</span> Hết phòng trống
+                            <span className="material-symbols-outlined text-base">cancel</span> {t('booking_not_available', 'Hết phòng trống')}
                           </span>
                         ) : (
-                          <span className="text-xs font-bold text-slate-500 mt-1 block">Chưa kiểm tra</span>
+                          <span className="text-xs font-bold text-slate-500 mt-1 block">{t('booking_not_checked', 'Chưa kiểm tra')}</span>
                         )}
                       </div>
                       <button
@@ -388,7 +390,7 @@ export default function Booking({ setActivePage }) {
                         onClick={checkAvailability}
                         className="bg-slate-900 hover:bg-primary text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 border-none cursor-pointer transition-all duration-200"
                       >
-                        Kiểm tra phòng trống
+                        {t('booking_btn_check_availability', 'Kiểm tra phòng trống')}
                       </button>
                     </div>
                   )}
@@ -396,16 +398,16 @@ export default function Booking({ setActivePage }) {
                   {/* Guests Steppers */}
                   <div className="space-y-4 border-t border-gray-100 pt-6">
                     <div className="flex justify-between items-center">
-                      <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Số lượng khách nghỉ</label>
-                      <span className="text-[10px] font-black text-primary uppercase tracking-wider bg-primary/5 px-2.5 py-1">Sức chứa tối đa: {maxCapacity} khách</span>
+                      <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('booking_guests_stepper_label', 'Số lượng khách nghỉ')}</label>
+                      <span className="text-[10px] font-black text-primary uppercase tracking-wider bg-primary/5 px-2.5 py-1">{t('booking_max_capacity', 'Sức chứa tối đa')}: {maxCapacity} {t('booking_guests_count', 'khách')}</span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       {/* Adults Stepper */}
                       <div className="flex justify-between items-center border border-slate-200 p-3">
                         <div>
-                          <span className="text-xs font-extrabold uppercase text-slate-700 block">Người lớn</span>
-                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Trên 12 tuổi</span>
+                          <span className="text-xs font-extrabold uppercase text-slate-700 block">{t('booking_adults_label', 'Người lớn')}</span>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('booking_adults_sub', 'Trên 12 tuổi')}</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <button
@@ -422,7 +424,7 @@ export default function Booking({ setActivePage }) {
                               if (totalGuests < maxCapacity) {
                                 setAdults(prev => prev + 1);
                               } else {
-                                showToast(`Tổng số lượng khách không được vượt quá sức chứa ${maxCapacity} khách.`, 'warning');
+                                showToast(`${t('booking_warning_capacity_prefix', 'Tổng số lượng khách không được vượt quá sức chứa')} ${maxCapacity} ${t('booking_warning_capacity_suffix', 'khách')}.`, 'warning');
                               }
                             }}
                             className="w-8 h-8 rounded-none border border-slate-300 bg-transparent text-slate-700 hover:bg-slate-100 font-black flex items-center justify-center cursor-pointer"
@@ -435,8 +437,8 @@ export default function Booking({ setActivePage }) {
                       {/* Children Stepper */}
                       <div className="flex justify-between items-center border border-slate-200 p-3">
                         <div>
-                          <span className="text-xs font-extrabold uppercase text-slate-700 block">Trẻ em</span>
-                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Dưới 12 tuổi</span>
+                          <span className="text-xs font-extrabold uppercase text-slate-700 block">{t('booking_children_label', 'Trẻ em')}</span>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('booking_children_sub', 'Dưới 12 tuổi')}</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <button
@@ -453,7 +455,7 @@ export default function Booking({ setActivePage }) {
                               if (totalGuests < maxCapacity) {
                                 setChildrenCount(prev => prev + 1);
                               } else {
-                                showToast(`Tổng số lượng khách không được vượt quá sức chứa ${maxCapacity} khách.`, 'warning');
+                                showToast(`${t('booking_warning_capacity_prefix', 'Tổng số lượng khách không được vượt quá sức chứa')} ${maxCapacity} ${t('booking_warning_capacity_suffix', 'khách')}.`, 'warning');
                               }
                             }}
                             className="w-8 h-8 rounded-none border border-slate-300 bg-transparent text-slate-700 hover:bg-slate-100 font-black flex items-center justify-center cursor-pointer"
@@ -471,7 +473,7 @@ export default function Booking({ setActivePage }) {
                     onClick={handleStep1Submit}
                     className="w-full bg-primary text-on-primary font-bold py-4 uppercase tracking-widest hover:brightness-110 active:scale-98 transition-all cursor-pointer border-none flex items-center justify-center h-12"
                   >
-                    Tiếp tục chọn Check-in
+                    {t('booking_btn_continue_checkin', 'Tiếp tục chọn Check-in')}
                   </button>
                 </div>
               )}
@@ -479,8 +481,8 @@ export default function Booking({ setActivePage }) {
               {/* WIZARD STEP 2: CHECK-IN METHOD */}
               {currentStep === 2 && (
                 <div className="space-y-6 animate-fade-in">
-                  <h3 className="font-headline-lg text-lg text-primary uppercase italic tracking-wider m-0">Bước 2: Chọn phương thức nhận phòng</h3>
-                  <p className="text-secondary text-xs font-bold uppercase tracking-widest">Lựa chọn 1 trong các hình thức nhận phòng tại Elysian Smart Hotel</p>
+                  <h3 className="font-headline-lg text-lg text-primary uppercase italic tracking-wider m-0">{t('booking_step2_title', 'Bước 2: Chọn phương thức nhận phòng')}</h3>
+                  <p className="text-secondary text-xs font-bold uppercase tracking-widest">{t('booking_step2_subtitle', 'Lựa chọn 1 trong các hình thức nhận phòng tại Elysian Smart Hotel')}</p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* QR Code Option */}
@@ -494,7 +496,7 @@ export default function Booking({ setActivePage }) {
                     >
                       <span className="material-symbols-outlined text-3xl mb-3">qr_code_2</span>
                       <span className="text-[12px] font-black uppercase tracking-wider block">QR Code</span>
-                      <span className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">Check-in tự động</span>
+                      <span className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">{t('booking_checkin_qr_sub', 'Check-in tự động')}</span>
                     </div>
 
                     {/* FaceID Option */}
@@ -508,7 +510,7 @@ export default function Booking({ setActivePage }) {
                     >
                       <span className="material-symbols-outlined text-3xl mb-3">face</span>
                       <span className="text-[12px] font-black uppercase tracking-wider block">FaceID eKYC</span>
-                      <span className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">Nhận diện khuôn mặt</span>
+                      <span className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">{t('booking_checkin_face_sub', 'Nhận diện khuôn mặt')}</span>
                     </div>
 
                     {/* Manual Option */}
@@ -522,18 +524,18 @@ export default function Booking({ setActivePage }) {
                     >
                       <span className="material-symbols-outlined text-3xl mb-3">hotel_class</span>
                       <span className="text-[12px] font-black uppercase tracking-wider block">Manual</span>
-                      <span className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">Tại quầy lễ tân</span>
+                      <span className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">{t('booking_checkin_manual_sub', 'Tại quầy lễ tân')}</span>
                     </div>
                   </div>
 
                   {/* Special Requests */}
                   <div className="space-y-2 border-t border-gray-100 pt-6">
-                    <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Yêu Cầu Đặc Biệt (Tùy chọn)</label>
+                    <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('booking_special_requests_label', 'Yêu Cầu Đặc Biệt (Tùy chọn)')}</label>
                     <textarea 
                       rows="3"
                       value={specialRequests}
                       onChange={(e) => setSpecialRequests(e.target.value)}
-                      placeholder="Ghi chú về giường phụ, phòng không hút thuốc, thời gian nhận phòng dự kiến..."
+                      placeholder={t('booking_special_requests_placeholder', 'Ghi chú về giường phụ, phòng không hút thuốc, thời gian nhận phòng dự kiến...')}
                       className="w-full bg-transparent border border-slate-200 p-3 font-bold text-sm outline-none focus:border-primary resize-none"
                     />
                   </div>
@@ -543,7 +545,7 @@ export default function Booking({ setActivePage }) {
                     onClick={handleStep2Submit}
                     className="w-full bg-primary text-on-primary font-bold py-4 uppercase tracking-widest hover:brightness-110 active:scale-98 transition-all cursor-pointer border-none flex items-center justify-center h-12"
                   >
-                    Tiếp tục sang bước tổng kết
+                    {t('booking_btn_continue_summary', 'Tiếp tục sang bước tổng kết')}
                   </button>
                 </div>
               )}
@@ -551,16 +553,16 @@ export default function Booking({ setActivePage }) {
               {/* WIZARD STEP 3: SUMMARY & TERMS & CONFIRM */}
               {currentStep === 3 && (
                 <div className="space-y-6 animate-fade-in">
-                  <h3 className="font-headline-lg text-lg text-primary uppercase italic tracking-wider m-0">Bước 3: Tổng kết & Điều khoản</h3>
+                  <h3 className="font-headline-lg text-lg text-primary uppercase italic tracking-wider m-0">{t('booking_step3_title', 'Bước 3: Tổng kết & Điều khoản')}</h3>
                   
                   {/* Terms & Conditions details box */}
                   <div className="bg-slate-50 border border-slate-200 p-5 space-y-3">
-                    <span className="block text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-1.5">Điều khoản & Điều kiện đặt phòng (T&C)</span>
+                    <span className="block text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-1.5">{t('booking_tc_title', 'Điều khoản & Điều kiện đặt phòng (T&C)')}</span>
                     <div className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider leading-relaxed max-h-48 overflow-y-auto pr-2">
-                      <p className="mb-2">1. THỦ TỤC NHẬN PHÒNG: Giờ nhận phòng tiêu chuẩn là từ 2h trưa (14:00). Khách hàng nhận phòng thông minh bằng mã QR hoặc khuôn mặt FaceID đã đăng ký.</p>
-                      <p className="mb-2">2. THỦ TỤC TRẢ PHÒNG: Giờ trả phòng là trước 12h trưa (12:00). Việc trả phòng trễ sau 12:00 sẽ bị phụ thu phí tuỳ theo quy định khách sạn.</p>
-                      <p className="mb-2">3. CHÍNH SÁCH HỦY: Hủy phòng miễn phí trước 24 giờ. Hủy phòng trễ hoặc không đến sẽ bị trừ tiền đặt cọc tương đương đêm đầu tiên.</p>
-                      <p className="mb-2">4. SỨC CHỨA: Không vượt quá giới hạn số lượng khách đã chọn trong bước 1.</p>
+                      <p className="mb-2">{t('booking_tc_1', '1. THỦ TỤC NHẬN PHÒNG: Giờ nhận phòng tiêu chuẩn là từ 2h trưa (14:00). Khách hàng nhận phòng thông minh bằng mã QR hoặc khuôn mặt FaceID đã đăng ký.')}</p>
+                      <p className="mb-2">{t('booking_tc_2', '2. THỦ TỤC TRẢ PHÒNG: Giờ trả phòng là trước 12h trưa (12:00). Việc trả phòng trễ sau 12:00 sẽ bị phụ thu phí tuỳ theo quy định khách sạn.')}</p>
+                      <p className="mb-2">{t('booking_tc_3', '3. CHÍNH SÁCH HỦY: Hủy phòng miễn phí trước 24 giờ. Hủy phòng trễ hoặc không đến sẽ bị trừ tiền đặt cọc tương đương đêm đầu tiên.')}</p>
+                      <p className="mb-2">{t('booking_tc_4', '4. SỨC CHỨA: Không vượt quá giới hạn số lượng khách đã chọn trong bước 1.')}</p>
                     </div>
                   </div>
 
@@ -572,7 +574,7 @@ export default function Booking({ setActivePage }) {
                       onChange={(e) => setAgreedToTerms(e.target.checked)}
                       className="mt-1 accent-primary w-4 h-4 cursor-pointer"
                     />
-                    <span className="text-xs font-bold text-slate-700 leading-tight">Tôi đã đọc, hiểu và đồng ý với toàn bộ Điều khoản & Điều kiện đặt phòng của Elysian Hotels.</span>
+                    <span className="text-xs font-bold text-slate-700 leading-tight">{t('booking_tc_agree_text', 'Tôi đã đọc, hiểu và đồng ý với toàn bộ Điều khoản & Điều kiện đặt phòng của Elysian Hotels.')}</span>
                   </label>
 
                   <button
@@ -584,9 +586,9 @@ export default function Booking({ setActivePage }) {
                     {isLoading ? (
                       <>
                         <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                        ĐANG XỬ LÝ...
+                        {t('booking_btn_processing', 'ĐANG XỬ LÝ...')}
                       </>
-                    ) : 'XÁC NHẬN ĐẶT PHÒNG'}
+                    ) : t('booking_btn_confirm', 'XÁC NHẬN ĐẶT PHÒNG')}
                   </button>
                 </div>
               )}
@@ -597,7 +599,7 @@ export default function Booking({ setActivePage }) {
           <div className="lg:col-span-5 bg-white border border-outline-variant shadow-lg p-8 flex flex-col justify-between h-fit">
             <div>
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4 border-b border-gray-100 pb-2">
-                Tóm Tắt Chi Phí (Real-time)
+                {t('booking_summary_realtime', 'Tóm Tắt Chi Phí (Real-time)')}
               </h3>
 
               {selectedRoom && (
@@ -614,7 +616,7 @@ export default function Booking({ setActivePage }) {
                   {/* Room Title */}
                   <div>
                     <span className="text-[10px] font-black text-primary uppercase tracking-widest block mb-0.5">
-                      {selectedRoom.bedType || 'Phòng nghỉ thượng hạng'}
+                      {selectedRoom.bedType || t('room_detail_premium_class', 'HẠNG PHÒNG THƯỢNG HẠNG')}
                     </span>
                     <h4 className="text-lg font-black text-slate-950 uppercase tracking-wider">
                       {selectedRoom.name}
@@ -624,39 +626,39 @@ export default function Booking({ setActivePage }) {
                   {/* Real-time Summary Details */}
                   <div className="space-y-2 border-t border-b border-gray-100 py-4 text-xs font-bold text-slate-700">
                     <div className="flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Giá mỗi đêm:</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('booking_summary_price_per_night', 'Giá mỗi đêm:')}</span>
                       <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(basePrice)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Thời gian:</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('booking_summary_duration', 'Thời gian:')}</span>
                       {startDate && endDate ? (
-                        <span>{formatDateString(startDate)} đến {formatDateString(endDate)} ({nights} đêm)</span>
+                        <span>{formatDateString(startDate)} {t('booking_summary_date_to', 'đến')} {formatDateString(endDate)} ({nights} {t('booking_summary_nights', 'đêm')})</span>
                       ) : (
-                        <span className="text-slate-400 italic">Chưa chọn ngày</span>
+                        <span className="text-slate-400 italic">{t('booking_summary_no_date', 'Chưa chọn ngày')}</span>
                       )}
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Số lượng khách:</span>
-                      <span>{totalGuests} người ({adults} NL, {childrenCount} TE)</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('booking_summary_guests', 'Số lượng khách:')}</span>
+                      <span>{totalGuests} {t('booking_summary_people', 'người')} ({adults} {t('booking_summary_nl', 'NL')}, {childrenCount} {t('booking_summary_te', 'TE')})</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Hình thức check-in:</span>
-                      <span className="text-primary uppercase">{checkInMethod === 'Manual' ? 'Quầy lễ tân' : checkInMethod === 'FaceID' ? 'FaceID eKYC' : 'Mã QR'}</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('booking_summary_checkin_method', 'Hình thức check-in:')}</span>
+                      <span className="text-primary uppercase">{checkInMethod === 'Manual' ? t('booking_checkin_manual_option', 'Quầy lễ tân') : checkInMethod === 'FaceID' ? 'FaceID eKYC' : t('booking_checkin_qr_option', 'Mã QR')}</span>
                     </div>
                   </div>
 
                   {/* Price breakdown */}
                   <div className="space-y-2 pt-2 text-xs font-bold text-slate-700">
                     <div className="flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Tạm tính (chưa thuế):</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('booking_summary_subtotal', 'Tạm tính (chưa thuế):')}</span>
                       <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalAmount)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider">Thuế VAT (10%):</span>
+                      <span className="text-slate-400 font-bold uppercase tracking-wider">{t('booking_summary_vat', 'Thuế VAT (10%):')}</span>
                       <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(vatAmount)}</span>
                     </div>
                     <div className="flex justify-between border-t border-slate-900 pt-3 text-sm">
-                      <span className="font-black text-slate-900 uppercase tracking-wider">TỔNG CỘNG:</span>
+                      <span className="font-black text-slate-900 uppercase tracking-wider">{t('booking_summary_total', 'TỔNG CỘNG:')}</span>
                       <span className="font-black text-primary text-base">
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(finalAmount)}
                       </span>
@@ -667,7 +669,7 @@ export default function Booking({ setActivePage }) {
             </div>
 
             <div className="mt-8 bg-slate-50 border border-slate-100 p-4 text-[9px] text-slate-500 font-semibold leading-relaxed uppercase tracking-wider">
-              Hệ thống Smart Hotel tự động áp dụng thông tin check-in và tính giá chuẩn xác.
+              {t('booking_summary_system_notice', 'Hệ thống Smart Hotel tự động áp dụng thông tin check-in và tính giá chuẩn xác.')}
             </div>
           </div>
           

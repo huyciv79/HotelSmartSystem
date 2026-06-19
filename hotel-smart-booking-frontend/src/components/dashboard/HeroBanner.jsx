@@ -1,4 +1,7 @@
+import { useLanguage } from "../../context/LanguageContext";
+
 const HeroBanner = ({ name, tier, nextStayDate }) => {
+  const { t } = useLanguage();
   return (
     <div className="h-72 rounded-none overflow-hidden relative font-['Montserrat'] border border-outline-variant shadow-lg">
       <img
@@ -13,10 +16,10 @@ const HeroBanner = ({ name, tier, nextStayDate }) => {
             {tier}
           </span>
           <h1 className="mt-3 text-white text-3xl font-black uppercase tracking-wider italic leading-tight">
-            Chào mừng trở lại, {name}
+            {t('db_hero_welcome_back', 'Chào mừng trở lại')}, {name}
           </h1>
           <p className="mt-1.5 text-white/80 text-xs font-bold uppercase tracking-wider">
-            Kỳ nghỉ tiếp theo của bạn bắt đầu từ ngày {nextStayDate}
+            {t('db_hero_next_stay', 'Kỳ nghỉ tiếp theo của bạn bắt đầu từ ngày')} {nextStayDate}
           </p>
         </div>
         {/* Removed Quản lý kỳ nghỉ button */}

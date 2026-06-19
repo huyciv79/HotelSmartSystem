@@ -5,6 +5,7 @@ import * as z from 'zod';
 import OtpInput from '../components/OtpInput';
 import { forgotPassword, verifyForgotOTP, resetPassword } from '../services/authService';
 import { useToast, ToastContainer } from '../components/Toast';
+import { useLanguage } from '../context/LanguageContext';
 
 const emailSchema = z.object({
   email: z
@@ -30,6 +31,7 @@ const passwordSchema = z
   });
 
 export default function ForgotPassword({ setActivePage }) {
+  const { t } = useLanguage();
   const [step, setStep] = useState(1); // 1: Email Input, 2: OTP Input, 3: New Password, 4: Success
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
@@ -82,12 +84,12 @@ export default function ForgotPassword({ setActivePage }) {
     try {
       await forgotPassword({ email: data.email });
       setUserEmail(data.email);
-      showToast('Mã OTP đã được gửi đến email của bạn.', 'success');
+      showToast(t('forgot_toast_otp_sent', 'Mã OTP đã được gửi đến email của bạn.'), 'success');
       setStep(2);
       setCountdown(60);
       setOtp('');
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Không thể gửi yêu cầu. Vui lòng thử lại sau.';
+      const msg = err?.response?.data?.message || t('forgot_toast_error_send', 'Không thể gửi yêu cầu. Vui lòng thử lại sau.');
       setApiError(msg);
       showToast(msg, 'error');
     } finally {
@@ -99,7 +101,7 @@ export default function ForgotPassword({ setActivePage }) {
   const onOtpSubmit = async (e) => {
     e.preventDefault();
     if (otp.length < 6) {
-      setApiError('Vui lòng nhập đầy đủ mã xác thực OTP 6 chữ số.');
+      setApiError(t('forgot_error_otp_length', 'Vui lòng nhập đầy đủ mã xác thực OTP 6 chữ số.'));
       return;
     }
 
@@ -109,10 +111,10 @@ export default function ForgotPassword({ setActivePage }) {
       const response = await verifyForgotOTP({ email: userEmail, otp });
       // The response.data should contain the resetToken
       setResetToken(response.data);
-      showToast('Xác thực mã OTP thành công.', 'success');
+      showToast(t('forgot_toast_otp_success', 'Xác thực mã OTP thành công.'), 'success');
       setStep(3);
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Mã OTP không hợp lệ hoặc đã hết hạn.';
+      const msg = err?.response?.data?.message || t('forgot_toast_error_otp', 'Mã OTP không hợp lệ hoặc đã hết hạn.');
       setApiError(msg);
       showToast(msg, 'error');
     } finally {
@@ -129,11 +131,11 @@ export default function ForgotPassword({ setActivePage }) {
         resetToken: resetToken,
         newPassword: data.newPassword,
       });
-      showToast('Đặt lại mật khẩu thành công.', 'success');
+      showToast(t('forgot_toast_reset_success', 'Đặt lại mật khẩu thành công.'), 'success');
       setStep(4);
       setTimeout(() => setActivePage('login'), 2500);
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Đặt lại mật khẩu thất bại. Vui lòng thử lại.';
+      const msg = err?.response?.data?.message || t('forgot_toast_error_reset', 'Đặt lại mật khẩu thất bại. Vui lòng thử lại.');
       setApiError(msg);
       showToast(msg, 'error');
     } finally {
@@ -151,9 +153,9 @@ export default function ForgotPassword({ setActivePage }) {
     try {
       await forgotPassword({ email: userEmail });
       setCountdown(60);
-      showToast('Mã OTP mới đã được gửi thành công.', 'success');
+      showToast(t('forgot_toast_otp_resent', 'Mã OTP mới đã được gửi thành công.'), 'success');
     } catch (err) {
-      showToast(err?.response?.data?.message || 'Không thể gửi lại OTP. Vui lòng thử lại.', 'error');
+      showToast(err?.response?.data?.message || t('forgot_toast_error_resend', 'Không thể gửi lại OTP. Vui lòng thử lại.'), 'error');
     } finally {
       setIsLoading(false);
     }
@@ -174,7 +176,7 @@ export default function ForgotPassword({ setActivePage }) {
             }}
             className="absolute top-6 left-6 text-xs text-secondary hover:text-primary uppercase tracking-widest font-bold flex items-center gap-1 cursor-pointer bg-transparent border-none"
           >
-            <span className="material-symbols-outlined text-sm">arrow_back</span> Quay lại
+            <span className="material-symbols-outlined text-sm">arrow_back</span> {t('forgot_btn_back', 'Quay lại')}
           </button>
 
           {/* Step Indicator */}
@@ -186,7 +188,7 @@ export default function ForgotPassword({ setActivePage }) {
                 }`}>1</span>
                 <span className={`text-xs font-bold uppercase tracking-wider ${
                   step === 1 ? 'text-primary' : 'text-secondary'
-                }`}>Email</span>
+                }`}>{t('forgot_step_email', 'Email')}</span>
               </div>
               <div className="w-8 h-[1px] bg-outline-variant flex-grow mx-2"></div>
               <div className="flex items-center gap-2">
@@ -195,7 +197,7 @@ export default function ForgotPassword({ setActivePage }) {
                 }`}>2</span>
                 <span className={`text-xs font-bold uppercase tracking-wider ${
                   step === 2 ? 'text-primary' : 'text-secondary'
-                }`}>Xác thực</span>
+                }`}>{t('forgot_step_verify', 'Xác thực')}</span>
               </div>
               <div className="w-8 h-[1px] bg-outline-variant flex-grow mx-2"></div>
               <div className="flex items-center gap-2">
@@ -204,7 +206,7 @@ export default function ForgotPassword({ setActivePage }) {
                 }`}>3</span>
                 <span className={`text-xs font-bold uppercase tracking-wider ${
                   step === 3 ? 'text-primary' : 'text-secondary'
-                }`}>Mật khẩu</span>
+                }`}>{t('forgot_step_password', 'Mật khẩu')}</span>
               </div>
             </div>
           )}
@@ -212,16 +214,16 @@ export default function ForgotPassword({ setActivePage }) {
           {/* Title */}
           <div className="mb-8">
             <h2 className="font-headline-lg text-headline-md text-primary uppercase italic m-0">
-              {step === 1 && 'QUÊN MẬT KHẨU'}
-              {step === 2 && 'NHẬP MÃ XÁC THỰC'}
-              {step === 3 && 'ĐẶT LẠI MẬT KHẨU'}
-              {step === 4 && 'THÀNH CÔNG'}
+              {step === 1 && t('forgot_title_forgot', 'QUÊN MẬT KHẨU')}
+              {step === 2 && t('forgot_title_verify', 'NHẬP MÃ XÁC THỰC')}
+              {step === 3 && t('forgot_title_reset', 'ĐẶT LẠI MẬT KHẨU')}
+              {step === 4 && t('forgot_title_success', 'THÀNH CÔNG')}
             </h2>
             <p className="text-secondary text-sm mt-2">
-              {step === 1 && 'Nhập email đã đăng ký hội viên của bạn để thiết lập lại mật khẩu.'}
-              {step === 2 && `Mã xác thực OTP đã được gửi đến địa chỉ email: ${userEmail}`}
-              {step === 3 && 'Vui lòng thiết lập mật khẩu mới có độ bảo mật cao.'}
-              {step === 4 && 'Mật khẩu của bạn đã được cập nhật thành công.'}
+              {step === 1 && t('forgot_desc_forgot', 'Nhập email đã đăng ký hội viên của bạn để thiết lập lại mật khẩu.')}
+              {step === 2 && `${t('forgot_desc_verify_prefix', 'Mã xác thực OTP đã được gửi đến địa chỉ email:')} ${userEmail}`}
+              {step === 3 && t('forgot_desc_reset', 'Vui lòng thiết lập mật khẩu mới có độ bảo mật cao.')}
+              {step === 4 && t('forgot_desc_success', 'Mật khẩu của bạn đã được cập nhật thành công.')}
             </p>
           </div>
 
@@ -237,7 +239,7 @@ export default function ForgotPassword({ setActivePage }) {
           {step === 1 && (
             <form onSubmit={handleEmailSubmit(onEmailSubmit)} className="space-y-6">
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Email hội viên</label>
+                <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('forgot_label_email', 'Email hội viên')}</label>
                 <input 
                   {...registerEmail('email')}
                   type="email" 
@@ -258,9 +260,9 @@ export default function ForgotPassword({ setActivePage }) {
                 {isLoading ? (
                   <>
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    ĐANG GỬI...
+                    {t('forgot_btn_sending', 'ĐANG GỬI...')}
                   </>
-                ) : 'TIẾP TỤC'}
+                ) : t('forgot_btn_continue', 'TIẾP TỤC')}
               </button>
             </form>
           )}
@@ -270,7 +272,7 @@ export default function ForgotPassword({ setActivePage }) {
             <form onSubmit={onOtpSubmit} className="space-y-8">
               <div className="space-y-4">
                 <label className="block text-center text-xs font-bold text-secondary uppercase tracking-widest">
-                  Nhập mã xác thực 6 chữ số
+                  {t('forgot_enter_otp', 'Nhập mã xác thực 6 chữ số')}
                 </label>
                 <OtpInput value={otp} onChange={setOtp} disabled={isLoading} />
               </div>
@@ -278,7 +280,7 @@ export default function ForgotPassword({ setActivePage }) {
               <div className="flex flex-col items-center gap-3">
                 {countdown > 0 ? (
                   <p className="text-sm text-secondary font-semibold">
-                    Mã xác thực hết hạn sau <span className="text-primary font-bold">{countdown}s</span>
+                    {t('forgot_otp_expiry_prefix', 'Mã xác thực hết hạn sau')} <span className="text-primary font-bold">{countdown}s</span>
                   </p>
                 ) : (
                   <button
@@ -287,7 +289,7 @@ export default function ForgotPassword({ setActivePage }) {
                     disabled={isLoading}
                     className="text-xs text-primary font-bold uppercase tracking-widest hover:underline cursor-pointer bg-transparent border-none disabled:opacity-30 disabled:no-underline"
                   >
-                    GỬI LẠI MÃ OTP
+                    {t('forgot_btn_resend_otp', 'GỬI LẠI MÃ OTP')}
                   </button>
                 )}
               </div>
@@ -300,9 +302,9 @@ export default function ForgotPassword({ setActivePage }) {
                 {isLoading ? (
                   <>
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    ĐANG XÁC THỰC...
+                    {t('forgot_btn_verifying', 'ĐANG XÁC THỰC...')}
                   </>
-                ) : 'XÁC THỰC OTP'}
+                ) : t('forgot_btn_verify_otp', 'XÁC THỰC OTP')}
               </button>
             </form>
           )}
@@ -311,7 +313,7 @@ export default function ForgotPassword({ setActivePage }) {
           {step === 3 && (
             <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="space-y-6">
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Mật khẩu mới</label>
+                <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('forgot_label_new_password', 'Mật khẩu mới')}</label>
                 <input 
                   {...registerPassword('newPassword')}
                   type="password" 
@@ -325,7 +327,7 @@ export default function ForgotPassword({ setActivePage }) {
               </div>
 
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Xác nhận mật khẩu mới</label>
+                <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('forgot_label_confirm_password', 'Xác nhận mật khẩu mới')}</label>
                 <input 
                   {...registerPassword('confirmPassword')}
                   type="password" 
@@ -346,9 +348,9 @@ export default function ForgotPassword({ setActivePage }) {
                 {isLoading ? (
                   <>
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    ĐANG ĐẶT LẠI MẬT KHẨU...
+                    {t('forgot_btn_resetting', 'ĐANG ĐẶT LẠI MẬT KHẨU...')}
                   </>
-                ) : 'ĐẶT LẠI MẬT KHẨU'}
+                ) : t('forgot_btn_reset_password', 'ĐẶT LẠI MẬT KHẨU')}
               </button>
             </form>
           )}
@@ -361,9 +363,9 @@ export default function ForgotPassword({ setActivePage }) {
               </div>
               
               <div className="space-y-2">
-                <h3 className="font-bold text-xl text-on-surface uppercase">Thiết lập lại mật khẩu thành công</h3>
+                <h3 className="font-bold text-xl text-on-surface uppercase">{t('forgot_success_title', 'Thiết lập lại mật khẩu thành công')}</h3>
                 <p className="text-sm text-secondary max-w-sm mx-auto leading-relaxed">
-                  Mật khẩu mới của bạn đã được ghi nhận. Bạn sẽ được tự động chuyển về trang đăng nhập sau vài giây.
+                  {t('forgot_success_desc', 'Mật khẩu mới của bạn đã được ghi nhận. Bạn sẽ được tự động chuyển về trang đăng nhập sau vài giây.')}
                 </p>
               </div>
 
@@ -371,7 +373,7 @@ export default function ForgotPassword({ setActivePage }) {
                 onClick={() => setActivePage('login')}
                 className="w-full max-w-xs bg-primary text-on-primary font-bold py-4 uppercase tracking-widest hover:brightness-110 active:scale-98 transition-all cursor-pointer border-none mx-auto block h-12 flex items-center justify-center"
               >
-                ĐĂNG NHẬP NGAY
+                {t('forgot_btn_login_now', 'ĐANG NHẬP NGAY')}
               </button>
             </div>
           )}

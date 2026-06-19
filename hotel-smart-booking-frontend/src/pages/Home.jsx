@@ -1,7 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import heroElysian from '../assets/hero_elysian.png';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Home({ setActivePage }) {
+  const { t } = useLanguage();
   const [selectedHotel, setSelectedHotel] = useState('Chọn Khách sạn');
   const [bookingDate, setBookingDate] = useState('02/06/2026 - 03/06/2026');
   const [guests, setGuests] = useState('1 Người lớn, 0 Trẻ em');
@@ -13,22 +15,22 @@ export default function Home({ setActivePage }) {
     {
       id: 1,
       icon: 'bedtime',
-      title: 'SỞ HỮU ĐÊM NGHỈ MIỄN PHÍ',
+      title: t('rewards_benefit1'),
     },
     {
       id: 2,
       icon: 'groups',
-      title: 'GIÁ ƯU ĐÃI DÀNH CHO HỘI VIÊN',
+      title: t('rewards_benefit2'),
     },
     {
       id: 3,
       icon: 'local_bar',
-      title: 'ƯU ĐÃI ẨM THỰC',
+      title: t('rewards_benefit3'),
     },
     {
       id: 4,
       icon: 'featured_seasonal_and_gifts',
-      title: 'NHIỀU ƯU ĐÃI DÀNH RIÊNG',
+      title: t('rewards_benefit4'),
     }
   ];
 
@@ -49,7 +51,6 @@ export default function Home({ setActivePage }) {
       const rect = rewardsRef.current.getBoundingClientRect();
       const windowHeight = window.innerHeight;
       
-      // When the top of the section enters past 75% of viewport height, shrink it
       if (rect.top < windowHeight * 0.75) {
         setIsRewardsShrunk(true);
       } else {
@@ -67,30 +68,30 @@ export default function Home({ setActivePage }) {
       id: 1,
       image: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&q=80',
       badge: 'SAVE UP TO 15%',
-      title: 'Ưu Đãi 15% Mừng Năm Mới',
-      description: 'Khởi đầu năm 2026 trọn vẹn tại Elysian với chương trình ưu đãi đặc biệt giảm giá lên đến 15% khi đặt phòng trực tiếp.',
+      title: t('offer1_title'),
+      description: t('offer1_desc'),
       highlight: null,
     },
     {
       id: 2,
       image: 'https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=800&q=80',
       badge: null,
-      title: 'Kỳ Nghỉ Golf Trọn Gói (All-in-One)',
-      description: 'Gói golf độc quyền mang đến trải nghiệm hoàn hảo, kết nối nhu cầu lưu trú sang trọng, những vòng golf đầy thử thách...',
+      title: t('offer2_title'),
+      description: t('offer2_desc'),
       highlight: null,
     },
     {
       id: 3,
       image: 'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=800&q=80',
       badge: null,
-      title: 'Tặng Voucher Ăn Uống Cho Mỗi Đêm Lưu Trú',
-      description: 'Nhận ngay 100K F&B credit hàng ngày để thoải mái khám phá từ cocktail nghệ thuật đến những món ăn tinh tế tại Elysian Bar.',
-      highlight: 'Nhận ngay 100K F&B credit',
+      title: t('offer3_title'),
+      description: t('offer3_desc'),
+      highlight: t('offer3_highlight'),
     },
   ];
 
   return (
-    <div className="w-full">
+    <div className="w-full text-left">
 
       {/* ── HERO SECTION ─────────────────────────────────────────────────── */}
       <section className="relative h-[680px] w-full mt-24">
@@ -104,8 +105,8 @@ export default function Home({ setActivePage }) {
         </div>
 
         <div className="relative z-10 h-full flex flex-col justify-end items-center text-center px-4 pb-60">
-          <h1 className="font-bold text-[22px] md:text-[32px] text-white max-w-4xl drop-shadow-lg leading-snug tracking-wider uppercase">
-            LƯU TRÚ TRỌN VẸN 24 GIỜ<br />VỚI DỊCH VỤ 24/7
+          <h1 className="font-bold text-[22px] md:text-[32px] text-white max-w-4xl drop-shadow-lg leading-snug tracking-wider uppercase whitespace-pre-line">
+            {t('hero_title')}
           </h1>
         </div>
 
@@ -113,11 +114,11 @@ export default function Home({ setActivePage }) {
         <div className="absolute bottom-12 left-1/2 -translate-x-1/2 w-full max-w-6xl px-4 z-20">
           <div className="bg-white border border-outline-variant shadow-2xl py-4 px-6 md:py-5 md:px-8 flex flex-col md:flex-row gap-6 items-end text-left">
             <div className="flex-1 w-full space-y-2">
-              <label className="block font-bold text-xs text-secondary uppercase">Hotel</label>
+              <label className="block font-bold text-xs text-secondary uppercase">{t('label_hotel')}</label>
               <div className="flex items-center justify-between border-b border-on-surface py-2">
                 <select value={selectedHotel} onChange={(e) => setSelectedHotel(e.target.value)}
                   className="w-full bg-transparent border-none focus:ring-0 font-bold text-sm p-0 outline-none cursor-pointer">
-                  <option>Chọn Khách sạn</option>
+                  <option>{t('select_hotel')}</option>
                   <option>Elysian Hotel Saigon Centre</option>
                   <option>Elysian Hotel Danang Centre</option>
                   <option>Elysian Hotel Can Tho</option>
@@ -126,7 +127,7 @@ export default function Home({ setActivePage }) {
               </div>
             </div>
             <div className="flex-1 w-full space-y-2">
-              <label className="block font-bold text-xs text-secondary uppercase">Ngày</label>
+              <label className="block font-bold text-xs text-secondary uppercase">{t('label_date')}</label>
               <div className="flex items-center justify-between border-b border-on-surface py-2">
                 <input className="w-full bg-transparent border-none focus:ring-0 font-bold text-sm p-0 outline-none"
                   type="text" value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} />
@@ -134,7 +135,7 @@ export default function Home({ setActivePage }) {
               </div>
             </div>
             <div className="flex-1 w-full space-y-2">
-              <label className="block font-bold text-xs text-secondary uppercase">Số Khách</label>
+              <label className="block font-bold text-xs text-secondary uppercase">{t('label_guests')}</label>
               <div className="flex items-center justify-between border-b border-on-surface py-2">
                 <input className="w-full bg-transparent border-none focus:ring-0 font-bold text-sm p-0 outline-none"
                   type="text" value={guests} onChange={(e) => setGuests(e.target.value)} />
@@ -142,7 +143,7 @@ export default function Home({ setActivePage }) {
               </div>
             </div>
             <button className="w-full md:w-auto bg-primary text-on-primary font-bold py-4 px-12 uppercase tracking-widest hover:brightness-110 transition-all cursor-pointer border-none text-xs h-[52px] flex items-center justify-center">
-              TÌM PHÒNG
+              {t('btn_search')}
             </button>
           </div>
         </div>
@@ -152,10 +153,9 @@ export default function Home({ setActivePage }) {
       <section className="bg-surface-container-low py-20 px-4 md:px-16">
         {/* Heading */}
         <div className="text-center max-w-2xl mx-auto mb-16 scroll-reveal">
-          <h2 className="font-bold text-[28px] md:text-[36px] text-on-surface mb-5">Trải nghiệm Elysian</h2>
+          <h2 className="font-bold text-[28px] md:text-[36px] text-on-surface mb-5">{t('exp_title')}</h2>
           <p className="text-secondary text-base leading-relaxed">
-            Elysian nổi bật với phong cách thiết kế độc đáo, kết hợp hài hòa giữa tính hiện đại và giá trị
-            truyền thống Việt Nam, mang đến trải nghiệm mới mẻ cho du khách.
+            {t('exp_desc')}
           </p>
         </div>
 
@@ -182,7 +182,7 @@ export default function Home({ setActivePage }) {
               {/* STAY24 label – below left image */}
               <div className="mt-4 pl-1">
                 <p className="font-extrabold text-[15px] uppercase italic text-on-surface tracking-wide leading-none">STAY24</p>
-                <p className="text-secondary text-[10px] uppercase tracking-[0.18em] mt-1.5 font-semibold">NHẬN PHÒNG GIỜ NÀO TRẢ PHÒNG GIỜ ĐÓ</p>
+                <p className="text-secondary text-[10px] uppercase tracking-[0.18em] mt-1.5 font-semibold">{t('exp_stay24_desc')}</p>
               </div>
             </div>
 
@@ -190,9 +190,9 @@ export default function Home({ setActivePage }) {
             <div className="flex-[1] flex flex-col -ml-10">
               {/* DỊCH VỤ 24/7 label – above right image */}
               <div className="mb-3 pl-10">
-                <p className="font-extrabold text-[15px] uppercase italic text-on-surface tracking-wide leading-none">DỊCH VỤ 24/7</p>
+                <p className="font-extrabold text-[15px] uppercase italic text-on-surface tracking-wide leading-none">{t('exp_service247_desc').split(',')[0]}</p>
                 <p className="text-secondary text-[10px] uppercase tracking-[0.15em] mt-1.5 font-semibold leading-snug">
-                  ELYSIAN BAR, LAUNDROMAT, GRAB &amp; GO, CO-WORKING SPACE
+                  {t('exp_service247_desc')}
                 </p>
               </div>
               {/* Right parallelogram image */}
@@ -223,8 +223,8 @@ export default function Home({ setActivePage }) {
 
           {/* NGHỈ NGƠI label – below center image */}
           <div className="text-center mt-5 mb-2">
-            <p className="font-extrabold text-[15px] uppercase italic text-on-surface tracking-wide leading-none">NGHỈ NGƠI THỜI CÔNG NGHỆ</p>
-            <p className="text-secondary text-[10px] uppercase tracking-[0.18em] mt-1.5 font-semibold">NHANH CHÓNG, HIỆU QUẢ &amp; TIỆN DỤNG</p>
+            <p className="font-extrabold text-[15px] uppercase italic text-on-surface tracking-wide leading-none">{t('exp_tech')}</p>
+            <p className="text-secondary text-[10px] uppercase tracking-[0.18em] mt-1.5 font-semibold">{t('exp_tech_desc')}</p>
           </div>
 
         </div>
@@ -234,25 +234,25 @@ export default function Home({ setActivePage }) {
       <section className="bg-surface-container-low py-20 px-4 md:px-16">
         {/* Heading */}
         <div className="text-center mb-4 scroll-reveal">
-          <h2 className="font-bold text-[28px] md:text-[36px] text-on-surface mb-0">Ưu đãi</h2>
+          <h2 className="font-bold text-[28px] md:text-[36px] text-on-surface mb-0">{t('offers_title')}</h2>
         </div>
         <div className="flex flex-col md:flex-row justify-between items-center max-w-5xl mx-auto border-t border-outline-variant pt-5 mb-12">
           <p className="text-secondary text-base text-center md:text-left">
-            Khám phá ngay những ưu đãi cực &quot;hot&quot; tại Elysian Hotels!
+            {t('offers_sub')}
           </p>
           <div className="flex items-center gap-4 mt-4 md:mt-0">
             <button
               onClick={() => setActivePage('offers')}
               className="flex items-center gap-1 text-xs text-on-surface uppercase tracking-widest hover:text-primary cursor-pointer bg-transparent border-none transition-colors"
             >
-              <span className="material-symbols-outlined text-sm">chevron_left</span> TRƯỚC
+              <span className="material-symbols-outlined text-sm">chevron_left</span> {t('offers_prev')}
             </button>
             <span className="text-sm font-bold text-on-surface">3/7</span>
             <button
               onClick={() => setActivePage('offers')}
               className="flex items-center gap-1 text-xs text-on-surface uppercase tracking-widest hover:text-primary cursor-pointer bg-transparent border-none transition-colors"
             >
-              TIẾP <span className="material-symbols-outlined text-sm">chevron_right</span>
+              {t('offers_next')} <span className="material-symbols-outlined text-sm">chevron_right</span>
             </button>
           </div>
         </div>
@@ -297,7 +297,7 @@ export default function Home({ setActivePage }) {
             className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-sm cursor-pointer bg-transparent border-none p-0 hover:underline"
           >
             <span className="text-primary text-xl font-black">/</span>
-            XEM TẤT CẢ
+            {t('offers_view_all')}
           </button>
         </div>
       </section>
@@ -307,12 +307,12 @@ export default function Home({ setActivePage }) {
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-0 items-center scroll-reveal">
           {/* Left text */}
           <div className="space-y-4 pr-0 md:pr-12 py-12">
-            <p className="text-secondary text-xs uppercase tracking-widest font-bold">SẮP RA MẮT</p>
+            <p className="text-secondary text-xs uppercase tracking-widest font-bold">{t('coming_soon')}</p>
             <h2 className="font-bold text-[28px] md:text-[36px] text-primary leading-tight m-0">
               Elysian Hotel Hanoi
             </h2>
             <p className="text-secondary text-sm leading-relaxed">
-              Buzz. Cơn lốc của sự đổi mới đã sẵn sàng tiến đến Thủ đô. Hẹn gặp lại vào năm 2026 ;)
+              {t('coming_desc')}
             </p>
           </div>
 
@@ -333,7 +333,6 @@ export default function Home({ setActivePage }) {
         </div>
       </section>
 
-      {/* ── ELYSIAN REWARDS LIFESTYLE ────────────────────────────────────── */}
       <section 
         ref={rewardsRef} 
         className={`elysian-pattern relative transition-all duration-1000 ease-out flex items-center justify-center overflow-hidden w-full ${
@@ -349,10 +348,10 @@ export default function Home({ setActivePage }) {
         >
           <div className="max-w-4xl mx-auto text-center space-y-4">
             <h2 className="font-headline-xl text-headline-xl text-primary leading-tight m-0 text-[28px] md:text-[36px] font-bold">
-              Tham gia Elysian Rewards Lifestyle hoàn toàn miễn phí
+              {t('rewards_title')}
             </h2>
             <p className="font-body-lg text-body-lg text-secondary italic max-w-2xl mx-auto mt-4">
-              "Gia nhập cộng đồng Elysian, không lo về hạng thẻ. Với Elysian, ai cũng là VIP."
+              {t('rewards_quote')}
             </p>
           </div>
 
@@ -389,7 +388,7 @@ export default function Home({ setActivePage }) {
               onClick={() => setActivePage('register')}
               className="bg-primary text-on-primary px-12 py-5 font-label-bold uppercase tracking-widest hover:scale-105 transition-all duration-300 cursor-pointer border-none"
             >
-              ĐĂNG KÝ NGAY
+              {t('rewards_btn_register')}
             </button>
           </div>
         </div>

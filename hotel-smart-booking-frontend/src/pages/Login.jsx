@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { loginUser } from '../services/authService';
 import { useToast, ToastContainer } from '../components/Toast';
+import { useLanguage } from '../context/LanguageContext';
 
 const loginSchema = z.object({
   email: z
@@ -16,6 +17,7 @@ const loginSchema = z.object({
 });
 
 export default function Login({ setActivePage }) {
+  const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -50,7 +52,7 @@ export default function Login({ setActivePage }) {
         loggedInUser = userObj;
       }
 
-      showToast('Đăng nhập thành công!', 'success');
+      showToast(t('login_success_toast', 'Đăng nhập thành công!'), 'success');
       
       const pendingRoom = sessionStorage.getItem('pendingBookingRoom');
       if (pendingRoom) {
@@ -71,7 +73,7 @@ export default function Login({ setActivePage }) {
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
-        'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.';
+        t('login_failed_toast', 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.');
       setApiError(msg);
       showToast(msg, 'error');
     } finally {
@@ -90,16 +92,16 @@ export default function Login({ setActivePage }) {
             onClick={() => setActivePage('home')}
             className="absolute top-6 left-6 text-xs text-secondary hover:text-primary uppercase tracking-widest font-bold flex items-center gap-1 cursor-pointer bg-transparent border-none"
           >
-            <span className="material-symbols-outlined text-sm">arrow_back</span> Quay lại
+            <span className="material-symbols-outlined text-sm">arrow_back</span> {t('booking_btn_cancel_back', 'Quay lại')}
           </button>
 
           {/* Title */}
           <div className="mb-8 mt-4">
             <h2 className="font-headline-lg text-headline-md text-primary uppercase italic m-0">
-              ĐĂNG NHẬP HỘI VIÊN
+              {t('login_title', 'ĐĂNG NHẬP HỘI VIÊN')}
             </h2>
             <p className="text-secondary text-sm mt-2">
-              Đăng nhập để quản lý đặt phòng và tận hưởng ưu đãi dành riêng cho hội viên Elysian.
+              {t('login_subtitle', 'Đăng nhập để quản lý đặt phòng và tận hưởng ưu đãi dành riêng cho hội viên Elysian.')}
             </p>
           </div>
 
@@ -114,7 +116,7 @@ export default function Login({ setActivePage }) {
           {/* Login Form */}
           <form onSubmit={handleSubmit(onLoginSubmit)} className="space-y-6">
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Email</label>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('register_email_label', 'Email')}</label>
               <input 
                 {...register('email')}
                 type="email" 
@@ -128,7 +130,7 @@ export default function Login({ setActivePage }) {
             </div>
 
             <div className="space-y-2 relative">
-              <label className="block text-xs font-bold text-secondary uppercase tracking-widest">Mật khẩu</label>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('register_password_label', 'Mật khẩu')}</label>
               <div className="relative flex items-center">
                 <input 
                   {...register('password')}
@@ -158,14 +160,14 @@ export default function Login({ setActivePage }) {
                 onClick={() => setActivePage('register')}
                 className="text-secondary hover:text-primary transition-colors cursor-pointer bg-transparent border-none"
               >
-                Chưa có tài khoản? Đăng ký ngay
+                {t('login_no_account', 'Chưa có tài khoản? Đăng ký ngay')}
               </button>
               <button 
                 type="button"
                 onClick={() => setActivePage('forgot-password')}
                 className="text-secondary hover:text-primary transition-colors cursor-pointer bg-transparent border-none"
               >
-                Quên mật khẩu?
+                {t('login_forgot_password', 'Quên mật khẩu?')}
               </button>
             </div>
 
@@ -177,9 +179,9 @@ export default function Login({ setActivePage }) {
               {isLoading ? (
                 <>
                   <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                  ĐANG ĐĂNG NHẬP...
+                  {t('login_btn_loading', 'ĐANG ĐĂNG NHẬP...')}
                 </>
-              ) : 'ĐĂNG NHẬP'}
+              ) : t('login_btn', 'ĐĂNG NHẬP')}
             </button>
           </form>
 
