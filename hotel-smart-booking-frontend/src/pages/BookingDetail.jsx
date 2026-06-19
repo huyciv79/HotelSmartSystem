@@ -70,6 +70,11 @@ export default function BookingDetail({ setActivePage }) {
     showToast('Đã chuyển tiếp yêu cầu Concierge của bạn tới quầy lễ tân!', 'success');
   };
 
+  const handlePaymentRedirect = () => {
+    sessionStorage.setItem('currentBooking', JSON.stringify(booking));
+    setActivePage('payment');
+  };
+
 
   if (isLoading) {
     return (
@@ -168,9 +173,19 @@ export default function BookingDetail({ setActivePage }) {
                   ? 'bg-blue-100 text-blue-700'
                   : booking.status === 'Checked-out' || booking.status === 'Checked Out'
                   ? 'bg-slate-200 text-slate-700'
-                  : 'bg-green-100 text-green-700'
+                  : booking.status === 'Paid'
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-yellow-100 text-yellow-700'
               }`}>
-                {booking.status === 'Cancelled' ? 'Đã Hủy' : booking.status === 'Checked-in' || booking.status === 'Checked In' ? 'Đã nhận phòng' : booking.status === 'Checked-out' || booking.status === 'Checked Out' ? 'Đã trả phòng' : 'Đã xác nhận'}
+                {booking.status === 'Cancelled' 
+                  ? 'Đã Hủy' 
+                  : booking.status === 'Checked-in' || booking.status === 'Checked In' 
+                  ? 'Đã nhận phòng' 
+                  : booking.status === 'Checked-out' || booking.status === 'Checked Out' 
+                  ? 'Đã trả phòng' 
+                  : booking.status === 'Paid' 
+                  ? 'Đã thanh toán' 
+                  : 'Chờ thanh toán'}
               </span>
             </div>
           </div>
@@ -258,6 +273,17 @@ export default function BookingDetail({ setActivePage }) {
 
               {/* ACTION BUTTONS BASED ON STATUS */}
               <div className="border-t border-gray-100 pt-6 flex flex-wrap gap-4">
+                {/* Pay Now button (available when unpaid/confirmed) */}
+                {booking.status === 'Confirmed' && (
+                  <button
+                    onClick={handlePaymentRedirect}
+                    className="bg-primary hover:brightness-110 text-on-primary text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-1.5 h-11"
+                  >
+                    <span className="material-symbols-outlined text-lg">payment</span>
+                    Thanh toán ngay
+                  </button>
+                )}
+
                 {/* Cancel button (available before Checked-in) */}
                 {booking.status !== 'Cancelled' && currentStatusIdx < 2 && (
                   <button

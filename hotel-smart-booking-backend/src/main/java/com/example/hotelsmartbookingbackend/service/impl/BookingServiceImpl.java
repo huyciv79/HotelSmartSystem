@@ -121,6 +121,9 @@ public class BookingServiceImpl implements BookingService {
                 .multiply(BigDecimal.valueOf(quantity))
                 .multiply(BigDecimal.valueOf(nights));
 
+        BigDecimal taxAmount = totalAmount.multiply(new BigDecimal("0.10")).setScale(2, java.math.RoundingMode.HALF_UP);
+        BigDecimal finalAmount = totalAmount.add(taxAmount).setScale(2, java.math.RoundingMode.HALF_UP);
+
         Booking booking = new Booking();
         booking.setUserid(customer);
         booking.setBookingreference(generateBookingReference(now));
@@ -130,9 +133,9 @@ public class BookingServiceImpl implements BookingService {
         booking.setPaidamount(BigDecimal.ZERO);
         booking.setDepositamount(BigDecimal.ZERO);
         booking.setDiscountamount(BigDecimal.ZERO);
-        booking.setTaxamount(BigDecimal.ZERO);
+        booking.setTaxamount(taxAmount);
         booking.setServicechargeamount(BigDecimal.ZERO);
-        booking.setFinalamount(totalAmount);
+        booking.setFinalamount(finalAmount);
         booking.setStatus(BOOKING_STATUS_CONFIRMED);
         booking.setSpecialrequests(specialRequests);
         booking.setCreatedat(now);
@@ -314,7 +317,7 @@ public class BookingServiceImpl implements BookingService {
                 .checkInDate(checkInDate)
                 .checkOutDate(checkOutDate)
                 .nights(ChronoUnit.DAYS.between(checkInDate, checkOutDate))
-                .totalAmount(booking.getTotalamount())
+                .totalAmount(booking.getFinalamount())
                 .status(booking.getStatus())
                 .build();
     }

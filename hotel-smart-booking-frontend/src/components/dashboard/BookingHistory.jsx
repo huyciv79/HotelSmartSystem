@@ -47,9 +47,12 @@ const BookingHistory = ({ bookings, onViewDetail }) => {
             } else if (normalizedStatus === 'checkedin') {
               statusText = 'Đã nhận phòng';
               statusClass = 'bg-blue-100 text-blue-700';
-            } else {
-              statusText = 'Đã xác nhận';
+            } else if (normalizedStatus === 'paid') {
+              statusText = 'Đã thanh toán';
               statusClass = 'bg-green-100 text-green-700';
+            } else {
+              statusText = 'Chờ thanh toán';
+              statusClass = 'bg-yellow-100 text-yellow-700';
             }
 
             return (
