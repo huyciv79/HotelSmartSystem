@@ -9,6 +9,7 @@ import com.example.hotelsmartbookingbackend.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -74,6 +77,26 @@ public class BookingController {
         String staffEmail = resolveCustomerEmail(authentication);
         BookingResponse response = bookingService.performCheckIn(bookingId, staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Nhận phòng thành công", response));
+    }
+
+    @PostMapping(
+            value = "/{bookingId}/face-check-in",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<ApiResponse<BookingResponse>> faceCheckIn(
+            @PathVariable Integer bookingId,
+            @RequestPart("selfieImage") MultipartFile selfieImage,
+            Authentication authentication) {
+        String actorEmail = resolveCustomerEmail(authentication);
+        BookingResponse response = bookingService.performFaceCheckIn(
+                bookingId,
+                selfieImage,
+                actorEmail
+        );
+        return ResponseEntity.ok(ApiResponse.success(
+                "Xác minh khuôn mặt và nhận phòng thành công",
+                response
+        ));
     }
 
     @PostMapping("/{bookingId}/check-out")

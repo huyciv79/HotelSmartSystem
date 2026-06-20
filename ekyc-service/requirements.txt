@@ -21,6 +21,7 @@ opencv-python-headless==4.10.0.84
 
 # Face Recognition - DeepFace
 deepface==0.0.93
+retina-face==0.0.18
 
 # OCR - EasyOCR
 easyocr==1.7.2

@@ -222,7 +222,7 @@ export default function GroupBooking({ setActivePage }) {
         roomTypeId: selectedRoom.id,
         checkInDate: formatDateString(startDate),
         checkOutDate: formatDateString(endDate),
-        checkInMethod: checkInMethod === 'Face ID' ? 'Face Recognition' : checkInMethod,
+        checkInMethod: checkInMethod === 'Face ID' ? 'FaceID' : checkInMethod,
         quantity: quantity,
         numberOfAdults: adults,
         numberOfChildren: childrenCount,

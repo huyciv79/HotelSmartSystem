@@ -234,7 +234,7 @@ export default function RegisterEkycWizard({ onSubmit, onClose, mode = 'register
               <div className="text-center">
                 <h2 className="text-xl font-bold font-['Playfair_Display'] text-white mb-2">Đang xử lý</h2>
                 <p className="text-slate-400 text-sm font-['Geist'] leading-relaxed max-w-xs">
-                  Hệ thống AI đang đối chiếu thông tin, vui lòng đợi...
+                  Hệ thống AI đang so khớp khuôn mặt trên CCCD với ảnh selfie, vui lòng đợi...
                 </p>
               </div>
               <div className="flex gap-4">

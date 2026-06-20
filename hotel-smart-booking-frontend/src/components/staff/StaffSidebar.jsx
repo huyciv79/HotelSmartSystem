@@ -72,6 +72,18 @@ const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleL
           {isManager && (
             <>
               <button
+                onClick={() => setActiveTab('face-check-in')}
+                className={`w-full py-3.5 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-sm ${
+                  activeTab === 'face-check-in'
+                    ? 'bg-gradient-to-r from-primary/15 to-transparent border-l-4 border-primary text-primary font-black'
+                    : 'bg-transparent text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <span className="material-symbols-outlined text-base">face</span>
+                FaceID Check-in
+              </button>
+
+              <button
                 onClick={() => setActiveTab('rooms')}
                 className={`w-full py-3.5 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-sm ${
                   activeTab === 'rooms'

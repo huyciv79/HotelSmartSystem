@@ -37,10 +37,14 @@ public class EkycController {
      *   <li>{@code backImage}   – ảnh mặt sau CCCD</li>
      *   <li>{@code selfieImage} – ảnh selfie khuôn mặt</li>
      * </ul>
-     * Số CCCD sẽ được AI tự động đọc từ ảnh mặt trước bằng OCR.
+     * Khuôn mặt trên CCCD được so khớp với selfie để kích hoạt FaceID.
+     * OCR chỉ bổ sung thông tin và không làm quy trình thất bại nếu chưa đọc được.
      */
     @PostMapping(value = "/verify", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Xác minh eKYC", description = "Upload ảnh CCCD + selfie để xác minh danh tính")
+    @Operation(
+            summary = "Xác minh eKYC bằng khuôn mặt",
+            description = "So khớp khuôn mặt trên CCCD với selfie và đăng ký FaceID"
+    )
     public ResponseEntity<ApiResponse<EkycResponse>> verifyEkyc(
             @RequestPart("frontImage")  MultipartFile frontImage,
             @RequestPart("backImage")   MultipartFile backImage,

@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     DEEPFACE_DETECTOR: str = "opencv"       # opencv | retinaface | mtcnn
     DEEPFACE_DISTANCE: str = "cosine"       # cosine | euclidean | euclidean_l2
     FACE_MATCH_THRESHOLD: float = 0.40      # ngưỡng xác nhận khớp (cosine)
+    FACE_RECOGNITION_DETECTOR: str = "retinaface"
 
     # ── EasyOCR ─────────────────────────────────────────────────────────────
     OCR_LANGUAGES: List[str] = ["vi", "en"]

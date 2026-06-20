@@ -34,5 +34,11 @@ public class BookingResponse {
     private String specialRequests;
     private Instant actualCheckIn;
     private Instant actualCheckOut;
+    private Integer roomId;
+    private String roomNumber;
+    private String roomPassword;
+    private String roomKeyStatus;
+    private Instant roomKeyGeneratedAt;
+    private Instant roomKeyExpiresAt;
     private Instant createdAt;
 }

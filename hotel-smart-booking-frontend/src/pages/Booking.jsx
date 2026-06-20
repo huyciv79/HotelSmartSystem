@@ -180,7 +180,7 @@ export default function Booking({ setActivePage }) {
         roomTypeId: selectedRoom.id,
         checkInDate: formatDateString(startDate),
         checkOutDate: formatDateString(endDate),
-        checkInMethod: checkInMethod === 'FaceID' ? 'Face Recognition' : checkInMethod,
+        checkInMethod,
         numberOfAdults: adults,
         numberOfChildren: childrenCount,
         specialRequests

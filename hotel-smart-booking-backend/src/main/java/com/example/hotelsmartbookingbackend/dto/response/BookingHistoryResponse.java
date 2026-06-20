@@ -32,4 +32,8 @@ public class BookingHistoryResponse {
     private String guestEmail;
     private Instant actualCheckIn;
     private Instant actualCheckOut;
+    private String roomNumber;
+    private String roomPassword;
+    private String roomKeyStatus;
+    private Instant roomKeyExpiresAt;
 }
