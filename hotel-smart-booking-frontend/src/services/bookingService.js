@@ -51,9 +51,20 @@ export const checkOutBooking = async (bookingId) => {
  * FaceID check-in at the hotel lobby.
  * POST /api/bookings/{bookingId}/face-check-in
  */
-export const faceCheckInBooking = async (bookingId, selfieImage) => {
+export const faceCheckInBooking = async (
+  bookingId,
+  selfieImage,
+  leftImage,
+  rightImage,
+  upImage,
+  downImage,
+) => {
   const formData = new FormData();
   formData.append('selfieImage', selfieImage);
+  formData.append('leftImage', leftImage);
+  formData.append('rightImage', rightImage);
+  formData.append('upImage', upImage);
+  formData.append('downImage', downImage);
 
   const response = await axiosInstance.post(
     `/bookings/${bookingId}/face-check-in`,

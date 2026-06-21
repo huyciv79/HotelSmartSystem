@@ -178,6 +178,7 @@ export default function StaffDashboard({ setActivePage }) {
             roomPassword: bk.roomPassword || '',
             roomKeyStatus: bk.roomKeyStatus || '',
             roomKeyExpiresAt: bk.roomKeyExpiresAt || null,
+            roomAccesses: bk.roomAccesses || [],
             checkInMethod: bk.checkInMethod || 'Manual',
             bookingType: bk.bookingType || 'Online',
             guestPhone: bk.guestPhone || '',
@@ -231,16 +232,25 @@ export default function StaffDashboard({ setActivePage }) {
     }, 2500);
   };
 
+  const mergeBookingResult = (booking, bookingResult, status) => ({
+    ...booking,
+    status,
+    roomNumber: bookingResult.roomNumber ?? booking.roomNumber,
+    roomPassword: bookingResult.roomPassword ?? '',
+    roomKeyStatus: bookingResult.roomKeyStatus ?? booking.roomKeyStatus,
+    roomKeyExpiresAt: bookingResult.roomKeyExpiresAt ?? booking.roomKeyExpiresAt,
+    roomAccesses: bookingResult.roomAccesses ?? booking.roomAccesses ?? [],
+  });
+
   const completeScannerAction = async () => {
     const isCheckIn = scanningBooking.status === 'Confirmed';
     const nextStatus = isCheckIn ? 'Checked In' : 'Checked Out';
 
     try {
-      if (isCheckIn) {
-        await checkInBooking(scanningBooking.id);
-      } else {
-        await checkOutBooking(scanningBooking.id);
-      }
+      const response = isCheckIn
+        ? await checkInBooking(scanningBooking.id)
+        : await checkOutBooking(scanningBooking.id);
+      const bookingResult = response?.data || {};
 
       localStorage.setItem(`booking_status_${scanningBooking.id}`, nextStatus);
       if (nextStatus === 'Checked In') {
@@ -250,8 +260,15 @@ export default function StaffDashboard({ setActivePage }) {
       }
 
       setBookings(prev => prev.map(bk =>
-        bk.id === scanningBooking.id ? { ...bk, status: nextStatus } : bk
+        bk.id === scanningBooking.id
+          ? mergeBookingResult(bk, bookingResult, nextStatus)
+          : bk
       ));
+      setSelectedBooking(current =>
+        current?.id === scanningBooking.id
+          ? mergeBookingResult(current, bookingResult, nextStatus)
+          : current
+      );
 
       showToast(`Đã cập nhật trạng thái đơn ${scanningBooking.bookingReference} sang ${nextStatus === 'Checked In' ? 'ĐÃ NHẬN PHÒNG' : 'ĐÃ TRẢ PHÒNG'} thành công!`, 'success');
     } catch (err) {
@@ -267,11 +284,10 @@ export default function StaffDashboard({ setActivePage }) {
   const handleDirectCheckInOut = async (booking, targetStatus) => {
     const isCheckIn = targetStatus === 'Checked In';
     try {
-      if (isCheckIn) {
-        await checkInBooking(booking.id);
-      } else {
-        await checkOutBooking(booking.id);
-      }
+      const response = isCheckIn
+        ? await checkInBooking(booking.id)
+        : await checkOutBooking(booking.id);
+      const bookingResult = response?.data || {};
 
       localStorage.setItem(`booking_status_${booking.id}`, targetStatus);
       if (targetStatus === 'Checked In') {
@@ -281,8 +297,15 @@ export default function StaffDashboard({ setActivePage }) {
       }
 
       setBookings(prev => prev.map(bk =>
-        bk.id === booking.id ? { ...bk, status: targetStatus } : bk
+        bk.id === booking.id
+          ? mergeBookingResult(bk, bookingResult, targetStatus)
+          : bk
       ));
+      setSelectedBooking(current =>
+        current?.id === booking.id
+          ? mergeBookingResult(current, bookingResult, targetStatus)
+          : current
+      );
       showToast(`Đã chuyển trạng thái sang ${targetStatus === 'Checked In' ? 'ĐÃ NHẬN PHÒNG' : 'ĐÃ TRẢ PHÒNG'}!`, 'success');
     } catch (err) {
       console.error(err);
@@ -293,16 +316,14 @@ export default function StaffDashboard({ setActivePage }) {
   const handleFaceCheckInCompleted = (bookingId, bookingResult) => {
     setBookings(prev => prev.map(bk =>
       bk.id === bookingId
-        ? {
-            ...bk,
-            status: 'Checked In',
-            roomNumber: bookingResult.roomNumber,
-            roomPassword: bookingResult.roomPassword,
-            roomKeyStatus: bookingResult.roomKeyStatus,
-            roomKeyExpiresAt: bookingResult.roomKeyExpiresAt,
-          }
+        ? mergeBookingResult(bk, bookingResult, 'Checked In')
         : bk
     ));
+    setSelectedBooking(current =>
+      current?.id === bookingId
+        ? mergeBookingResult(current, bookingResult, 'Checked In')
+        : current
+    );
     localStorage.setItem(`booking_status_${bookingId}`, 'Checked In');
     localStorage.setItem(`booking_actualcheckin_${bookingId}`, new Date().toISOString());
   };
@@ -784,6 +805,34 @@ export default function StaffDashboard({ setActivePage }) {
                   </span>
                 </div>
               </div>
+
+              {selectedBooking.roomAccesses?.length > 0 && (
+                <div className="border-t border-neutral-900 pt-3">
+                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">
+                    Phòng và mật khẩu đã cấp
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                    {selectedBooking.roomAccesses.map((access) => (
+                      <div
+                        key={access.roomId || access.roomNumber}
+                        className="bg-neutral-950 border border-neutral-850 p-3 flex items-center justify-between"
+                      >
+                        <div>
+                          <span className="block text-white font-black">
+                            Phòng {access.roomNumber}
+                          </span>
+                          <span className="block text-[9px] text-slate-600 mt-0.5">
+                            Tầng {access.floorNumber ?? 'N/A'}
+                          </span>
+                        </div>
+                        <span className="font-mono text-primary font-black tracking-[0.18em]">
+                          {access.roomPassword || 'Đã khóa'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Yêu cầu đặc biệt</span>
