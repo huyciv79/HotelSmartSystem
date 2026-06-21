@@ -439,6 +439,39 @@ export default function BookingDetail({ setActivePage }) {
                   </div>
                 </div>
 
+                {booking.roomAccesses?.length > 0 && (
+                  <div className="mt-6">
+                    <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-2">
+                      Phòng và mật khẩu truy cập
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {booking.roomAccesses.map((access) => (
+                        <div
+                          key={access.roomId || access.roomNumber}
+                          className="border border-slate-200 bg-slate-50 p-4 flex items-center justify-between"
+                        >
+                          <div>
+                            <span className="block text-sm text-slate-900 font-black">
+                              Phòng {access.roomNumber}
+                            </span>
+                            <span className="block text-[9px] text-slate-500 uppercase mt-1">
+                              Tầng {access.floorNumber ?? 'N/A'}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="block text-[8px] text-slate-400 uppercase">
+                              Mật khẩu
+                            </span>
+                            <strong className="block font-mono text-lg text-primary tracking-[0.18em]">
+                              {access.roomPassword || 'Đã khóa'}
+                            </strong>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {booking.specialRequests && (
                   <div className="mt-6 p-4 bg-slate-50 border border-slate-200">
                     <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-1">{t('booking_special_requests_label', 'Yêu cầu đặc biệt:')}</span>
