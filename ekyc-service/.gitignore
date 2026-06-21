@@ -9,6 +9,7 @@ __pycache__/
 venv/
 env/
 ENV/
+myenv/
 
 # Environment file (chứa secret)
 .env

@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @Builder
@@ -32,4 +33,9 @@ public class BookingHistoryResponse {
     private String guestEmail;
     private Instant actualCheckIn;
     private Instant actualCheckOut;
+    private String roomNumber;
+    private String roomPassword;
+    private String roomKeyStatus;
+    private Instant roomKeyExpiresAt;
+    private List<RoomAccessResponse> roomAccesses;
 }

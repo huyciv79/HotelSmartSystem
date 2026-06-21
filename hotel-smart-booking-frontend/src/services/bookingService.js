@@ -46,3 +46,22 @@ export const checkOutBooking = async (bookingId) => {
   const response = await axiosInstance.post(`/bookings/${bookingId}/check-out`);
   return response.data;
 };
+
+/**
+ * FaceID check-in at the hotel lobby.
+ * POST /api/bookings/{bookingId}/face-check-in
+ */
+export const faceCheckInBooking = async (bookingId, selfieImage) => {
+  const formData = new FormData();
+  formData.append('selfieImage', selfieImage);
+
+  const response = await axiosInstance.post(
+    `/bookings/${bookingId}/face-check-in`,
+    formData,
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    },
+  );
+  return response.data;
+};

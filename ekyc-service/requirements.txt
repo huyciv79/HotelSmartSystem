@@ -21,6 +21,9 @@ opencv-python-headless==4.10.0.84
 
 # Face Recognition - DeepFace
 deepface==0.0.93
+retina-face==0.0.18
+torch>=2.1.0,<3.0.0
+torchvision>=0.16.0,<1.0.0
 
 # OCR - EasyOCR
 easyocr==1.7.2

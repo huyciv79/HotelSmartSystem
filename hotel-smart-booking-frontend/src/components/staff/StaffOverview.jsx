@@ -137,7 +137,7 @@ const StaffOverview = ({
                         <span className="text-[9px] text-slate-500">{bk.nights} đêm</span>
                       </td>
                       <td className="py-4 px-4 text-primary font-black uppercase tracking-wider text-[9px]">
-                        {bk.checkInMethod === 'Face Recognition' ? 'FaceID eKYC' : bk.checkInMethod}
+                        {bk.checkInMethod === 'Face Recognition' || bk.checkInMethod === 'FaceID' ? 'FaceID eKYC' : bk.checkInMethod}
                       </td>
                       <td className="py-4 pl-4 text-right">
                         <span className={`inline-block px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${

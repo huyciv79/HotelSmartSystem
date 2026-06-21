@@ -13,6 +13,7 @@ import StaffOverview from '../components/staff/StaffOverview';
 import RoomTypesManager from '../components/staff/RoomTypesManager';
 import RoomsManager from '../components/staff/RoomsManager';
 import RevenueReports from '../components/staff/RevenueReports';
+import FaceCheckInStation from '../components/staff/FaceCheckInStation';
 
 // Mock Bookings Data for Receptionist/Manager Operation simulation
 const INITIAL_MOCK_BOOKINGS = [
@@ -31,7 +32,7 @@ export default function StaffDashboard({ setActivePage }) {
     return userStr ? JSON.parse(userStr) : { fullName: 'Nhân viên Elysian', role: 'receptionist', email: 'staff@elysian.com' };
   });
 
-  const isManager = currentUser.role === 'manager';
+  const isManager = String(currentUser.role || '').toLowerCase() === 'manager';
 
   // Dashboard Tabs Navigation
   const [activeTab, setActiveTab] = useState('overview');
@@ -161,6 +162,7 @@ export default function StaffDashboard({ setActivePage }) {
         const realMapped = allBookings.map(bk => {
           const localStatus = localStorage.getItem(`booking_status_${bk.bookingId}`) || bk.status;
           return {
+            source: 'backend',
             id: bk.bookingId,
             bookingReference: bk.bookingNumber || bk.bookingReference || `BK-${bk.bookingId}`,
             guestName: bk.guestName || 'Khách hàng Elysian',
@@ -172,6 +174,10 @@ export default function StaffDashboard({ setActivePage }) {
             nights: bk.nights,
             totalAmount: bk.totalAmount,
             status: localStatus === 'Cancelled' ? 'Cancelled' : localStatus === 'Checked-in' || localStatus === 'Checked In' ? 'Checked In' : localStatus === 'Checked-out' || localStatus === 'Checked Out' ? 'Checked Out' : 'Confirmed',
+            roomNumber: bk.roomNumber || '',
+            roomPassword: bk.roomPassword || '',
+            roomKeyStatus: bk.roomKeyStatus || '',
+            roomKeyExpiresAt: bk.roomKeyExpiresAt || null,
             checkInMethod: bk.checkInMethod || 'Manual',
             bookingType: bk.bookingType || 'Online',
             guestPhone: bk.guestPhone || '',
@@ -282,6 +288,23 @@ export default function StaffDashboard({ setActivePage }) {
       console.error(err);
       showToast(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật trạng thái.', 'error');
     }
+  };
+
+  const handleFaceCheckInCompleted = (bookingId, bookingResult) => {
+    setBookings(prev => prev.map(bk =>
+      bk.id === bookingId
+        ? {
+            ...bk,
+            status: 'Checked In',
+            roomNumber: bookingResult.roomNumber,
+            roomPassword: bookingResult.roomPassword,
+            roomKeyStatus: bookingResult.roomKeyStatus,
+            roomKeyExpiresAt: bookingResult.roomKeyExpiresAt,
+          }
+        : bk
+    ));
+    localStorage.setItem(`booking_status_${bookingId}`, 'Checked In');
+    localStorage.setItem(`booking_actualcheckin_${bookingId}`, new Date().toISOString());
   };
 
   // Filter bookings for receptionist
@@ -521,6 +544,9 @@ export default function StaffDashboard({ setActivePage }) {
                       filteredBookings.map((bk) => {
                         const isConfirmed = bk.status === 'Confirmed';
                         const isCheckedIn = bk.status === 'Checked In';
+                        const usesFaceId =
+                          bk.checkInMethod === 'Face Recognition' ||
+                          bk.checkInMethod === 'FaceID';
 
                         return (
                           <div key={bk.id} className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:bg-white/5 transition-colors">
@@ -542,7 +568,7 @@ export default function StaffDashboard({ setActivePage }) {
                             <div className="flex flex-wrap items-center gap-4 self-stretch md:self-auto justify-between md:justify-end">
                               <div className="text-left md:text-right shrink-0">
                                 <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider block">Check-in bằng:</span>
-                                <span className="text-[10px] text-primary font-black uppercase tracking-wider">{bk.checkInMethod === 'Face Recognition' ? 'FaceID eKYC' : bk.checkInMethod}</span>
+                                <span className="text-[10px] text-primary font-black uppercase tracking-wider">{bk.checkInMethod === 'Face Recognition' || bk.checkInMethod === 'FaceID' ? 'FaceID eKYC' : bk.checkInMethod}</span>
                                 <span className="text-xs font-black text-white block mt-1">
                                   {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(bk.totalAmount)}
                                 </span>
@@ -568,17 +594,33 @@ export default function StaffDashboard({ setActivePage }) {
                                 {isConfirmed && (
                                   <>
                                     <button
-                                      onClick={() => startScanner(bk, bk.checkInMethod === 'Face Recognition' ? 'face' : 'qr')}
-                                      className="bg-primary hover:brightness-110 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 border-none cursor-pointer flex items-center gap-1"
+                                      onClick={() => {
+                                        if (usesFaceId && isManager) {
+                                          setActiveTab('face-check-in');
+                                          return;
+                                        }
+                                        startScanner(bk, 'qr');
+                                      }}
+                                      disabled={usesFaceId && !isManager}
+                                      className="bg-primary hover:brightness-110 disabled:bg-neutral-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 border-none cursor-pointer flex items-center gap-1"
                                     >
-                                      <span className="material-symbols-outlined text-xs">qr_code_scanner</span> Quét nhận phòng
+                                      <span className="material-symbols-outlined text-xs">
+                                        {usesFaceId ? 'face' : 'qr_code_scanner'}
+                                      </span>
+                                      {usesFaceId
+                                        ? isManager
+                                          ? 'FaceID tại sảnh'
+                                          : 'Cần Manager'
+                                        : 'Quét nhận phòng'}
                                     </button>
-                                    <button
-                                      onClick={() => handleDirectCheckInOut(bk, 'Checked In')}
-                                      className="bg-neutral-900 border border-neutral-800 text-white hover:bg-neutral-800 text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer"
-                                    >
-                                      Check-in nhanh
-                                    </button>
+                                    {!usesFaceId && (
+                                      <button
+                                        onClick={() => handleDirectCheckInOut(bk, 'Checked In')}
+                                        className="bg-neutral-900 border border-neutral-800 text-white hover:bg-neutral-800 text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer"
+                                      >
+                                        Check-in nhanh
+                                      </button>
+                                    )}
                                   </>
                                 )}
                                 {isCheckedIn && (
@@ -601,6 +643,14 @@ export default function StaffDashboard({ setActivePage }) {
             )}
 
             {/* QUẢN LÝ LOẠI PHÒNG (MANAGER ROOM TYPES CRUD) */}
+            {activeTab === 'face-check-in' && isManager && (
+              <FaceCheckInStation
+                bookings={bookings}
+                showToast={showToast}
+                onCheckInCompleted={handleFaceCheckInCompleted}
+              />
+            )}
+
             {activeTab === 'rooms' && isManager && (
               <RoomTypesManager
                 roomTypes={roomTypes}
@@ -719,7 +769,7 @@ export default function StaffDashboard({ setActivePage }) {
               <div className="border-t border-neutral-900 pt-3 grid grid-cols-2 gap-4">
                 <div>
                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Hình thức Check-in</span>
-                  <span className="text-primary font-black uppercase block mt-0.5">{selectedBooking.checkInMethod === 'Face Recognition' ? 'FaceID eKYC' : selectedBooking.checkInMethod}</span>
+                  <span className="text-primary font-black uppercase block mt-0.5">{selectedBooking.checkInMethod === 'Face Recognition' || selectedBooking.checkInMethod === 'FaceID' ? 'FaceID eKYC' : selectedBooking.checkInMethod}</span>
                 </div>
                 <div>
                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Trạng thái</span>

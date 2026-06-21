@@ -40,8 +40,8 @@ public class CreateBookingRequest {
 
     @NotBlank(message = "Vui lòng chọn phương thức check-in")
     @Pattern(
-            regexp = "Face Recognition|QR Code|Manual",
-            message = "Phương thức check-in chỉ được là Face Recognition, QR Code hoặc Manual"
+            regexp = "FaceID|Face Recognition|Face ID|QR Code|Manual",
+            message = "Phương thức check-in chỉ được là FaceID, QR Code hoặc Manual"
     )
     private String checkInMethod;
 

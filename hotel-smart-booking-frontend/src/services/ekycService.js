@@ -2,7 +2,8 @@ import axiosInstance from './axiosInstance';
 
 /**
  * Submit eKYC verification with front ID, back ID, and selfie images.
- * Số CCCD sẽ được AI tự động đọc từ ảnh mặt trước bằng OCR.
+ * Face matching giữa ảnh CCCD và selfie là điều kiện xác minh chính.
+ * OCR chỉ bổ sung thông tin nếu đọc được và không chặn đăng ký FaceID.
  * @param {File} frontImage  - Ảnh mặt trước CCCD
  * @param {File} backImage   - Ảnh mặt sau CCCD
  * @param {File} selfieImage - Ảnh selfie khuôn mặt
@@ -32,7 +33,7 @@ export const getEkycProfile = async () => {
 
 /**
  * Update eKYC data (re-submit with new images).
- * Số CCCD sẽ được AI tự động đọc từ ảnh mặt trước bằng OCR.
+ * Face matching là điều kiện chính; OCR là bước bổ sung không bắt buộc.
  */
 export const updateEkyc = async (frontImage, backImage, selfieImage) => {
   const formData = new FormData();

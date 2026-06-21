@@ -75,6 +75,18 @@ public class Bookingdetail {
     @Column(name = "roomkeyaccess")
     private String roomkeyaccess;
 
+    @Column(name = "roomkeygeneratedat")
+    private Instant roomkeygeneratedat;
+
+    @Column(name = "roomkeyexpiredat")
+    private Instant roomkeyexpiredat;
+
+    @Size(max = 50)
+    @NotNull
+    @ColumnDefault("'NotGenerated'")
+    @Column(name = "roomkeystatus", nullable = false, length = 50)
+    private String roomkeystatus = "NotGenerated";
+
     @Size(max = 255)
     @Column(name = "qrcodevalue")
     private String qrcodevalue;
