@@ -15,11 +15,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_v1_router
 from app.core.config import settings
+from app.services.face_service import warm_face_models
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Hiển thị các URL dành cho developer khi ứng dụng khởi động."""
+    warm_face_models()
     print("\n" + "=" * 60, flush=True)
     print("eKYC AI Service is running", flush=True)
     print(f"Swagger UI : http://localhost:{settings.PORT}/docs", flush=True)

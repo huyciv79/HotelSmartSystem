@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     DEEPFACE_DISTANCE: str = "cosine"       # cosine | euclidean | euclidean_l2
     FACE_MATCH_THRESHOLD: float = 0.40      # ngưỡng xác nhận khớp (cosine)
     FACE_RECOGNITION_DETECTOR: str = "retinaface"
+    LIVENESS_MIN_SCORE: float = 0.80        # độ tin cậy tối thiểu của anti-spoofing
+    ACTIVE_LIVENESS_CENTER_MAX_YAW: float = 0.12
+    ACTIVE_LIVENESS_SIDE_MIN_YAW: float = 0.13
+    ACTIVE_LIVENESS_MIN_YAW_RANGE: float = 0.30
+    ACTIVE_LIVENESS_VERTICAL_MIN_DELTA: float = 0.04
+    ACTIVE_LIVENESS_MIN_PITCH_RANGE: float = 0.10
 
     # ── EasyOCR ─────────────────────────────────────────────────────────────
     OCR_LANGUAGES: List[str] = ["vi", "en"]

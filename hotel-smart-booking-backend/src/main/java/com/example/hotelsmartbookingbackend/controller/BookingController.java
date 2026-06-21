@@ -6,6 +6,7 @@ import com.example.hotelsmartbookingbackend.dto.response.ApiResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
 import com.example.hotelsmartbookingbackend.service.BookingService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -83,14 +84,26 @@ public class BookingController {
             value = "/{bookingId}/face-check-in",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
+    @Operation(
+            summary = "Liveness detection và FaceID check-in",
+            description = "Chỉ Manager được gọi. Camera tự lấy frame khi khách nhìn thẳng, quay trái, quay phải, nhìn lên và nhìn xuống; sau đó hệ thống kiểm tra active liveness, anti-spoofing và hồ sơ eKYC."
+    )
     public ResponseEntity<ApiResponse<BookingResponse>> faceCheckIn(
             @PathVariable Integer bookingId,
             @RequestPart("selfieImage") MultipartFile selfieImage,
+            @RequestPart("leftImage") MultipartFile leftImage,
+            @RequestPart("rightImage") MultipartFile rightImage,
+            @RequestPart("upImage") MultipartFile upImage,
+            @RequestPart("downImage") MultipartFile downImage,
             Authentication authentication) {
         String actorEmail = resolveCustomerEmail(authentication);
         BookingResponse response = bookingService.performFaceCheckIn(
                 bookingId,
                 selfieImage,
+                leftImage,
+                rightImage,
+                upImage,
+                downImage,
                 actorEmail
         );
         return ResponseEntity.ok(ApiResponse.success(

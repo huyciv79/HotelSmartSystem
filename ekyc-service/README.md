@@ -131,6 +131,11 @@ Truy cập **Swagger UI**: http://localhost:8000/docs
 | Biến môi trường       | Mặc định      | Mô tả                                         |
 |-----------------------|---------------|-----------------------------------------------|
 | `DEEPFACE_MODEL`      | `Facenet512`  | Model face embedding (512-dim)                |
+| `LIVENESS_MIN_SCORE`  | `0.80`        | Độ tin cậy tối thiểu để vượt qua anti-spoofing |
+| `ACTIVE_LIVENESS_CENTER_MAX_YAW` | `0.12` | Độ lệch tối đa khi nhìn chính diện |
+| `ACTIVE_LIVENESS_SIDE_MIN_YAW` | `0.13` | Độ lệch tối thiểu cho mỗi lần quay đầu |
+| `ACTIVE_LIVENESS_VERTICAL_MIN_DELTA` | `0.04` | Độ lệch tối thiểu khi nhìn lên hoặc xuống |
+| `ACTIVE_LIVENESS_MIN_PITCH_RANGE` | `0.10` | Khoảng cách tối thiểu giữa frame nhìn lên và nhìn xuống |
 | `DEEPFACE_DETECTOR`   | `opencv`      | Face detector (`retinaface` chính xác hơn)    |
 | `DEEPFACE_DISTANCE`   | `cosine`      | Metric đo khoảng cách vector                  |
 | `FACE_MATCH_THRESHOLD`| `0.40`        | Ngưỡng cosine distance để xác nhận khớp       |

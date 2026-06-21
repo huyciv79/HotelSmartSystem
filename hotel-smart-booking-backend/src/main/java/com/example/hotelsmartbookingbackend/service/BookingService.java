@@ -23,6 +23,10 @@ public interface BookingService {
     BookingResponse performFaceCheckIn(
             Integer bookingId,
             MultipartFile selfieImage,
+            MultipartFile leftImage,
+            MultipartFile rightImage,
+            MultipartFile upImage,
+            MultipartFile downImage,
             String actorEmail
     );
 

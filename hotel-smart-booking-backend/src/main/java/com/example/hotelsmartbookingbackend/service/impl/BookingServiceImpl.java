@@ -5,12 +5,15 @@ import com.example.hotelsmartbookingbackend.dto.request.CreateGroupBookingReques
 import com.example.hotelsmartbookingbackend.dto.response.AiFaceVerificationResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
+import com.example.hotelsmartbookingbackend.dto.response.RoomAccessResponse;
 import com.example.hotelsmartbookingbackend.entity.Booking;
+import com.example.hotelsmartbookingbackend.entity.BookingRoomAccess;
 import com.example.hotelsmartbookingbackend.entity.Bookingdetail;
 import com.example.hotelsmartbookingbackend.entity.Room;
 import com.example.hotelsmartbookingbackend.entity.Roomtype;
 import com.example.hotelsmartbookingbackend.entity.User;
 import com.example.hotelsmartbookingbackend.repository.BookingRepository;
+import com.example.hotelsmartbookingbackend.repository.BookingRoomAccessRepository;
 import com.example.hotelsmartbookingbackend.repository.BookingdetailRepository;
 import com.example.hotelsmartbookingbackend.repository.EkycProfileRepository;
 import com.example.hotelsmartbookingbackend.repository.FaceembeddingRepository;
@@ -39,7 +42,10 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -67,6 +73,7 @@ public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
     private final BookingdetailRepository bookingdetailRepository;
+    private final BookingRoomAccessRepository bookingRoomAccessRepository;
     private final RoomtypeRepository roomtypeRepository;
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
@@ -307,6 +314,7 @@ public class BookingServiceImpl implements BookingService {
         LocalDate checkOutDate = toLocalDate(detail.getExpectedcheckout());
         Room assignedRoom = detail.getRoomid();
         boolean roomKeyUsable = isRoomKeyUsable(booking, detail);
+        List<RoomAccessResponse> roomAccesses = mapRoomAccesses(booking, detail, true);
 
         return BookingResponse.builder()
                 .bookingId(booking.getId())
@@ -335,6 +343,7 @@ public class BookingServiceImpl implements BookingService {
                 .roomKeyStatus(detail.getRoomkeystatus())
                 .roomKeyGeneratedAt(detail.getRoomkeygeneratedat())
                 .roomKeyExpiresAt(detail.getRoomkeyexpiredat())
+                .roomAccesses(roomAccesses)
                 .createdAt(booking.getCreatedat())
                 .build();
     }
@@ -349,6 +358,11 @@ public class BookingServiceImpl implements BookingService {
         LocalDate checkInDate = toLocalDate(detail.getExpectedcheckin());
         LocalDate checkOutDate = toLocalDate(detail.getExpectedcheckout());
         boolean roomKeyUsable = includeRoomPassword && isRoomKeyUsable(booking, detail);
+        List<RoomAccessResponse> roomAccesses = mapRoomAccesses(
+                booking,
+                detail,
+                includeRoomPassword
+        );
 
         return BookingHistoryResponse.builder()
                 .bookingId(booking.getId())
@@ -373,6 +387,7 @@ public class BookingServiceImpl implements BookingService {
                 .roomPassword(roomKeyUsable ? detail.getRoomkeyaccess() : null)
                 .roomKeyStatus(detail.getRoomkeystatus())
                 .roomKeyExpiresAt(detail.getRoomkeyexpiredat())
+                .roomAccesses(roomAccesses)
                 .build();
     }
 
@@ -393,17 +408,10 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Đơn đặt phòng không ở trạng thái có thể nhận phòng");
         }
 
-        booking.setStatus("Checked-in");
-        booking.setUpdatedat(Instant.now());
-        bookingRepository.save(booking);
-
         Bookingdetail detail = bookingdetailRepository.findByBookingid_Id(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đặt phòng"));
-        detail.setActualcheckin(Instant.now());
-        detail.setUpdatedat(Instant.now());
-        bookingdetailRepository.save(detail);
 
-        return mapToResponse(booking, detail, detail.getRoomtypeid());
+        return completeCheckIn(booking, detail, staff);
     }
 
     @Override
@@ -411,26 +419,28 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse performFaceCheckIn(
             Integer bookingId,
             MultipartFile selfieImage,
+            MultipartFile leftImage,
+            MultipartFile rightImage,
+            MultipartFile upImage,
+            MultipartFile downImage,
             String actorEmail
     ) {
         validateSelfie(selfieImage);
+        validateSelfie(leftImage);
+        validateSelfie(rightImage);
+        validateSelfie(upImage);
+        validateSelfie(downImage);
 
         User actor = userRepository.findByEmail(actorEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
         boolean isManager = "manager".equalsIgnoreCase(actor.getRole().name());
-        boolean isCustomer = "customer".equalsIgnoreCase(actor.getRole().name());
 
-        if (!isManager && !isCustomer) {
-            throw new RuntimeException(
-                    "Chỉ khách hàng sở hữu booking hoặc Manager mới được check-in bằng FaceID");
+        if (!isManager) {
+            throw new RuntimeException("Chỉ Manager mới được check-in bằng FaceID");
         }
 
-        Bookingdetail detail = isManager
-                ? bookingdetailRepository.findByBookingid_Id(bookingId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy booking"))
-                : bookingdetailRepository.findBookingDetail(bookingId, actorEmail)
-                    .orElseThrow(() -> new RuntimeException(
-                            "Không tìm thấy booking hoặc bạn không có quyền nhận phòng"));
+        Bookingdetail detail = bookingdetailRepository.findByBookingid_Id(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy booking"));
         Booking booking = detail.getBookingid();
         User customer = booking.getUserid();
         if (customer == null) {
@@ -444,11 +454,6 @@ public class BookingServiceImpl implements BookingService {
                 && !"FaceID".equalsIgnoreCase(booking.getCheckinmethod())) {
             throw new RuntimeException("Đơn đặt phòng này không sử dụng phương thức FaceID");
         }
-        if (detail.getQuantity() == null || detail.getQuantity() != 1) {
-            throw new RuntimeException(
-                    "FaceID tự nhận phòng hiện chỉ hỗ trợ đơn đặt một phòng");
-        }
-
         validateFaceCheckInDate(detail);
 
         if (!ekycProfileRepository.existsByUseridAndStatus(customer, "Verified")) {
@@ -464,46 +469,122 @@ public class BookingServiceImpl implements BookingService {
 
         AiFaceVerificationResponse verification = callFaceVerificationService(
                 registeredEmbedding,
-                selfieImage
+                selfieImage,
+                leftImage,
+                rightImage,
+                upImage,
+                downImage
         );
+        if (!Boolean.TRUE.equals(verification.getLivenessPassed())) {
+            String livenessMessage = verification.getMessage() != null
+                    && !verification.getMessage().isBlank()
+                    ? verification.getMessage()
+                    : "Không vượt qua kiểm tra liveness";
+            throw new RuntimeException(
+                    livenessMessage
+                            + " Vui lòng dùng khuôn mặt thật trước camera, không dùng ảnh hoặc màn hình");
+        }
         if (!Boolean.TRUE.equals(verification.getVerified())
                 || !Boolean.TRUE.equals(verification.getMatched())) {
             throw new RuntimeException("Khuôn mặt không khớp với hồ sơ eKYC đã đăng ký");
         }
 
-        Room room = detail.getRoomid();
-        if (room == null) {
-            room = roomRepository
-                    .findFirstByRoomtypeid_IdAndStatusOrderByRoomnumberAsc(
-                            detail.getRoomtypeid().getId(),
-                            AVAILABLE_ROOM_STATUS
-                    )
-                    .orElseThrow(() -> new RuntimeException(
-                            "Hiện chưa có phòng sẵn sàng cho loại phòng đã đặt"));
-            detail.setRoomid(room);
-        } else if (!AVAILABLE_ROOM_STATUS.equalsIgnoreCase(room.getStatus())) {
-            throw new RuntimeException("Phòng được gán hiện chưa sẵn sàng để nhận phòng");
+        return completeCheckIn(booking, detail, actor);
+    }
+
+    private BookingResponse completeCheckIn(
+            Booking booking,
+            Bookingdetail detail,
+            User checkedInBy
+    ) {
+        int quantity = detail.getQuantity() == null
+                ? DEFAULT_SINGLE_BOOKING_QUANTITY
+                : detail.getQuantity();
+        if (quantity <= 0) {
+            throw new RuntimeException("Số lượng phòng của booking không hợp lệ");
+        }
+
+        List<BookingRoomAccess> existingAccesses =
+                bookingRoomAccessRepository.findByBookingid_IdOrderByRoomid_RoomnumberAsc(
+                        booking.getId()
+                );
+        if (!existingAccesses.isEmpty()) {
+            throw new RuntimeException("Booking này đã được cấp quyền truy cập phòng");
+        }
+
+        List<Room> availableRooms = roomRepository
+                .findByRoomtypeid_IdAndStatusOrderByRoomnumberAsc(
+                        detail.getRoomtypeid().getId(),
+                        AVAILABLE_ROOM_STATUS
+                );
+
+        List<Room> selectedRooms = new ArrayList<>();
+        if (detail.getRoomid() != null) {
+            Room assignedRoom = detail.getRoomid();
+            if (!detail.getRoomtypeid().getId().equals(assignedRoom.getRoomtypeid().getId())) {
+                throw new RuntimeException("Phòng được gán không thuộc loại phòng đã đặt");
+            }
+            if (!AVAILABLE_ROOM_STATUS.equalsIgnoreCase(assignedRoom.getStatus())) {
+                throw new RuntimeException("Phòng được gán hiện chưa sẵn sàng để nhận phòng");
+            }
+            selectedRooms.add(assignedRoom);
+        }
+
+        for (Room room : availableRooms) {
+            if (selectedRooms.size() >= quantity) {
+                break;
+            }
+            if (selectedRooms.stream().noneMatch(selected -> selected.getId().equals(room.getId()))) {
+                selectedRooms.add(room);
+            }
+        }
+
+        if (selectedRooms.size() < quantity) {
+            throw new RuntimeException(
+                    "Không đủ phòng sẵn sàng để nhận phòng. Cần "
+                            + quantity + " phòng nhưng chỉ có " + selectedRooms.size()
+            );
         }
 
         Instant now = Instant.now();
         Instant keyExpiresAt = toCheckoutExpiry(detail.getExpectedcheckout());
+        Set<String> generatedPasswords = new HashSet<>();
+        List<BookingRoomAccess> roomAccesses = new ArrayList<>();
+
+        for (Room room : selectedRooms) {
+            String password = generateUniqueRoomPassword(generatedPasswords);
+
+            BookingRoomAccess access = new BookingRoomAccess();
+            access.setBookingid(booking);
+            access.setRoomid(room);
+            access.setRoomkeyaccess(password);
+            access.setRoomkeygeneratedat(now);
+            access.setRoomkeyexpiredat(keyExpiresAt);
+            access.setRoomkeystatus(ROOM_KEY_STATUS_ACTIVE);
+            access.setCreatedat(now);
+            access.setUpdatedat(now);
+            roomAccesses.add(access);
+
+            room.setStatus(ROOM_STATUS_OCCUPIED);
+            room.setUpdatedat(now);
+        }
+
+        BookingRoomAccess primaryAccess = roomAccesses.get(0);
+        detail.setRoomid(primaryAccess.getRoomid());
+        detail.setRoomkeyaccess(primaryAccess.getRoomkeyaccess());
+        detail.setRoomkeygeneratedat(now);
+        detail.setRoomkeyexpiredat(keyExpiresAt);
+        detail.setRoomkeystatus(ROOM_KEY_STATUS_ACTIVE);
+        detail.setActualcheckin(now);
+        detail.setCheckedinat(now);
+        detail.setCheckedinby(checkedInBy);
+        detail.setUpdatedat(now);
 
         booking.setStatus("Checked-in");
         booking.setUpdatedat(now);
 
-        detail.setActualcheckin(now);
-        detail.setCheckedinat(now);
-        detail.setCheckedinby(actor);
-        detail.setRoomkeyaccess(generateRoomPassword());
-        detail.setRoomkeygeneratedat(now);
-        detail.setRoomkeyexpiredat(keyExpiresAt);
-        detail.setRoomkeystatus(ROOM_KEY_STATUS_ACTIVE);
-        detail.setUpdatedat(now);
-
-        room.setStatus(ROOM_STATUS_OCCUPIED);
-        room.setUpdatedat(now);
-
-        roomRepository.save(room);
+        roomRepository.saveAll(selectedRooms);
+        bookingRoomAccessRepository.saveAll(roomAccesses);
         bookingRepository.save(booking);
         bookingdetailRepository.save(detail);
 
@@ -537,12 +618,30 @@ public class BookingServiceImpl implements BookingService {
         detail.setActualcheckout(now);
         detail.setCheckedoutat(now);
         detail.setCheckedoutby(staff);
+        List<BookingRoomAccess> roomAccesses =
+                bookingRoomAccessRepository.findByBookingid_IdOrderByRoomid_RoomnumberAsc(bookingId);
+        for (BookingRoomAccess access : roomAccesses) {
+            Room room = access.getRoomid();
+            room.setStatus(AVAILABLE_ROOM_STATUS);
+            room.setUpdatedat(now);
+            access.setRoomkeyaccess(null);
+            access.setRoomkeyexpiredat(now);
+            access.setRoomkeystatus(ROOM_KEY_STATUS_EXPIRED);
+            access.setUpdatedat(now);
+        }
+        if (!roomAccesses.isEmpty()) {
+            roomRepository.saveAll(roomAccesses.stream()
+                    .map(BookingRoomAccess::getRoomid)
+                    .toList());
+            bookingRoomAccessRepository.saveAll(roomAccesses);
+        }
+
         detail.setRoomkeyaccess(null);
         detail.setRoomkeyexpiredat(now);
         detail.setRoomkeystatus(ROOM_KEY_STATUS_EXPIRED);
         detail.setUpdatedat(now);
 
-        if (detail.getRoomid() != null) {
+        if (roomAccesses.isEmpty() && detail.getRoomid() != null) {
             Room room = detail.getRoomid();
             room.setStatus(AVAILABLE_ROOM_STATUS);
             room.setUpdatedat(now);
@@ -555,23 +654,21 @@ public class BookingServiceImpl implements BookingService {
 
     private AiFaceVerificationResponse callFaceVerificationService(
             String registeredEmbedding,
-            MultipartFile selfieImage
+            MultipartFile selfieImage,
+            MultipartFile leftImage,
+            MultipartFile rightImage,
+            MultipartFile upImage,
+            MultipartFile downImage
     ) {
         MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
         bodyBuilder.part("registered_embedding", registeredEmbedding)
                 .contentType(MediaType.TEXT_PLAIN);
 
-        Resource selfieResource = selfieImage.getResource();
-        MediaType selfieContentType = MediaType.APPLICATION_OCTET_STREAM;
-        if (selfieImage.getContentType() != null
-                && !selfieImage.getContentType().isBlank()) {
-            selfieContentType = MediaType.parseMediaType(selfieImage.getContentType());
-        }
-        bodyBuilder.part("selfie_image", selfieResource)
-                .filename(selfieImage.getOriginalFilename() != null
-                        ? selfieImage.getOriginalFilename()
-                        : "face-check-in.jpg")
-                .contentType(selfieContentType);
+        addFaceImagePart(bodyBuilder, "selfie_image", selfieImage, "face-center.jpg");
+        addFaceImagePart(bodyBuilder, "left_image", leftImage, "face-left.jpg");
+        addFaceImagePart(bodyBuilder, "right_image", rightImage, "face-right.jpg");
+        addFaceImagePart(bodyBuilder, "up_image", upImage, "face-up.jpg");
+        addFaceImagePart(bodyBuilder, "down_image", downImage, "face-down.jpg");
 
         try {
             AiFaceVerificationResponse response = webClient.post()
@@ -600,6 +697,24 @@ public class BookingServiceImpl implements BookingService {
                     ex
             );
         }
+    }
+
+    private void addFaceImagePart(
+            MultipartBodyBuilder bodyBuilder,
+            String partName,
+            MultipartFile image,
+            String fallbackFilename
+    ) {
+        Resource resource = image.getResource();
+        MediaType contentType = MediaType.APPLICATION_OCTET_STREAM;
+        if (image.getContentType() != null && !image.getContentType().isBlank()) {
+            contentType = MediaType.parseMediaType(image.getContentType());
+        }
+        bodyBuilder.part(partName, resource)
+                .filename(image.getOriginalFilename() != null
+                        ? image.getOriginalFilename()
+                        : fallbackFilename)
+                .contentType(contentType);
     }
 
     private void validateSelfie(MultipartFile selfieImage) {
@@ -632,9 +747,76 @@ public class BookingServiceImpl implements BookingService {
         return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
     }
 
+    private String generateUniqueRoomPassword(Set<String> generatedPasswords) {
+        for (int attempt = 0; attempt < 20; attempt++) {
+            String password = generateRoomPassword();
+            if (generatedPasswords.add(password)) {
+                return password;
+            }
+        }
+        throw new RuntimeException("Không thể tạo mật khẩu riêng cho các phòng");
+    }
+
     private Instant toCheckoutExpiry(Instant expectedCheckout) {
         LocalDate checkoutDate = toLocalDate(expectedCheckout);
         return checkoutDate.atTime(LocalTime.NOON).atZone(HOTEL_ZONE).toInstant();
+    }
+
+    private List<RoomAccessResponse> mapRoomAccesses(
+            Booking booking,
+            Bookingdetail detail,
+            boolean includeRoomPassword
+    ) {
+        List<BookingRoomAccess> accesses =
+                bookingRoomAccessRepository.findByBookingid_IdOrderByRoomid_RoomnumberAsc(
+                        booking.getId()
+                );
+
+        if (!accesses.isEmpty()) {
+            return accesses.stream()
+                    .map(access -> {
+                        boolean usable = includeRoomPassword
+                                && isRoomAccessUsable(booking, access);
+                        Room room = access.getRoomid();
+                        return RoomAccessResponse.builder()
+                                .roomId(room.getId())
+                                .roomNumber(room.getRoomnumber())
+                                .floorNumber(room.getFloornumber())
+                                .roomPassword(usable ? access.getRoomkeyaccess() : null)
+                                .roomKeyStatus(access.getRoomkeystatus())
+                                .roomKeyExpiresAt(access.getRoomkeyexpiredat())
+                                .build();
+                    })
+                    .toList();
+        }
+
+        if (detail.getRoomid() == null) {
+            return List.of();
+        }
+
+        Room room = detail.getRoomid();
+        boolean usable = includeRoomPassword && isRoomKeyUsable(booking, detail);
+        return List.of(RoomAccessResponse.builder()
+                .roomId(room.getId())
+                .roomNumber(room.getRoomnumber())
+                .floorNumber(room.getFloornumber())
+                .roomPassword(usable ? detail.getRoomkeyaccess() : null)
+                .roomKeyStatus(detail.getRoomkeystatus())
+                .roomKeyExpiresAt(detail.getRoomkeyexpiredat())
+                .build());
+    }
+
+    private boolean isRoomAccessUsable(
+            Booking booking,
+            BookingRoomAccess access
+    ) {
+        return ("Checked-in".equalsIgnoreCase(booking.getStatus())
+                || "Checked In".equalsIgnoreCase(booking.getStatus()))
+                && ROOM_KEY_STATUS_ACTIVE.equalsIgnoreCase(access.getRoomkeystatus())
+                && access.getRoomkeyaccess() != null
+                && !access.getRoomkeyaccess().isBlank()
+                && access.getRoomkeyexpiredat() != null
+                && Instant.now().isBefore(access.getRoomkeyexpiredat());
     }
 
     private boolean isRoomKeyUsable(Booking booking, Bookingdetail detail) {

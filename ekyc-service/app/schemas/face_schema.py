@@ -27,8 +27,20 @@ class FaceEnrollmentResponse(BaseModel):
 class FaceVerificationResponse(BaseModel):
     verified: bool
     matched: bool
+    liveness_passed: bool
+    active_liveness_passed: bool
+    is_real: bool
+    liveness_score: float
+    liveness_threshold: float
+    anti_spoofing_model: str
+    center_yaw: Optional[float] = None
+    first_turn_yaw: Optional[float] = None
+    second_turn_yaw: Optional[float] = None
+    center_pitch: Optional[float] = None
+    up_pitch: Optional[float] = None
+    down_pitch: Optional[float] = None
     message: str
-    distance: float
+    distance: Optional[float] = None
     threshold: float
     similarity_percentage: Optional[float] = None
     metric: str

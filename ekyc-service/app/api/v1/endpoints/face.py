@@ -10,10 +10,13 @@ from app.schemas.face_schema import (
     FaceVerificationResponse,
 )
 from app.services.face_service import (
+    analyze_face_frame,
     compare_embeddings,
     decode_image,
+    detect_liveness,
     extract_single_face_embedding,
     parse_embedding,
+    validate_active_liveness,
 )
 
 router = APIRouter(
@@ -57,6 +60,25 @@ def _extract_embedding(image, label: str) -> list[float]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Lỗi xử lý khuôn mặt trong {label}: {exc}",
+        ) from exc
+
+
+def _detect_liveness(
+    image,
+    label: str,
+    analysis=None,
+) -> dict[str, float | bool | str]:
+    try:
+        return detect_liveness(image, label, analysis)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Lỗi kiểm tra liveness trong {label}: {exc}",
         ) from exc
 
 
@@ -111,7 +133,10 @@ async def enroll_face(
     response_model=FaceVerificationResponse,
     summary="Xác minh khuôn mặt đã đăng ký",
     description=(
-        "So sánh selfie mới với registered_embedding do Spring Boot lưu. "
+        "Nhận chuỗi frame chính diện, quay trái, quay phải, nhìn lên và nhìn xuống "
+        "để kiểm tra active liveness. "
+        "Sau đó kiểm tra anti-spoofing và so sánh khuôn mặt thật "
+        "với registered_embedding do Spring Boot lưu. "
         "Để dev test trên Swagger, có thể bỏ embedding và tải reference_image "
         "thay thế. Chỉ được cung cấp một trong hai nguồn tham chiếu."
     ),
@@ -119,7 +144,23 @@ async def enroll_face(
 async def verify_face(
     selfie_image: Annotated[
         UploadFile,
-        File(description="Ảnh selfie mới cần xác minh"),
+        File(description="Ảnh chính diện cần xác minh"),
+    ],
+    left_image: Annotated[
+        UploadFile,
+        File(description="Ảnh sau khi khách quay đầu sang trái"),
+    ],
+    right_image: Annotated[
+        UploadFile,
+        File(description="Ảnh sau khi khách quay đầu sang phải"),
+    ],
+    up_image: Annotated[
+        UploadFile,
+        File(description="Ảnh sau khi khách nhìn lên"),
+    ],
+    down_image: Annotated[
+        UploadFile,
+        File(description="Ảnh sau khi khách nhìn xuống"),
     ],
     registered_embedding: Annotated[
         str | None,
@@ -163,18 +204,95 @@ async def verify_face(
         reference = await _read_image(reference_image, "ảnh tham chiếu")
         reference_embedding = _extract_embedding(reference, "ảnh tham chiếu")
 
-    selfie = await _read_image(selfie_image, "ảnh selfie cần xác minh")
-    selfie_embedding = _extract_embedding(selfie, "ảnh selfie cần xác minh")
+    selfie = await _read_image(selfie_image, "ảnh chính diện")
+    left = await _read_image(left_image, "ảnh quay trái")
+    right = await _read_image(right_image, "ảnh quay phải")
+    up = await _read_image(up_image, "ảnh nhìn lên")
+    down = await _read_image(down_image, "ảnh nhìn xuống")
+
+    try:
+        center_analysis = analyze_face_frame(selfie, "ảnh chính diện")
+        left_analysis = analyze_face_frame(left, "ảnh quay trái")
+        right_analysis = analyze_face_frame(right, "ảnh quay phải")
+        up_analysis = analyze_face_frame(up, "ảnh nhìn lên")
+        down_analysis = analyze_face_frame(down, "ảnh nhìn xuống")
+        active_liveness = validate_active_liveness(
+            center_analysis,
+            left_analysis,
+            right_analysis,
+            up_analysis,
+            down_analysis,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    liveness = _detect_liveness(
+        selfie,
+        "ảnh chính diện",
+        center_analysis,
+    )
+    active_passed = bool(active_liveness["active_liveness_passed"])
+    passive_passed = bool(liveness["liveness_passed"])
+    if not active_passed or not passive_passed:
+        message = (
+            "Không vượt qua active liveness. "
+            "Hãy nhìn thẳng, quay trái, quay phải, nhìn lên và nhìn xuống theo hướng dẫn."
+            if not active_passed
+            else (
+                "Không vượt qua kiểm tra chống giả mạo. "
+                "Vui lòng dùng khuôn mặt thật trước camera, không dùng ảnh hoặc màn hình."
+            )
+        )
+        return FaceVerificationResponse(
+            verified=False,
+            matched=False,
+            liveness_passed=False,
+            active_liveness_passed=active_passed,
+            is_real=bool(liveness["is_real"]),
+            liveness_score=float(liveness["liveness_score"]),
+            liveness_threshold=float(liveness["liveness_threshold"]),
+            anti_spoofing_model=str(liveness["anti_spoofing_model"]),
+            center_yaw=float(active_liveness["center_yaw"]),
+            first_turn_yaw=float(active_liveness["first_turn_yaw"]),
+            second_turn_yaw=float(active_liveness["second_turn_yaw"]),
+            center_pitch=float(active_liveness["center_pitch"]),
+            up_pitch=float(active_liveness["up_pitch"]),
+            down_pitch=float(active_liveness["down_pitch"]),
+            message=message,
+            distance=None,
+            threshold=float(settings.FACE_MATCH_THRESHOLD),
+            similarity_percentage=None,
+            metric=settings.DEEPFACE_DISTANCE,
+            model_used=settings.DEEPFACE_MODEL,
+            detector_used=settings.FACE_RECOGNITION_DETECTOR,
+        )
+
+    selfie_embedding = _extract_embedding(selfie, "ảnh chính diện")
     result = compare_embeddings(reference_embedding, selfie_embedding)
     matched = bool(result["matched"])
 
     return FaceVerificationResponse(
         verified=matched,
         matched=matched,
+        liveness_passed=True,
+        active_liveness_passed=True,
+        is_real=bool(liveness["is_real"]),
+        liveness_score=float(liveness["liveness_score"]),
+        liveness_threshold=float(liveness["liveness_threshold"]),
+        anti_spoofing_model=str(liveness["anti_spoofing_model"]),
+        center_yaw=float(active_liveness["center_yaw"]),
+        first_turn_yaw=float(active_liveness["first_turn_yaw"]),
+        second_turn_yaw=float(active_liveness["second_turn_yaw"]),
+        center_pitch=float(active_liveness["center_pitch"]),
+        up_pitch=float(active_liveness["up_pitch"]),
+        down_pitch=float(active_liveness["down_pitch"]),
         message=(
-            "Khuôn mặt khớp với dữ liệu đã đăng ký."
+            "Liveness hợp lệ và khuôn mặt khớp với dữ liệu đã đăng ký."
             if matched
-            else "Khuôn mặt không khớp với dữ liệu đã đăng ký."
+            else "Liveness hợp lệ nhưng khuôn mặt không khớp với dữ liệu đã đăng ký."
         ),
         distance=float(result["distance"]),
         threshold=float(result["threshold"]),
