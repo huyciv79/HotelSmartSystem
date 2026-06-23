@@ -28,11 +28,11 @@ export default function EkycHub({ onBack }) {
     setScreen(SCREEN.UPDATE);
   }, []);
 
-  const handleSubmit = useCallback(async (front, back, selfie) => {
+  const handleSubmit = useCallback(async (front, back, faceFrames) => {
     if (wizardMode === 'update') {
-      return updateEkyc(front, back, selfie);
+      return updateEkyc(front, back, faceFrames);
     }
-    return submitEkyc(front, back, selfie);
+    return submitEkyc(front, back, faceFrames);
   }, [wizardMode]);
 
   const closeWizard = useCallback(() => {

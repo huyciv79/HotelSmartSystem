@@ -6,17 +6,16 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 /**
- * DTO ánh xạ phản hồi JSON từ Python AI Service (phiên bản tự động hóa).
+ * DTO ánh xạ phản hồi OCR CCCD từ Python AI Service.
  * Endpoint: POST http://localhost:8000/api/v1/ai/verify-ekyc
  *
  * <p>Cấu trúc JSON từ AI Service:
  * <pre>
  * {
- *   "id_card_number": "012345678901",  // null nếu OCR không đọc được
- *   "embedding": [0.12, -0.43, ...]    // 512 phần tử float
+ *   "id_card_number": "012345678901",
+ *   "full_name": "NGUYEN VAN A",
+ *   "date_of_birth": "01/01/2000"
  * }
  * </pre>
  */
@@ -27,7 +26,7 @@ import java.util.List;
 public class AiEkycResponse {
 
     /**
-     * Số CCCD/CMND bóc tách tự động từ ảnh mặt trước CCCD bằng EasyOCR.
+     * Số CCCD/CMND đọc từ vùng YOLO id_number bằng VietOCR.
      * Null nếu OCR không nhận dạng được (ảnh mờ, thiếu sáng, ...).
      */
     @JsonProperty("id_card_number")
@@ -45,9 +44,4 @@ public class AiEkycResponse {
     @JsonProperty("date_of_birth")
     private String dateOfBirth;
 
-    /**
-     * Mảng vector embedding khuôn mặt 512 chiều từ ảnh selfie (DeepFace.represent).
-     */
-    @JsonProperty("embedding")
-    private List<Double> embedding;
 }

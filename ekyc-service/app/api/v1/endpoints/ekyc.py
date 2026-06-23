@@ -1,20 +1,10 @@
-"""
-eKYC API Controller
-=====================
-POST /api/v1/ai/verify-ekyc
-
-Luồng tự động hóa:
-  1. Tải 3 ảnh từ URL (mặt trước CCCD, mặt sau CCCD, ảnh selfie).
-  2. Dùng EasyOCR bóc tách Số CCCD từ ảnh mặt trước.
-  3. Dùng DeepFace.represent trích xuất vector embedding 512 chiều từ ảnh selfie.
-  4. Trả về { id_card_number, embedding } cho Spring Boot.
-"""
+"""CCCD field extraction API using YOLOv11 and VietOCR."""
 
 import logging
 from fastapi import APIRouter, HTTPException, status
 
 from app.schemas.ekyc_schema import EKYCRequest, EKYCResponse
-from app.services.ekyc_service import extract_id_card_details, extract_face_embedding
+from app.services.ekyc_service import extract_id_card_details
 from app.utils.image_utils import download_image
 
 logger = logging.getLogger(__name__)
@@ -29,33 +19,26 @@ router = APIRouter(
     "/verify-ekyc",
     response_model=EKYCResponse,
     status_code=status.HTTP_200_OK,
-    summary="Xác thực danh tính điện tử (eKYC) – Tự động hoàn toàn",
+    summary="Trích xuất thông tin mặt trước CCCD",
     description=(
-        "Thực hiện xác thực eKYC tự động gồm 2 bước:\n"
-        "1. **OCR**: Bóc tách Số CCCD từ ảnh mặt trước CCCD bằng EasyOCR.\n"
-        "2. **Face Embedding**: Trích xuất vector 512 chiều từ ảnh selfie bằng DeepFace.\n\n"
-        "> Tất cả 3 ảnh phải là URL trỏ đến file ảnh hợp lệ (JPG/PNG).\n"
-        "> Client **KHÔNG** cần gửi số CCCD; hệ thống tự đọc từ ảnh."
+        "Tải ảnh CCCD, dùng YOLOv11 phát hiện các vùng id_number, full_name và dob, "
+        "sau đó dùng VietOCR để đọc tiếng Việt. API này không nhận selfie, "
+        "không tạo embedding và không so sánh khuôn mặt."
     ),
     responses={
-        200: {"description": "Xử lý thành công – trả về số CCCD và embedding"},
-        400: {"description": "Ảnh không hợp lệ hoặc không tìm thấy khuôn mặt"},
+        200: {"description": "Trả về số CCCD, họ tên và ngày sinh đọc được"},
+        400: {"description": "Ảnh không hợp lệ hoặc không phát hiện được vùng thông tin"},
         422: {"description": "Dữ liệu đầu vào không đúng định dạng"},
         500: {"description": "Lỗi server nội bộ"},
     },
 )
 async def verify_ekyc(payload: EKYCRequest) -> EKYCResponse:
     """
-    Endpoint eKYC tự động:
-    - Nhận 3 URL ảnh: mặt trước CCCD, mặt sau CCCD, ảnh selfie.
-    - Trả về { id_card_number (có thể None nếu OCR thất bại), embedding (512 chiều) }.
+    Mặt sau hiện được tải để kiểm tra URL/ảnh hợp lệ; OCR thực hiện trên mặt trước.
     """
     front_url = str(payload.front_image_url)
     back_url = str(payload.back_image_url)
-    face_url = str(payload.face_image_url)
-
-    # ── Bước 1: Tải ảnh từ URL ───────────────────────────────────────────
-    logger.info("Bắt đầu eKYC tự động – tải ảnh từ URL")
+    logger.info("Bắt đầu trích xuất thông tin CCCD bằng YOLOv11 + VietOCR")
 
     try:
         front_img = download_image(front_url)
@@ -76,49 +59,21 @@ async def verify_ekyc(payload: EKYCRequest) -> EKYCResponse:
         )
 
     try:
-        selfie_img = download_image(face_url)
-        logger.info("✓ Tải ảnh selfie thành công: %s", face_url)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Không thể tải ảnh selfie: {exc}",
-        )
-
-    # ── Bước 2: OCR – Bóc tách thông tin từ ảnh mặt trước ────────────────
-    id_card_number: str | None = None
-    full_name: str | None = None
-    date_of_birth: str | None = None
-    try:
         id_card_number, full_name, date_of_birth = extract_id_card_details(front_img)
-        if id_card_number:
-            logger.info("✓ OCR bóc tách Số CCCD: %s", id_card_number)
-        else:
-            logger.warning("✗ OCR không đọc được Số CCCD từ ảnh mặt trước")
-    except Exception as exc:
-        logger.exception("Lỗi OCR không xác định")
-        id_card_number = None
-
-    # ── Bước 3: Face Embedding – Trích xuất vector 512 chiều ─────────────
-    try:
-        face_embedding = extract_face_embedding(selfie_img=selfie_img)
-        logger.info("✓ Trích xuất face embedding: %d chiều", len(face_embedding))
     except ValueError as exc:
-        logger.warning("Trích xuất embedding thất bại: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
-        )
+        ) from exc
     except Exception as exc:
-        logger.exception("Lỗi không xác định trong face embedding")
+        logger.exception("Lỗi pipeline YOLOv11 + VietOCR")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Lỗi trích xuất khuôn mặt: {exc}",
-        )
+            detail=f"Lỗi trích xuất thông tin CCCD: {exc}",
+        ) from exc
 
-    # ── Trả về kết quả ───────────────────────────────────────────────────
     return EKYCResponse(
         id_card_number=id_card_number,
         full_name=full_name,
         date_of_birth=date_of_birth,
-        embedding=face_embedding,
     )

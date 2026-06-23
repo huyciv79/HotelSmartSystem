@@ -10,7 +10,10 @@ import {
   ShieldCheck,
   UserRound,
 } from 'lucide-react';
-import { faceCheckInBooking } from '../../services/bookingService';
+import {
+  checkFaceReadiness,
+  faceCheckInBooking,
+} from '../../services/bookingService';
 
 const isFaceIdBooking = (booking) => {
   const method = String(booking.checkInMethod || '').toLowerCase();
@@ -23,36 +26,36 @@ const getErrorMessage = (error) =>
   error?.message ||
   'Không thể xác minh khuôn mặt. Vui lòng thử lại.';
 
-const LIVENESS_STEPS = [
+const createExpressLivenessSteps = (direction = 'left') => [
   {
     key: 'center',
     instruction: 'Nhìn thẳng vào camera',
     maxWidth: 480,
+    countdown: 1,
+    hold: 450,
   },
   {
-    key: 'left',
-    instruction: 'Từ từ quay đầu sang trái',
-    maxWidth: 360,
-  },
-  {
-    key: 'right',
-    instruction: 'Từ từ quay đầu sang phải',
-    maxWidth: 360,
-  },
-  {
-    key: 'up',
-    instruction: 'Từ từ nhìn lên trên',
-    maxWidth: 360,
-  },
-  {
-    key: 'down',
-    instruction: 'Từ từ nhìn xuống dưới',
-    maxWidth: 360,
+    key: 'challenge',
+    direction,
+    instruction:
+      direction === 'left'
+        ? 'Từ từ quay đầu sang trái'
+        : 'Từ từ quay đầu sang phải',
+    maxWidth: 400,
+    countdown: 2,
+    hold: 500,
   },
 ];
 
 const wait = (milliseconds) =>
   new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+const INITIAL_READINESS = {
+  ready: false,
+  status: 'idle',
+  code: 'IDLE',
+  reason: 'Đưa một khuôn mặt vào giữa khung để hệ thống kiểm tra.',
+};
 
 export default function FaceCheckInStation({
   bookings,
@@ -62,6 +65,7 @@ export default function FaceCheckInStation({
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const scanRunRef = useRef(0);
+  const readinessRequestRef = useRef(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBookingId, setSelectedBookingId] = useState('');
@@ -73,7 +77,12 @@ export default function FaceCheckInStation({
   const [scanPhase, setScanPhase] = useState('idle');
   const [livenessStep, setLivenessStep] = useState(0);
   const [livenessFrames, setLivenessFrames] = useState({});
+  const [scanSteps, setScanSteps] = useState(() =>
+    createExpressLivenessSteps(),
+  );
+  const [readiness, setReadiness] = useState(INITIAL_READINESS);
   const [result, setResult] = useState(null);
+  const [verificationError, setVerificationError] = useState('');
 
   const eligibleBookings = useMemo(
     () =>
@@ -115,6 +124,7 @@ export default function FaceCheckInStation({
     setScanCountdown(null);
     setScanPhase('idle');
     setCameraState('idle');
+    setReadiness(INITIAL_READINESS);
   }, []);
 
   useEffect(() => () => stopCamera(), [stopCamera]);
@@ -133,6 +143,12 @@ export default function FaceCheckInStation({
     setLivenessFrames({});
     setScanCountdown(null);
     setScanPhase('idle');
+    setReadiness({
+      ...INITIAL_READINESS,
+      status: 'checking',
+      code: 'CHECKING',
+      reason: 'Đang kiểm tra vị trí khuôn mặt...',
+    });
 
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -156,6 +172,7 @@ export default function FaceCheckInStation({
       setCameraState('ready');
     } catch (error) {
       setCameraState('error');
+      setReadiness(INITIAL_READINESS);
       setCameraError(
         error?.name === 'NotAllowedError'
           ? 'Camera đang bị chặn. Hãy cấp quyền camera cho localhost:5173.'
@@ -200,16 +217,109 @@ export default function FaceCheckInStation({
     });
   }, []);
 
+  const checkCurrentReadiness = useCallback(async (forceFresh = false) => {
+    if (readinessRequestRef.current) {
+      const pendingRequest = readinessRequestRef.current;
+      const pendingResult = await pendingRequest;
+      if (!forceFresh) return pendingResult;
+      if (readinessRequestRef.current === pendingRequest) {
+        readinessRequestRef.current = null;
+      }
+    }
+
+    const readinessRunId = scanRunRef.current;
+    const request = (async () => {
+      setReadiness((current) =>
+        current.ready
+          ? current
+          : {
+              ...current,
+              status: 'checking',
+              code: 'CHECKING',
+              reason: 'Đang kiểm tra vị trí khuôn mặt...',
+            },
+      );
+
+      try {
+        const preview = await captureFrame('readiness', 480);
+        const response = await checkFaceReadiness(preview);
+        const readinessData = response?.data;
+        if (!readinessData) {
+          throw new Error('Backend không trả về trạng thái camera FaceID.');
+        }
+
+        if (scanRunRef.current !== readinessRunId || !streamRef.current) {
+          return null;
+        }
+
+        const warningCodes = new Set(['FACE_TOO_SMALL', 'NOT_CENTERED']);
+        setReadiness({
+          ...readinessData,
+          status: readinessData.ready
+            ? 'ready'
+            : warningCodes.has(readinessData.code)
+              ? 'warning'
+              : 'error',
+        });
+        return readinessData;
+      } catch (error) {
+        if (scanRunRef.current === readinessRunId && streamRef.current) {
+          setReadiness({
+            ready: false,
+            status: 'error',
+            code: 'SERVICE_ERROR',
+            reason: getErrorMessage(error),
+          });
+        }
+        return null;
+      }
+    })();
+
+    readinessRequestRef.current = request;
+    try {
+      return await request;
+    } finally {
+      if (readinessRequestRef.current === request) {
+        readinessRequestRef.current = null;
+      }
+    }
+  }, [captureFrame]);
+
+  useEffect(() => {
+    if (cameraState !== 'ready' || isScanning || isVerifying || result) {
+      return undefined;
+    }
+
+    let stopped = false;
+    const pollReadiness = async () => {
+      if (!stopped) await checkCurrentReadiness();
+    };
+
+    pollReadiness();
+    const intervalId = window.setInterval(pollReadiness, 2000);
+    return () => {
+      stopped = true;
+      window.clearInterval(intervalId);
+    };
+  }, [
+    cameraState,
+    checkCurrentReadiness,
+    isScanning,
+    isVerifying,
+    result,
+  ]);
+
   const submitLivenessFrames = async (frames) => {
     setIsVerifying(true);
+    setVerificationError('');
     try {
       const response = await faceCheckInBooking(
         selectedBooking.id,
         frames.center,
-        frames.left,
-        frames.right,
-        frames.up,
-        frames.down,
+        frames.challenge,
+        frames.challenge2,
+        frames.challenge3,
+        frames.challengeDirection,
       );
       const bookingResult = response?.data;
       if (!bookingResult) {
@@ -217,6 +327,7 @@ export default function FaceCheckInStation({
       }
 
       setResult(bookingResult);
+      setVerificationError('');
       onCheckInCompleted?.(selectedBooking.id, bookingResult);
       showToast(
         `Xác minh khuôn mặt và check-in thành công cho ${selectedBooking.guestName}.`,
@@ -225,7 +336,9 @@ export default function FaceCheckInStation({
       );
       stopCamera();
     } catch (error) {
-      showToast(getErrorMessage(error), 'error', 7000);
+      const message = getErrorMessage(error);
+      setVerificationError(message);
+      showToast(message, 'error', 7000);
       setLivenessStep(0);
       setLivenessFrames({});
       setScanPhase('idle');
@@ -242,10 +355,28 @@ export default function FaceCheckInStation({
       isScanning
     ) return;
 
+    setIsScanning(true);
+    setScanPhase('readiness');
+    const readinessData = await checkCurrentReadiness(true);
+    if (!readinessData?.ready) {
+      const reason =
+        readinessData?.reason ||
+        'Camera chưa sẵn sàng. Hãy bảo đảm chỉ có một người nhìn thẳng vào camera.';
+      showToast(reason, 'warning', 6000);
+      setIsScanning(false);
+      setScanPhase('idle');
+      return;
+    }
+
     const runId = scanRunRef.current + 1;
     scanRunRef.current = runId;
-    setIsScanning(true);
+    const randomByte = new Uint8Array(1);
+    window.crypto.getRandomValues(randomByte);
+    const challengeDirection = randomByte[0] % 2 === 0 ? 'left' : 'right';
+    const activeScanSteps = createExpressLivenessSteps(challengeDirection);
+    setScanSteps(activeScanSteps);
     setResult(null);
+    setVerificationError('');
     setLivenessStep(0);
     setLivenessFrames({});
 
@@ -253,28 +384,52 @@ export default function FaceCheckInStation({
     const frames = {};
 
     try {
-      for (let index = 0; index < LIVENESS_STEPS.length; index += 1) {
+      for (let index = 0; index < activeScanSteps.length; index += 1) {
         if (!isCurrentRun()) return;
 
-        const stepConfig = LIVENESS_STEPS[index];
+        const stepConfig = activeScanSteps[index];
         setLivenessStep(index);
         setScanPhase('positioning');
 
-        for (let countdown = 3; countdown >= 1; countdown -= 1) {
+        for (
+          let countdown = stepConfig.countdown;
+          countdown >= 1;
+          countdown -= 1
+        ) {
           setScanCountdown(countdown);
-          await wait(550);
+          await wait(750);
           if (!isCurrentRun()) return;
         }
 
         setScanCountdown(null);
         setScanPhase('reading');
-        await wait(250);
+        await wait(stepConfig.hold);
         if (!isCurrentRun()) return;
 
-        frames[stepConfig.key] = await captureFrame(
-          stepConfig.key,
-          stepConfig.maxWidth,
-        );
+        if (stepConfig.key === 'challenge') {
+          frames.challenge = await captureFrame(
+            'challenge-1',
+            stepConfig.maxWidth,
+          );
+          await wait(120);
+          if (!isCurrentRun()) return;
+          frames.challenge2 = await captureFrame(
+            'challenge-2',
+            stepConfig.maxWidth,
+          );
+          await wait(120);
+          if (!isCurrentRun()) return;
+          frames.challenge3 = await captureFrame(
+            'challenge-3',
+            stepConfig.maxWidth,
+          );
+          frames.challengeDirection = challengeDirection;
+        } else {
+          frames[stepConfig.key] = await captureFrame(
+            stepConfig.key,
+            stepConfig.maxWidth,
+          );
+        }
         setLivenessFrames({ ...frames });
         setScanPhase('completed');
         await wait(250);
@@ -302,6 +457,7 @@ export default function FaceCheckInStation({
     stopCamera();
     setSelectedBookingId(bookingId);
     setResult(null);
+    setVerificationError('');
     setCameraError('');
     setLivenessStep(0);
     setLivenessFrames({});
@@ -309,7 +465,31 @@ export default function FaceCheckInStation({
   };
 
   const currentLivenessStep =
-    LIVENESS_STEPS[Math.min(livenessStep, LIVENESS_STEPS.length - 1)];
+    scanSteps[Math.min(livenessStep, scanSteps.length - 1)];
+  const readinessStyle =
+    readiness.status === 'ready'
+      ? {
+          border: 'border-green-400',
+          dot: 'bg-green-400',
+          text: 'text-green-300',
+          label: 'Một khuôn mặt · Sẵn sàng',
+        }
+      : readiness.status === 'warning' || readiness.status === 'checking'
+        ? {
+            border: 'border-amber-400',
+            dot: 'bg-amber-400',
+            text: 'text-amber-300',
+            label:
+              readiness.status === 'checking'
+                ? 'Đang kiểm tra khuôn mặt'
+                : 'Cần điều chỉnh vị trí',
+          }
+        : {
+            border: 'border-red-500',
+            dot: 'bg-red-500',
+            text: 'text-red-300',
+            label: 'Camera chưa sẵn sàng',
+          };
 
   return (
     <div className="space-y-6 animate-scale-in">
@@ -522,6 +702,14 @@ export default function FaceCheckInStation({
                 </div>
               ) : (
                 <>
+                  {verificationError && (
+                    <div
+                      role="alert"
+                      className="border border-red-800/70 bg-red-950/30 px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-red-300"
+                    >
+                      {verificationError}
+                    </div>
+                  )}
                   <div className="relative aspect-video bg-black border border-neutral-800 overflow-hidden">
                     <video
                       ref={videoRef}
@@ -548,11 +736,21 @@ export default function FaceCheckInStation({
                     {cameraState === 'ready' && (
                       <>
                         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_31%_46%_at_50%_48%,transparent_55%,rgba(0,0,0,0.72)_100%)]" />
-                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[74%] rounded-[50%] border-2 border-dashed border-primary pointer-events-none" />
+                        <div
+                          className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[74%] rounded-[50%] border-2 border-dashed pointer-events-none transition-colors ${readinessStyle.border}`}
+                        />
                         <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 px-3 py-2">
-                          <span className="w-2 h-2 rounded-full bg-green-400" />
-                          <span className="text-[9px] text-white font-black uppercase tracking-widest">
-                            {isScanning ? 'Đang quét chuyển động' : 'Camera sẵn sàng'}
+                          <span
+                            className={`w-2 h-2 rounded-full ${readinessStyle.dot}`}
+                          />
+                          <span
+                            className={`text-[9px] font-black uppercase tracking-widest ${readinessStyle.text}`}
+                          >
+                            {isScanning
+                              ? scanPhase === 'readiness'
+                                ? 'Đang xác nhận khuôn mặt'
+                                : 'Đang quét chuyển động'
+                              : readinessStyle.label}
                           </span>
                         </div>
                         {isScanning && scanCountdown && (
@@ -564,7 +762,14 @@ export default function FaceCheckInStation({
                         )}
                         {isScanning && scanPhase === 'reading' && (
                           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-primary/90 px-4 py-2 text-[10px] text-white font-black uppercase tracking-widest">
-                            Đang ghi nhận chuyển động
+                            Giữ nguyên tư thế · Đang chụp
+                          </div>
+                        )}
+                        {!isScanning && (
+                          <div
+                            className={`absolute bottom-4 left-4 right-4 bg-black/75 border px-4 py-2.5 text-[10px] font-bold text-center ${readinessStyle.border} ${readinessStyle.text}`}
+                          >
+                            {readiness.reason}
                           </div>
                         )}
                       </>
@@ -584,16 +789,22 @@ export default function FaceCheckInStation({
                           {isVerifying
                             ? 'Đang đối chiếu với hồ sơ eKYC'
                             : isScanning
-                              ? currentLivenessStep.instruction
-                              : 'Sẵn sàng quét chuyển động khuôn mặt'}
+                              ? scanPhase === 'readiness'
+                                ? 'Đang xác nhận chỉ có một khuôn mặt'
+                                : scanPhase === 'reading'
+                                  ? `Giữ nguyên tư thế · ${currentLivenessStep.instruction}`
+                                  : currentLivenessStep.instruction
+                              : readiness.ready
+                                ? 'Sẵn sàng quét chuyển động khuôn mặt'
+                                : readiness.reason}
                         </strong>
                         <p className="text-[10px] text-slate-500 mt-1.5 mb-0">
                           {isScanning
-                            ? `Bước ${livenessStep + 1}/${LIVENESS_STEPS.length} · Giữ tư thế đến khi hệ thống tự chuyển bước.`
-                            : 'Chỉ cần bắt đầu một lần; camera sẽ tự hướng dẫn nhìn thẳng, trái, phải, lên và xuống.'}
+                            ? `Bước ${livenessStep + 1}/${scanSteps.length} · Giữ tư thế đến khi hệ thống tự chuyển bước.`
+                            : 'Express liveness chỉ yêu cầu nhìn thẳng và một hướng quay ngẫu nhiên.'}
                         </p>
                         <div className="flex items-center gap-1.5 mt-3">
-                          {LIVENESS_STEPS.map((step, index) => {
+                          {scanSteps.map((step, index) => {
                             const completed = Boolean(livenessFrames[step.key]);
                             const active = isScanning && index === livenessStep;
                             return (
@@ -634,7 +845,7 @@ export default function FaceCheckInStation({
                         <button
                           type="button"
                           onClick={startLivenessScan}
-                          disabled={isVerifying || isScanning}
+                          disabled={isVerifying || isScanning || !readiness.ready}
                           className="flex-1 py-4 bg-primary hover:brightness-110 disabled:opacity-50 text-white border-none cursor-pointer font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
                         >
                           {isVerifying || isScanning ? (
@@ -646,7 +857,9 @@ export default function FaceCheckInStation({
                             ? 'Đang xác minh FaceID...'
                             : isScanning
                               ? currentLivenessStep.instruction
-                              : 'Bắt đầu quét liveness'}
+                              : readiness.ready
+                                ? 'Bắt đầu quét liveness'
+                                : 'Chờ camera sẵn sàng'}
                         </button>
                         <button
                           type="button"

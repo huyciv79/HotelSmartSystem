@@ -18,13 +18,14 @@ import java.util.List;
 public class AiFaceEnrollmentResponse {
 
     private Boolean enrolled;
-    private Boolean matched;
-    private String message;
-    private Double distance;
-    private Double threshold;
 
-    @JsonProperty("similarity_percentage")
-    private Double similarityPercentage;
+    @JsonProperty("liveness_passed")
+    private Boolean livenessPassed;
+
+    @JsonProperty("active_liveness_passed")
+    private Boolean activeLivenessPassed;
+
+    private String message;
 
     @JsonProperty("model_used")
     private String modelUsed;

@@ -4,13 +4,14 @@ import {
   ChevronRight, RotateCcw, AlertCircle,
 } from 'lucide-react';
 import EkycCamera from './EkycCamera';
+import EkycLivenessCamera from './EkycLivenessCamera';
 
 // ─── Step indicator bar ───────────────────────────────────────────────────────
 const STEPS = [
   { id: 1, label: 'Giới thiệu' },
   { id: 2, label: 'Mặt trước' },
   { id: 3, label: 'Mặt sau' },
-  { id: 4, label: 'Selfie' },
+  { id: 4, label: 'Khuôn mặt' },
   { id: 5, label: 'Xác minh' },
   { id: 6, label: 'Kết quả' },
 ];
@@ -56,16 +57,15 @@ function ImagePreviewCard({ label, previewUrl }) {
 
 // ─── Main RegisterEkyc wizard ─────────────────────────────────────────────────
 /**
- * @param {(front: File, back: File, selfie: File) => Promise<void>} onSubmit
+ * @param {(front: File, back: File, faceFrames: object) => Promise<void>} onSubmit
  * @param {() => void} onClose
  * @param {'register' | 'update'} mode
  */
 export default function RegisterEkycWizard({ onSubmit, onClose, mode = 'register' }) {
   const [step, setStep] = useState(1);
-  const [images, setImages] = useState({ front: null, back: null, selfie: null });
-  const [previews, setPreviews] = useState({ front: null, back: null, selfie: null });
+  const [images, setImages] = useState({ front: null, back: null, faceFrames: null });
+  const [previews, setPreviews] = useState({ front: null, back: null, faceFrames: null });
   const [result, setResult] = useState(null); // { success, message }
-  const [loading, setLoading] = useState(false);
 
   const handleCapture = useCallback((key, nextStep) => (file, previewUrl) => {
     setImages(prev => ({ ...prev, [key]: file }));
@@ -73,31 +73,31 @@ export default function RegisterEkycWizard({ onSubmit, onClose, mode = 'register
     setStep(nextStep);
   }, []);
 
-  const handleSelfieCapture = useCallback(async (file, previewUrl) => {
-    setImages(prev => ({ ...prev, selfie: file }));
-    setPreviews(prev => ({ ...prev, selfie: previewUrl }));
+  const handleLivenessComplete = useCallback(async (faceFrames, facePreviews) => {
+    setImages(prev => ({ ...prev, faceFrames }));
+    setPreviews(prev => ({ ...prev, faceFrames: facePreviews }));
     setStep(5);
 
-    setLoading(true);
     try {
-      const res = await onSubmit(images.front, images.back, file);
+      const res = await onSubmit(images.front, images.back, faceFrames);
       const successMessage = res?.data?.message || res?.message || 'Xác minh danh tính thành công! Tài khoản của bạn đã được kích hoạt đầy đủ.';
       setResult({ success: true, message: successMessage });
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || 'Xác minh thất bại. Vui lòng thử lại.';
+      const msg = err?.response?.data?.message
+        || err?.response?.data?.detail
+        || err?.message
+        || 'Xác minh thất bại. Vui lòng thử lại.';
       setResult({ success: false, message: msg });
     } finally {
-      setLoading(false);
       setStep(6);
     }
   }, [images.front, images.back, onSubmit]);
 
   const handleRetry = () => {
     setStep(1);
-    setImages({ front: null, back: null, selfie: null });
-    setPreviews({ front: null, back: null, selfie: null });
+    setImages({ front: null, back: null, faceFrames: null });
+    setPreviews({ front: null, back: null, faceFrames: null });
     setResult(null);
-    setLoading(false);
   };
 
   return (
@@ -200,24 +200,19 @@ export default function RegisterEkycWizard({ onSubmit, onClose, mode = 'register
             </div>
           )}
 
-          {/* ── Step 4: Selfie ── */}
+          {/* ── Step 4: Face liveness enrollment ── */}
           {step === 4 && (
             <div className="flex flex-col items-center gap-4 animate-fade-in">
               <div className="flex items-center gap-2">
                 <Camera size={22} className="text-emerald-400" />
-                <h2 className="text-xl font-bold font-['Playfair_Display'] text-white">Chụp chân dung</h2>
+                <h2 className="text-xl font-bold font-['Playfair_Display'] text-white">Đăng ký liveness khuôn mặt</h2>
               </div>
               {/* Show both ID previews */}
               <div className="flex gap-4 justify-center">
                 <ImagePreviewCard label="Mặt trước ✓" previewUrl={previews.front} />
                 <ImagePreviewCard label="Mặt sau ✓" previewUrl={previews.back} />
               </div>
-              <EkycCamera
-                overlayType="selfie"
-                hint="Đưa khuôn mặt vào trong khung bầu dục xanh. Nhìn thẳng vào camera."
-                onCapture={handleSelfieCapture}
-                mirrored={true}
-              />
+              <EkycLivenessCamera onComplete={handleLivenessComplete} />
               <button onClick={() => setStep(3)} className="text-slate-500 hover:text-slate-300 text-sm font-['Geist'] transition-colors">
                 ← Quay lại
               </button>
@@ -232,15 +227,23 @@ export default function RegisterEkycWizard({ onSubmit, onClose, mode = 'register
                 <ShieldCheck size={32} className="absolute inset-0 m-auto text-amber-400" />
               </div>
               <div className="text-center">
-                <h2 className="text-xl font-bold font-['Playfair_Display'] text-white mb-2">Đang xử lý</h2>
+                <h2 className="text-xl font-bold font-['Playfair_Display'] text-white mb-2">Đang xác minh eKYC</h2>
                 <p className="text-slate-400 text-sm font-['Geist'] leading-relaxed max-w-xs">
-                  Hệ thống AI đang so khớp khuôn mặt trên CCCD với ảnh selfie, vui lòng đợi...
+                  Hệ thống xác minh CCCD, kiểm tra active/passive liveness và tạo mẫu khuôn mặt từ năm góc.
+                </p>
+              </div>
+              <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/5 p-4 text-left">
+                <p className="text-sm text-amber-300 font-semibold font-['Geist']">
+                  1. Đọc số CCCD, họ tên và ngày sinh
+                </p>
+                <p className="mt-2 text-sm text-emerald-300 font-semibold font-['Geist']">
+                  2. Kiểm tra người thật và đăng ký face template nhiều góc
                 </p>
               </div>
               <div className="flex gap-4">
                 <ImagePreviewCard label="Mặt trước" previewUrl={previews.front} />
                 <ImagePreviewCard label="Mặt sau" previewUrl={previews.back} />
-                <ImagePreviewCard label="Selfie" previewUrl={previews.selfie} />
+                <ImagePreviewCard label="Chính diện" previewUrl={previews.faceFrames?.center} />
               </div>
             </div>
           )}
@@ -260,7 +263,7 @@ export default function RegisterEkycWizard({ onSubmit, onClose, mode = 'register
                   <div className="flex gap-4">
                     <ImagePreviewCard label="Mặt trước" previewUrl={previews.front} />
                     <ImagePreviewCard label="Mặt sau" previewUrl={previews.back} />
-                    <ImagePreviewCard label="Selfie" previewUrl={previews.selfie} />
+                    <ImagePreviewCard label="Chính diện" previewUrl={previews.faceFrames?.center} />
                   </div>
                   <button
                     onClick={onClose}

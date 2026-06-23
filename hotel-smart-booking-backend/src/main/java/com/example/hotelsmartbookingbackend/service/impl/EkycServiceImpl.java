@@ -3,6 +3,7 @@ package com.example.hotelsmartbookingbackend.service.impl;
 import com.example.hotelsmartbookingbackend.dto.request.EkycRequest;
 import com.example.hotelsmartbookingbackend.dto.response.AiEkycResponse;
 import com.example.hotelsmartbookingbackend.dto.response.AiFaceEnrollmentResponse;
+import com.example.hotelsmartbookingbackend.dto.response.AiFaceFrameValidationResponse;
 import com.example.hotelsmartbookingbackend.dto.response.EkycResponse;
 import com.example.hotelsmartbookingbackend.dto.response.EkycStatusResponse;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,18 +37,21 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Triển khai luồng xử lý eKYC (Electronic Know Your Customer) – Tự động hóa hoàn toàn.
  *
  * <p>Luồng hoạt động mới:
  * <ol>
- *   <li>Client gửi 3 URL ảnh (mặt trước CCCD, mặt sau CCCD, ảnh selfie) – <b>không cần nhập số CCCD</b>.</li>
+ *   <li>Client gửi hai ảnh CCCD và năm frame khuôn mặt – <b>không cần nhập số CCCD</b>.</li>
  *   <li>Tạo bản ghi EkycProfile tạm với trạng thái "Pending".</li>
  *   <li>Gọi Python AI Service:
  *     <ul>
- *       <li>EasyOCR tự đọc Số CCCD từ ảnh mặt trước.</li>
- *       <li>DeepFace.represent trích xuất vector embedding 512 chiều từ ảnh selfie.</li>
+ *       <li>YOLOv11 phát hiện vùng số CCCD, họ tên và ngày sinh.</li>
+ *       <li>VietOCR đọc tiếng Việt trong từng vùng đã cắt.</li>
+ *       <li>Face API kiểm tra liveness và tạo face template 512 chiều từ năm góc.</li>
  *     </ul>
  *   </li>
  *   <li>Nếu OCR không đọc được số CCCD → báo lỗi ngay cho client.</li>
@@ -81,10 +85,16 @@ public class EkycServiceImpl implements EkycService {
     @Value("${ai.service.face-enroll-url:http://localhost:8000/api/v1/face/enroll}")
     private String aiFaceEnrollUrl;
 
+    @Value("${ai.service.face-frame-validation-url:http://localhost:8000/api/v1/face/validate-frame}")
+    private String aiFaceFrameValidationUrl;
+
     // ── Constants ─────────────────────────────────────────────────────────────
     private static final String EKYC_CACHE_PREFIX = "user:ekyc:";
     private static final Duration EKYC_CACHE_TTL = Duration.ofDays(7);
     private static final String VERIFICATION_METHOD = "Auto";
+    private static final Pattern FASTAPI_DETAIL_PATTERN = Pattern.compile(
+            "\"detail\"\\s*:\\s*\"((?:\\\\.|[^\"])*)\""
+    );
 
     // ─────────────────────────────────────────────────────────────────────────
     // PUBLIC API
@@ -92,7 +102,16 @@ public class EkycServiceImpl implements EkycService {
 
     @Override
     @Transactional
-    public EkycResponse processEkyc(String email, MultipartFile frontImage, MultipartFile backImage, MultipartFile selfieImage) {
+    public EkycResponse processEkyc(
+            String email,
+            MultipartFile frontImage,
+            MultipartFile backImage,
+            MultipartFile selfieImage,
+            MultipartFile leftImage,
+            MultipartFile rightImage,
+            MultipartFile upImage,
+            MultipartFile downImage
+    ) {
         // ── Upload 3 ảnh lên Supabase → lấy public URL ───────────────────────
         String frontUrl   = uploadImage(frontImage,   "ekyc_front");
         String backUrl    = uploadImage(backImage,    "ekyc_back");
@@ -123,12 +142,9 @@ public class EkycServiceImpl implements EkycService {
             EkycProfile existingProfile = profileOpt.get();
             if ("Verified".equalsIgnoreCase(existingProfile.getStatus())) {
                 throw new RuntimeException("Tài khoản của bạn đã được xác minh eKYC trước đó.");
-            } else if ("Pending".equalsIgnoreCase(existingProfile.getStatus())) {
-                throw new RuntimeException("Yêu cầu xác minh eKYC của bạn đang được xử lý, không thể thực hiện yêu cầu mới.");
-            } else if ("Rejected".equalsIgnoreCase(existingProfile.getStatus())) {
-                isUpdateFlow = true;
-                profile = existingProfile;
             } else {
+                // Cả "Pending" (kẹt do lỗi trước) lẫn "Rejected" đều cho phép thử lại (isUpdateFlow).
+                // Điều này tránh user bị block vĩnh viễn khi server crash giữa chừng ở lần trước.
                 isUpdateFlow = true;
                 profile = existingProfile;
             }
@@ -151,13 +167,48 @@ public class EkycServiceImpl implements EkycService {
             ekycProfileRepository.save(profile);
         }
 
-        // ── 4. Face matching là điều kiện bắt buộc để kích hoạt FaceID ─────────
+        // ── 4. OCR CCCD trước; chỉ tiếp tục đăng ký khuôn mặt khi CCCD hợp lệ ──
+        AiEkycResponse ocrResponse;
+        try {
+            ocrResponse = callAiService(request);
+        } catch (Exception ex) {
+            String rejectionReason = "CCCD OCR failed: " + ex.getMessage();
+            self.markAsRejectedNewTx(profile.getId(), rejectionReason, Instant.now());
+            throw new RuntimeException(
+                    "Không thể đọc thông tin CCCD. Hãy chụp đúng mặt trước, mặt sau, "
+                            + "đặt thẻ trong khung và bảo đảm ảnh rõ nét.",
+                    ex
+            );
+        }
+
+        String idCardNumber = blankToNull(ocrResponse.getIdCardNumber());
+        String fullName = blankToNull(ocrResponse.getFullName());
+        String dateOfBirth = blankToNull(ocrResponse.getDateOfBirth());
+
+        if (idCardNumber == null) {
+            String rejectionReason = "CCCD OCR did not return an identification number";
+            self.markAsRejectedNewTx(profile.getId(), rejectionReason, Instant.now());
+            throw new RuntimeException(
+                    "Không nhận diện được số CCCD trên ảnh mặt trước. "
+                            + "Vui lòng chụp lại mặt trước CCCD rõ nét và đầy đủ bốn góc."
+            );
+        }
+
+        // ── 5. CCCD hợp lệ mới kiểm tra liveness và tạo face template ─────────
+        // Không so sánh selfie với chân dung trên CCCD.
         AiFaceEnrollmentResponse faceResponse;
         try {
-            faceResponse = callFaceEnrollmentService(frontImage, selfieImage);
+            faceResponse = callFaceEnrollmentService(
+                    selfieImage,
+                    leftImage,
+                    rightImage,
+                    upImage,
+                    downImage
+            );
             if (faceResponse == null
-                    || !Boolean.TRUE.equals(faceResponse.getMatched())
-                    || !Boolean.TRUE.equals(faceResponse.getEnrolled())) {
+                    || !Boolean.TRUE.equals(faceResponse.getEnrolled())
+                    || !Boolean.TRUE.equals(faceResponse.getLivenessPassed())
+                    || !Boolean.TRUE.equals(faceResponse.getActiveLivenessPassed())) {
                 String detail = faceResponse != null
                         ? faceResponse.getMessage()
                         : "Face API returned an empty response";
@@ -167,27 +218,23 @@ public class EkycServiceImpl implements EkycService {
                 throw new RuntimeException("Face API did not return a valid 512-dimensional embedding");
             }
         } catch (Exception ex) {
-            String rejectionReason = "Face matching failed: " + ex.getMessage();
+            // Ưu tiên trả message từ AI service (đã chi tiết) thay vì wrap chung chung.
+            // ex.getMessage() đã là detail từ Python Face API (active liveness, passive liveness, v.v.)
+            String aiDetail = ex.getMessage();
+            String rejectionReason = "Face enrollment failed: " + aiDetail;
             self.markAsRejectedNewTx(profile.getId(), rejectionReason, Instant.now());
+            // Nếu message đã đủ cụ thể (từ AI), dùng nguyên; nếu không, fallback generic.
+            boolean isAiDetail = aiDetail != null && !aiDetail.startsWith("Face API") && !aiDetail.startsWith("Không thể kết nối");
             throw new RuntimeException(
-                    "Xác minh khuôn mặt thất bại. Hãy bảo đảm ảnh CCCD và selfie rõ nét, chính diện và thuộc cùng một người.",
+                    isAiDetail
+                            ? aiDetail
+                            : "Đăng ký khuôn mặt thất bại. Hãy thực hiện rõ đủ năm tư thế, "
+                            + "bảo đảm chỉ có một người và không dùng ảnh hoặc màn hình.",
                     ex
             );
         }
 
-        // ── 5. OCR chỉ bổ sung dữ liệu; OCR lỗi không làm thất bại FaceID ───────
-        AiEkycResponse ocrResponse = null;
-        try {
-            ocrResponse = callAiService(request);
-        } catch (Exception ignored) {
-            // Có thể cập nhật dữ liệu OCR sau mà không ảnh hưởng kết quả khuôn mặt.
-        }
-
-        String idCardNumber = ocrResponse != null ? blankToNull(ocrResponse.getIdCardNumber()) : null;
-        String fullName = ocrResponse != null ? blankToNull(ocrResponse.getFullName()) : null;
-        String dateOfBirth = ocrResponse != null ? blankToNull(ocrResponse.getDateOfBirth()) : null;
-
-        // ── 6. Lưu embedding FaceID; lưu thông tin OCR nếu đọc được ─────────────
+        // ── 6. Lưu thông tin CCCD và embedding FaceID ──────────────────────────
         return handleVerificationSuccess(
                 user,
                 profile,
@@ -279,6 +326,67 @@ public class EkycServiceImpl implements EkycService {
                 .build();
     }
 
+    @Override
+    public AiFaceFrameValidationResponse validateLivenessFrame(
+            MultipartFile frameImage,
+            MultipartFile referenceImage,
+            MultipartFile oppositeImage,
+            String step
+    ) {
+        if (frameImage == null || frameImage.isEmpty()) {
+            throw new RuntimeException("Frame khuôn mặt không có dữ liệu.");
+        }
+        String normalizedStep = step == null ? "" : step.trim().toLowerCase();
+        if (!List.of("center", "left", "right", "up", "down").contains(normalizedStep)) {
+            throw new RuntimeException("Bước liveness không hợp lệ.");
+        }
+        if (!"center".equals(normalizedStep)
+                && (referenceImage == null || referenceImage.isEmpty())) {
+            throw new RuntimeException("Thiếu ảnh chính diện tham chiếu.");
+        }
+
+        MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+        addImagePart(bodyBuilder, "frame_image", frameImage);
+        bodyBuilder.part("step", normalizedStep)
+                .contentType(MediaType.TEXT_PLAIN);
+        if (referenceImage != null && !referenceImage.isEmpty()) {
+            addImagePart(bodyBuilder, "reference_image", referenceImage);
+        }
+        if (oppositeImage != null && !oppositeImage.isEmpty()) {
+            addImagePart(bodyBuilder, "opposite_image", oppositeImage);
+        }
+
+        try {
+            AiFaceFrameValidationResponse response = webClient.post()
+                    .uri(aiFaceFrameValidationUrl)
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                    .retrieve()
+                    .bodyToMono(AiFaceFrameValidationResponse.class)
+                    .timeout(Duration.ofSeconds(120))
+                    .block();
+            if (response == null) {
+                throw new RuntimeException("Face validation API trả về phản hồi rỗng.");
+            }
+            return response;
+        } catch (WebClientResponseException ex) {
+            String detail = extractFastApiDetail(ex.getResponseBodyAsString());
+            throw new RuntimeException(
+                    detail != null
+                            ? detail
+                            : "Face validation API lỗi: " + ex.getResponseBodyAsString(),
+                    ex
+            );
+        } catch (RuntimeException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new RuntimeException(
+                    "Không thể kết nối tới dịch vụ kiểm tra tư thế khuôn mặt.",
+                    ex
+            );
+        }
+    }
+
     /**
      * Mask số CCCD bảo mật thông tin cá nhân.
      * Ví dụ: "091234123" (độ dài 9) -> "09****123"
@@ -292,6 +400,20 @@ public class EkycServiceImpl implements EkycService {
             return "*".repeat(length);
         }
         return id.substring(0, 2) + "*".repeat(length - 5) + id.substring(length - 3);
+    }
+
+    private String extractFastApiDetail(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return null;
+        }
+        Matcher matcher = FASTAPI_DETAIL_PATTERN.matcher(responseBody);
+        if (!matcher.find()) {
+            return null;
+        }
+        return matcher.group(1)
+                .replace("\\\"", "\"")
+                .replace("\\n", "\n")
+                .replace("\\\\", "\\");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -318,17 +440,16 @@ public class EkycServiceImpl implements EkycService {
 
     /**
      * Gọi Python AI Service thông qua WebClient.
-     * AI Service tự đọc Số CCCD bằng OCR và trích xuất embedding từ selfie.
+     * AI Service dùng YOLOv11 + VietOCR để đọc thông tin mặt trước CCCD.
      *
-     * <p>Payload gửi lên: { front_image_url, back_image_url, face_image_url }
+     * <p>Payload gửi lên: { front_image_url, back_image_url }
      *
      * @throws RuntimeException nếu AI service không phản hồi hoặc trả về lỗi HTTP
      */
     private AiEkycResponse callAiService(EkycRequest request) {
         Map<String, String> payload = Map.of(
                 "front_image_url", request.getFrontImageUrl(),
-                "back_image_url",  request.getBackImageUrl(),
-                "face_image_url",  request.getFaceImageUrl()
+                "back_image_url",  request.getBackImageUrl()
         );
 
         try {
@@ -337,7 +458,7 @@ public class EkycServiceImpl implements EkycService {
                     .bodyValue(payload)
                     .retrieve()
                     .bodyToMono(AiEkycResponse.class)
-                    .timeout(Duration.ofSeconds(120)) // Model load lần đầu có thể mất 60-90s
+                    .timeout(Duration.ofSeconds(300))
                     .block(); // Block vì đang trong @Transactional context
 
             if (response == null) {
@@ -357,16 +478,22 @@ public class EkycServiceImpl implements EkycService {
     }
 
     /**
-     * Gọi Face API bằng multipart/form-data.
-     * Ảnh mặt trước CCCD là khuôn mặt tham chiếu, selfie là khuôn mặt đăng ký.
+     * Gọi Face API bằng multipart/form-data để kiểm tra liveness và tạo face template nhiều góc.
+     * Ảnh CCCD không được gửi tới Face API và không được dùng để so sánh khuôn mặt.
      */
     private AiFaceEnrollmentResponse callFaceEnrollmentService(
-            MultipartFile frontImage,
-            MultipartFile selfieImage
+            MultipartFile selfieImage,
+            MultipartFile leftImage,
+            MultipartFile rightImage,
+            MultipartFile upImage,
+            MultipartFile downImage
     ) {
         MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-        addImagePart(bodyBuilder, "id_card_image", frontImage);
         addImagePart(bodyBuilder, "selfie_image", selfieImage);
+        addImagePart(bodyBuilder, "left_image", leftImage);
+        addImagePart(bodyBuilder, "right_image", rightImage);
+        addImagePart(bodyBuilder, "up_image", upImage);
+        addImagePart(bodyBuilder, "down_image", downImage);
 
         try {
             AiFaceEnrollmentResponse response = webClient.post()
@@ -375,7 +502,7 @@ public class EkycServiceImpl implements EkycService {
                     .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
                     .retrieve()
                     .bodyToMono(AiFaceEnrollmentResponse.class)
-                    .timeout(Duration.ofSeconds(120))
+                    .timeout(Duration.ofSeconds(300))
                     .block();
 
             if (response == null) {
@@ -383,7 +510,11 @@ public class EkycServiceImpl implements EkycService {
             }
             return response;
         } catch (WebClientResponseException ex) {
-            throw new RuntimeException("Face API lỗi: " + ex.getResponseBodyAsString(), ex);
+            String detail = extractFastApiDetail(ex.getResponseBodyAsString());
+            throw new RuntimeException(
+                    detail != null ? detail : "Face API lỗi: " + ex.getResponseBodyAsString(),
+                    ex
+            );
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -426,32 +557,30 @@ public class EkycServiceImpl implements EkycService {
                                                    boolean isUpdateFlow) {
         Instant now = Instant.now();
 
-        String idCardNumberHash = null;
-        if (idCardNumber != null) {
-            // Chỉ kiểm tra trùng CCCD khi OCR thực sự đọc được số.
-            idCardNumberHash = aesEncryptionService.hmac(idCardNumber);
-            boolean isDuplicate = isUpdateFlow
-                    ? ekycProfileRepository.existsByIdcardnumberhashAndStatusAndUseridNot(
-                            idCardNumberHash, "Verified", user)
-                    : ekycProfileRepository.existsByIdcardnumberhashAndStatus(
-                            idCardNumberHash, "Verified");
+        if (idCardNumber == null || idCardNumber.isBlank()) {
+            throw new RuntimeException("Không thể xác minh eKYC khi chưa nhận diện được số CCCD.");
+        }
 
-            if (isDuplicate) {
-                String reason = "Số CCCD này đã được đăng ký bởi một tài khoản khác";
-                self.markAsRejectedNewTx(profile.getId(), reason, now);
-                throw new RuntimeException(
-                        "This identification number is already linked to another account."
-                );
-            }
+        String idCardNumberHash = aesEncryptionService.hmac(idCardNumber);
+        boolean isDuplicate = isUpdateFlow
+                ? ekycProfileRepository.existsByIdcardnumberhashAndStatusAndUseridNot(
+                        idCardNumberHash, "Verified", user)
+                : ekycProfileRepository.existsByIdcardnumberhashAndStatus(
+                        idCardNumberHash, "Verified");
+
+        if (isDuplicate) {
+            String reason = "Số CCCD này đã được đăng ký bởi một tài khoản khác";
+            self.markAsRejectedNewTx(profile.getId(), reason, now);
+            throw new RuntimeException(
+                    "Số CCCD này đã được liên kết với một tài khoản khác."
+            );
         }
 
         // ─ 3. Cập nhật EkycProfile → Verified ────────────────────────────────
         ekycProfileRepository.markAsVerified(profile.getId(), now, now, VERIFICATION_METHOD);
 
         // ─ 4. Mã hóa Số CCCD, Họ tên, Ngày sinh bằng AES-256-GCM ────────────────────────────
-        String encryptedIdCardNumber = idCardNumber != null
-                ? aesEncryptionService.encrypt(idCardNumber)
-                : null;
+        String encryptedIdCardNumber = aesEncryptionService.encrypt(idCardNumber);
         String encryptedFullName = fullName != null ? aesEncryptionService.encrypt(fullName) : null;
         String encryptedDob = dateOfBirth != null ? aesEncryptionService.encrypt(dateOfBirth) : null;
 
@@ -469,12 +598,9 @@ public class EkycServiceImpl implements EkycService {
         // Lưu trạng thái "Verified" vào Redis Cache
         cacheEkycStatus(user.getId(), "Verified");
 
-        String ocrMessage = idCardNumber != null
-                ? " Thông tin CCCD đã được OCR bổ sung."
-                : " OCR chưa đọc được thông tin CCCD và có thể được cập nhật sau.";
         String successMessage = isUpdateFlow
-                ? "Cập nhật FaceID thành công. Khuôn mặt đã sẵn sàng cho check-in." + ocrMessage
-                : "Xác minh khuôn mặt thành công. FaceID đã được kích hoạt cho check-in." + ocrMessage;
+                ? "CCCD đã được xác minh và FaceID đã được cập nhật thành công."
+                : "CCCD đã được xác minh và FaceID đã được đăng ký thành công cho check-in.";
 
         return EkycResponse.builder()
                 .status("Verified")
@@ -493,7 +619,7 @@ public class EkycServiceImpl implements EkycService {
      */
     private String convertToPostgresVectorString(List<Double> embedding) {
         if (embedding == null || embedding.isEmpty()) {
-            throw new RuntimeException("AI Service trả về embedding rỗng");
+            throw new RuntimeException("Face API trả về embedding rỗng");
         }
         if (embedding.size() != 512) {
             throw new RuntimeException("Embedding khuôn mặt phải có đúng 512 phần tử");

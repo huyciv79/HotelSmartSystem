@@ -2,6 +2,7 @@ package com.example.hotelsmartbookingbackend.service.impl;
 
 import com.example.hotelsmartbookingbackend.dto.request.CreateBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CreateGroupBookingRequest;
+import com.example.hotelsmartbookingbackend.dto.response.AiFaceReadinessResponse;
 import com.example.hotelsmartbookingbackend.dto.response.AiFaceVerificationResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
@@ -84,6 +85,9 @@ public class BookingServiceImpl implements BookingService {
     @Value("${ai.service.face-verify-url:http://localhost:8000/api/v1/face/verify}")
     private String aiFaceVerifyUrl;
 
+    @Value("${ai.service.face-readiness-url:http://localhost:8000/api/v1/face/check-readiness}")
+    private String aiFaceReadinessUrl;
+
     @Override
     @Transactional
     public BookingResponse createBooking(CreateBookingRequest request, String customerEmail) {
@@ -136,6 +140,24 @@ public class BookingServiceImpl implements BookingService {
         User customer = userRepository.findByEmail(customerEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
+        String normalizedCheckInMethod = normalizeCheckInMethod(checkInMethod);
+        if ("FaceID".equalsIgnoreCase(normalizedCheckInMethod)) {
+            boolean ekycVerified = ekycProfileRepository.existsByUseridAndStatus(
+                    customer,
+                    "Verified"
+            );
+            boolean faceRegistered = faceembeddingRepository
+                    .findEmbeddingTextByUserId(customer.getId())
+                    .filter(embedding -> !embedding.isBlank())
+                    .isPresent();
+
+            if (!ekycVerified || !faceRegistered) {
+                throw new RuntimeException(
+                        "Bạn phải hoàn thành đăng ký eKYC và khuôn mặt trước khi chọn check-in bằng FaceID"
+                );
+            }
+        }
+
         Roomtype roomtype = roomtypeRepository.findByIdForUpdate(roomTypeId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy loại phòng"));
 
@@ -159,7 +181,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setUserid(customer);
         booking.setBookingreference(generateBookingReference(now));
         booking.setBookingtype(bookingType);
-        booking.setCheckinmethod(normalizeCheckInMethod(checkInMethod));
+        booking.setCheckinmethod(normalizedCheckInMethod);
         booking.setTotalamount(totalAmount);
         booking.setPaidamount(BigDecimal.ZERO);
         booking.setDepositamount(BigDecimal.ZERO);
@@ -419,17 +441,23 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse performFaceCheckIn(
             Integer bookingId,
             MultipartFile selfieImage,
-            MultipartFile leftImage,
-            MultipartFile rightImage,
-            MultipartFile upImage,
-            MultipartFile downImage,
+            MultipartFile challengeImage,
+            MultipartFile challengeImage2,
+            MultipartFile challengeImage3,
+            String challengeDirection,
             String actorEmail
     ) {
         validateSelfie(selfieImage);
-        validateSelfie(leftImage);
-        validateSelfie(rightImage);
-        validateSelfie(upImage);
-        validateSelfie(downImage);
+        validateSelfie(challengeImage);
+        validateSelfie(challengeImage2);
+        validateSelfie(challengeImage3);
+        String normalizedChallengeDirection = challengeDirection == null
+                ? ""
+                : challengeDirection.trim().toLowerCase();
+        if (!normalizedChallengeDirection.equals("left")
+                && !normalizedChallengeDirection.equals("right")) {
+            throw new RuntimeException("Hướng thử thách FaceID không hợp lệ");
+        }
 
         User actor = userRepository.findByEmail(actorEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
@@ -470,26 +498,82 @@ public class BookingServiceImpl implements BookingService {
         AiFaceVerificationResponse verification = callFaceVerificationService(
                 registeredEmbedding,
                 selfieImage,
-                leftImage,
-                rightImage,
-                upImage,
-                downImage
+                challengeImage,
+                challengeImage2,
+                challengeImage3,
+                normalizedChallengeDirection
         );
         if (!Boolean.TRUE.equals(verification.getLivenessPassed())) {
             String livenessMessage = verification.getMessage() != null
                     && !verification.getMessage().isBlank()
                     ? verification.getMessage()
                     : "Không vượt qua kiểm tra liveness";
-            throw new RuntimeException(
-                    livenessMessage
-                            + " Vui lòng dùng khuôn mặt thật trước camera, không dùng ảnh hoặc màn hình");
+            if (Boolean.FALSE.equals(verification.getActiveLivenessPassed())) {
+                throw new RuntimeException(livenessMessage);
+            }
+            throw new RuntimeException(livenessMessage
+                    + " Vui lòng dùng khuôn mặt thật trước camera, không dùng ảnh hoặc màn hình");
         }
         if (!Boolean.TRUE.equals(verification.getVerified())
                 || !Boolean.TRUE.equals(verification.getMatched())) {
-            throw new RuntimeException("Khuôn mặt không khớp với hồ sơ eKYC đã đăng ký");
+            String mismatchMessage = verification.getMessage() != null
+                    && !verification.getMessage().isBlank()
+                    ? verification.getMessage()
+                    : "Check-in bị từ chối: khuôn mặt hiện tại không khớp với khuôn mặt đã đăng ký eKYC.";
+            throw new RuntimeException(mismatchMessage);
         }
 
         return completeCheckIn(booking, detail, actor);
+    }
+
+    @Override
+    public AiFaceReadinessResponse checkFaceReadiness(
+            MultipartFile selfieImage,
+            String actorEmail
+    ) {
+        validateSelfie(selfieImage);
+
+        User actor = userRepository.findByEmail(actorEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+        if (!"manager".equalsIgnoreCase(actor.getRole().name())) {
+            throw new RuntimeException("Chỉ Manager mới được kiểm tra camera FaceID");
+        }
+
+        MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+        addFaceImagePart(
+                bodyBuilder,
+                "selfie_image",
+                selfieImage,
+                "face-readiness.jpg"
+        );
+
+        try {
+            AiFaceReadinessResponse response = webClient.post()
+                    .uri(aiFaceReadinessUrl)
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                    .retrieve()
+                    .bodyToMono(AiFaceReadinessResponse.class)
+                    .timeout(Duration.ofSeconds(30))
+                    .block();
+
+            if (response == null) {
+                throw new RuntimeException("Face readiness API trả về phản hồi rỗng");
+            }
+            return response;
+        } catch (WebClientResponseException ex) {
+            throw new RuntimeException(
+                    "Face readiness API lỗi: " + ex.getResponseBodyAsString(),
+                    ex
+            );
+        } catch (RuntimeException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new RuntimeException(
+                    "Không thể kết nối tới dịch vụ kiểm tra camera FaceID",
+                    ex
+            );
+        }
     }
 
     private BookingResponse completeCheckIn(
@@ -655,20 +739,36 @@ public class BookingServiceImpl implements BookingService {
     private AiFaceVerificationResponse callFaceVerificationService(
             String registeredEmbedding,
             MultipartFile selfieImage,
-            MultipartFile leftImage,
-            MultipartFile rightImage,
-            MultipartFile upImage,
-            MultipartFile downImage
+            MultipartFile challengeImage,
+            MultipartFile challengeImage2,
+            MultipartFile challengeImage3,
+            String challengeDirection
     ) {
         MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
         bodyBuilder.part("registered_embedding", registeredEmbedding)
                 .contentType(MediaType.TEXT_PLAIN);
 
         addFaceImagePart(bodyBuilder, "selfie_image", selfieImage, "face-center.jpg");
-        addFaceImagePart(bodyBuilder, "left_image", leftImage, "face-left.jpg");
-        addFaceImagePart(bodyBuilder, "right_image", rightImage, "face-right.jpg");
-        addFaceImagePart(bodyBuilder, "up_image", upImage, "face-up.jpg");
-        addFaceImagePart(bodyBuilder, "down_image", downImage, "face-down.jpg");
+        addFaceImagePart(
+                bodyBuilder,
+                "challenge_image",
+                challengeImage,
+                "face-challenge.jpg"
+        );
+        addFaceImagePart(
+                bodyBuilder,
+                "challenge_image_2",
+                challengeImage2,
+                "face-challenge-2.jpg"
+        );
+        addFaceImagePart(
+                bodyBuilder,
+                "challenge_image_3",
+                challengeImage3,
+                "face-challenge-3.jpg"
+        );
+        bodyBuilder.part("challenge_direction", challengeDirection)
+                .contentType(MediaType.TEXT_PLAIN);
 
         try {
             AiFaceVerificationResponse response = webClient.post()
