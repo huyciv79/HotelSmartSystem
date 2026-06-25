@@ -56,6 +56,10 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/bookings/*/face-check-in"
                         ).hasRole("MANAGER")
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/rooms/status",
+                                "/api/rooms/*/status"
+                        ).hasAnyRole("RECEPTIONIST", "MANAGER")
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
