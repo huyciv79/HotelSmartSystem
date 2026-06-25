@@ -7,6 +7,7 @@ import com.example.hotelsmartbookingbackend.dto.request.UpdateBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CancelBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
+import com.example.hotelsmartbookingbackend.dto.response.AiFaceReadinessResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,10 +28,15 @@ public interface BookingService {
     BookingResponse performFaceCheckIn(
             Integer bookingId,
             MultipartFile selfieImage,
-            MultipartFile leftImage,
-            MultipartFile rightImage,
-            MultipartFile upImage,
-            MultipartFile downImage,
+            MultipartFile challengeImage,
+            MultipartFile challengeImage2,
+            MultipartFile challengeImage3,
+            String challengeDirection,
+            String actorEmail
+    );
+
+    AiFaceReadinessResponse checkFaceReadiness(
+            MultipartFile selfieImage,
             String actorEmail
     );
 

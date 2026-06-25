@@ -1,8 +1,12 @@
 # 🛡️ eKYC AI Service
 
 FastAPI microservice xác thực danh tính điện tử (eKYC) tích hợp:
-- **DeepFace** – So sánh khuôn mặt & trích xuất vector 512 chiều
-- **EasyOCR** – Đọc thông tin CCCD/CMND (hỗ trợ tiếng Việt)
+- **DeepFace** – Đăng ký embedding selfie và xác minh khuôn mặt khi check-in
+- **YOLOv11** – Phát hiện vùng số CCCD, họ tên và ngày sinh
+- **VietOCR** – Đọc tiếng Việt trong từng vùng thông tin
+
+Ảnh CCCD chỉ dùng cho OCR/hồ sơ. Khi đăng ký eKYC, hệ thống không so sánh
+chân dung trên CCCD với selfie. Việc đối chiếu khuôn mặt chỉ diễn ra tại check-in.
 
 ---
 
@@ -54,7 +58,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-> **Lưu ý:** Lần đầu chạy, DeepFace sẽ tự động tải model **Facenet512** (~90MB) và EasyOCR sẽ tải model tiếng Việt. Cần kết nối Internet.
+> **Lưu ý:** Lần đầu chạy cần Internet để tải model **Facenet512**, weight YOLO từ Hugging Face và weight VietOCR. Các model được cache cho những lần chạy sau.
 
 ### 3. Cấu hình biến môi trường
 
@@ -88,8 +92,7 @@ Truy cập **Swagger UI**: http://localhost:8000/docs
 ```json
 {
   "front_image_url": "https://example.com/cccd_front.jpg",
-  "back_image_url":  "https://example.com/cccd_back.jpg",
-  "face_image_url":  "https://example.com/selfie.jpg"
+  "back_image_url":  "https://example.com/cccd_back.jpg"
 }
 ```
 
@@ -97,32 +100,41 @@ Truy cập **Swagger UI**: http://localhost:8000/docs
 
 ```json
 {
-  "success": true,
-  "message": "Xác thực thành công – khuôn mặt KHỚP.",
-  "face_verification": {
-    "is_matched": true,
-    "confidence_score": 0.8731,
-    "distance": 0.1269,
-    "model_used": "Facenet512",
-    "detector_used": "opencv"
-  },
-  "face_embedding": [0.01234567, -0.00987654, ...],  // 512 phần tử
-  "ocr_info": {
-    "id_number": "012345678901",
-    "full_name": "NGUYỄN VĂN A",
-    "dob": "01/01/1990",
-    "raw_text": "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\n..."
-  }
+  "id_card_number": "012345678901",
+  "full_name": "NGUYỄN VĂN A",
+  "date_of_birth": "01/01/1990"
 }
 ```
 
-**Response lỗi không tìm thấy khuôn mặt (400):**
+Pipeline OCR:
 
-```json
-{
-  "detail": "Không tìm thấy khuôn mặt trong một hoặc cả hai ảnh. Hãy đảm bảo ảnh rõ nét và chứa khuôn mặt."
-}
-```
+1. Tải và kiểm tra ảnh mặt trước/mặt sau.
+2. YOLOv11 phát hiện các class `id_number`, `full_name`, `dob`.
+3. Chọn box có confidence cao nhất cho từng class.
+4. Thêm padding cố định 6 px, chuẩn hóa chiều cao 80 px, sharpening kernel tâm 9 và normalize tương phản.
+5. VietOCR đọc từng vùng và hậu xử lý theo kiểu dữ liệu.
+
+Selfie không được gửi tới API này. Đăng ký khuôn mặt thực hiện riêng qua
+`POST /api/v1/face/enroll`.
+
+### `POST /api/v1/face/enroll`
+
+Nhận năm multipart field `selfie_image`, `left_image`, `right_image`, `up_image`,
+`down_image`. Endpoint kiểm tra active liveness, anti-spoofing, xác nhận năm frame
+thuộc cùng một người rồi tổng hợp thành face template 512 chiều để Spring Boot lưu.
+Endpoint không nhận và không so sánh ảnh CCCD.
+
+### `POST /api/v1/face/check-readiness`
+
+Nhận một frame preview và trả trạng thái sẵn sàng trước khi quét liveness. Endpoint yêu cầu đúng
+một khuôn mặt, khuôn mặt có chiều rộng/chiều cao tối thiểu và đang nhìn thẳng; không tạo embedding
+và không lưu ảnh.
+
+### `POST /api/v1/face/verify`
+
+Nhận face template đã đăng ký, một frame nhìn thẳng và một frame thử thách quay trái
+hoặc phải. Endpoint kiểm tra express active liveness, anti-spoofing rồi so sánh khuôn
+mặt check-in với face template nhiều góc đã đăng ký.
 
 ---
 
@@ -132,15 +144,24 @@ Truy cập **Swagger UI**: http://localhost:8000/docs
 |-----------------------|---------------|-----------------------------------------------|
 | `DEEPFACE_MODEL`      | `Facenet512`  | Model face embedding (512-dim)                |
 | `LIVENESS_MIN_SCORE`  | `0.80`        | Độ tin cậy tối thiểu để vượt qua anti-spoofing |
-| `ACTIVE_LIVENESS_CENTER_MAX_YAW` | `0.12` | Độ lệch tối đa khi nhìn chính diện |
-| `ACTIVE_LIVENESS_SIDE_MIN_YAW` | `0.13` | Độ lệch tối thiểu cho mỗi lần quay đầu |
-| `ACTIVE_LIVENESS_VERTICAL_MIN_DELTA` | `0.04` | Độ lệch tối thiểu khi nhìn lên hoặc xuống |
-| `ACTIVE_LIVENESS_MIN_PITCH_RANGE` | `0.10` | Khoảng cách tối thiểu giữa frame nhìn lên và nhìn xuống |
+| `ACTIVE_LIVENESS_CENTER_MAX_YAW` | `0.08` | Độ lệch tối đa khi nhìn chính diện |
+| `ACTIVE_LIVENESS_SIDE_MIN_YAW` | `0.20` | Độ lệch tối thiểu cho mỗi lần quay đầu |
+| `ACTIVE_LIVENESS_MIN_YAW_RANGE` | `0.42` | Khoảng cách tối thiểu giữa hai frame quay trái/phải |
+| `ACTIVE_LIVENESS_VERTICAL_MIN_DELTA` | `0.08` | Độ lệch tối thiểu khi nhìn lên hoặc xuống |
+| `ACTIVE_LIVENESS_MIN_PITCH_RANGE` | `0.18` | Khoảng cách tối thiểu giữa frame nhìn lên và nhìn xuống |
+| `FACE_READINESS_MIN_SIZE` | `96` | Chiều rộng và chiều cao tối thiểu của khuôn mặt trong frame preview |
 | `DEEPFACE_DETECTOR`   | `opencv`      | Face detector (`retinaface` chính xác hơn)    |
 | `DEEPFACE_DISTANCE`   | `cosine`      | Metric đo khoảng cách vector                  |
-| `FACE_MATCH_THRESHOLD`| `0.40`        | Ngưỡng cosine distance để xác nhận khớp       |
-| `OCR_LANGUAGES`       | `["vi","en"]` | Ngôn ngữ EasyOCR                              |
-| `OCR_GPU`             | `False`       | Bật CUDA cho EasyOCR                          |
+| `FACE_MATCH_THRESHOLD`| `0.30`        | Ngưỡng cosine distance để xác nhận khớp       |
+| `FACE_ENROLLMENT_CONSISTENCY_THRESHOLD` | `0.48` | Ngưỡng đảm bảo các frame đăng ký thuộc cùng một người |
+| `HF_REPO_ID`          | Repo model    | Hugging Face repository chứa weight YOLO      |
+| `HF_MODEL_FILE`       | `best.pt`     | Tên file weight YOLO                          |
+| `CCCD_YOLO_CONFIDENCE`| `0.15`        | Confidence tối thiểu của detection            |
+| `CCCD_YOLO_AGNOSTIC_NMS` | `True`     | Dùng class-agnostic NMS như pipeline Colab     |
+| `OCR_PADDING_PIXELS`  | `6`           | Lề cố định quanh vùng YOLO trước khi OCR       |
+| `CCCD_YOLO_IOU`       | `0.50`        | IoU threshold cho class-aware NMS             |
+| `VIETOCR_CONFIG`      | `vgg_transformer` | Cấu hình VietOCR                          |
+| `OCR_DEVICE`          | `auto`        | Tự chọn CUDA nếu có, ngược lại dùng CPU       |
 
 ### 💡 Model hỗ trợ embedding 512 chiều
 - **`Facenet512`** ← *Được khuyến nghị* – Chính xác cao, cân bằng tốc độ/độ chính xác
@@ -153,8 +174,8 @@ Truy cập **Swagger UI**: http://localhost:8000/docs
 
 ```bash
 # Tất cả trong một lệnh:
-pip install fastapi uvicorn[standard] deepface easyocr tensorflow \
-            Pillow numpy opencv-python-headless requests \
+pip install fastapi uvicorn[standard] deepface ultralytics vietocr \
+            huggingface-hub tensorflow Pillow numpy opencv-python-headless requests \
             pydantic-settings python-dotenv
 ```
 
@@ -169,8 +190,7 @@ Gọi từ Java (Spring Boot) bằng `RestTemplate` hoặc `WebClient`:
 String eKYCUrl = "http://localhost:8000/api/v1/ai/verify-ekyc";
 Map<String, String> body = Map.of(
     "front_image_url", frontUrl,
-    "back_image_url",  backUrl,
-    "face_image_url",  selfieUrl
+    "back_image_url",  backUrl
 );
 ResponseEntity<EKYCResponse> response = restTemplate.postForEntity(eKYCUrl, body, EKYCResponse.class);
 ```

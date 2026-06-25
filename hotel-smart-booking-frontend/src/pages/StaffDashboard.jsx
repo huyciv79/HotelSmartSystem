@@ -179,6 +179,7 @@ export default function StaffDashboard({ setActivePage }) {
             roomKeyStatus: bk.roomKeyStatus || '',
             roomKeyExpiresAt: bk.roomKeyExpiresAt || null,
             roomAccesses: bk.roomAccesses || [],
+            ekycIdentity: bk.ekycIdentity || null,
             checkInMethod: bk.checkInMethod || 'Manual',
             bookingType: bk.bookingType || 'Online',
             guestPhone: bk.guestPhone || '',
@@ -240,6 +241,7 @@ export default function StaffDashboard({ setActivePage }) {
     roomKeyStatus: bookingResult.roomKeyStatus ?? booking.roomKeyStatus,
     roomKeyExpiresAt: bookingResult.roomKeyExpiresAt ?? booking.roomKeyExpiresAt,
     roomAccesses: bookingResult.roomAccesses ?? booking.roomAccesses ?? [],
+    ekycIdentity: bookingResult.ekycIdentity ?? booking.ekycIdentity ?? null,
   });
 
   const completeScannerAction = async () => {
@@ -361,7 +363,7 @@ export default function StaffDashboard({ setActivePage }) {
       adultCapacity: String(room.adultCapacity || room.adultcapacity || '2'),
       childCapacity: String(room.childCapacity || room.childcapacity || '1'),
       bedType: room.bedType || 'Giường Đôi King Size',
-      roomSize: String(room.roomSize || room.roomsize || '35'),
+      roomSize: String(room.area || room.roomSize || room.roomsize || '35'),
       status: room.status || 'Active',
       description: room.description || ''
     });
@@ -390,11 +392,14 @@ export default function StaffDashboard({ setActivePage }) {
       formData.append('adultCapacity', roomFormData.adultCapacity);
       formData.append('childCapacity', roomFormData.childCapacity);
       formData.append('bedType', roomFormData.bedType);
-      formData.append('roomSize', roomFormData.roomSize);
+      formData.append('area', roomFormData.roomSize);
       formData.append('status', roomFormData.status);
       formData.append('description', roomFormData.description);
       if (roomImage) {
-        formData.append('image', roomImage);
+        formData.append('images', roomImage);
+        if (editingRoom) {
+          formData.append('replaceImages', 'true');
+        }
       }
 
       if (editingRoom) {

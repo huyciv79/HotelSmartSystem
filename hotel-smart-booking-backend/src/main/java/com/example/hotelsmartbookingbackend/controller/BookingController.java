@@ -6,6 +6,7 @@ import com.example.hotelsmartbookingbackend.dto.request.BookingFilter;
 import com.example.hotelsmartbookingbackend.dto.request.UpdateBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CancelBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.response.ApiResponse;
+import com.example.hotelsmartbookingbackend.dto.response.AiFaceReadinessResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
@@ -93,28 +94,50 @@ public class BookingController {
     )
     @Operation(
             summary = "Liveness detection và FaceID check-in",
-            description = "Chỉ Manager được gọi. Camera tự lấy frame khi khách nhìn thẳng, quay trái, quay phải, nhìn lên và nhìn xuống; sau đó hệ thống kiểm tra active liveness, anti-spoofing và hồ sơ eKYC."
+            description = "Chỉ Manager được gọi. Camera lấy frame chính diện và một hướng quay ngẫu nhiên; hệ thống kiểm tra active liveness nhanh, anti-spoofing và face template nhiều góc đã đăng ký."
     )
     public ResponseEntity<ApiResponse<BookingResponse>> faceCheckIn(
             @PathVariable Integer bookingId,
             @RequestPart("selfieImage") MultipartFile selfieImage,
-            @RequestPart("leftImage") MultipartFile leftImage,
-            @RequestPart("rightImage") MultipartFile rightImage,
-            @RequestPart("upImage") MultipartFile upImage,
-            @RequestPart("downImage") MultipartFile downImage,
+            @RequestPart("challengeImage") MultipartFile challengeImage,
+            @RequestPart("challengeImage2") MultipartFile challengeImage2,
+            @RequestPart("challengeImage3") MultipartFile challengeImage3,
+            @RequestPart("challengeDirection") String challengeDirection,
             Authentication authentication) {
         String actorEmail = resolveCustomerEmail(authentication);
         BookingResponse response = bookingService.performFaceCheckIn(
                 bookingId,
                 selfieImage,
-                leftImage,
-                rightImage,
-                upImage,
-                downImage,
+                challengeImage,
+                challengeImage2,
+                challengeImage3,
+                challengeDirection,
                 actorEmail
         );
         return ResponseEntity.ok(ApiResponse.success(
                 "Xác minh khuôn mặt và nhận phòng thành công",
+                response
+        ));
+    }
+
+    @PostMapping(
+            value = "/face-readiness",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @Operation(
+            summary = "Kiểm tra camera trước khi quét FaceID",
+            description = "Chỉ Manager được gọi. Kiểm tra đúng một khuôn mặt, đủ gần và nhìn thẳng."
+    )
+    public ResponseEntity<ApiResponse<AiFaceReadinessResponse>> checkFaceReadiness(
+            @RequestPart("selfieImage") MultipartFile selfieImage,
+            Authentication authentication) {
+        String actorEmail = resolveCustomerEmail(authentication);
+        AiFaceReadinessResponse response = bookingService.checkFaceReadiness(
+                selfieImage,
+                actorEmail
+        );
+        return ResponseEntity.ok(ApiResponse.success(
+                "Kiểm tra camera FaceID thành công",
                 response
         ));
     }

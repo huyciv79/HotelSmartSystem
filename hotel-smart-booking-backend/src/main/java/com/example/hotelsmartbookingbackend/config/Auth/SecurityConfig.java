@@ -54,7 +54,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/room-types/**").hasRole("MANAGER")
                         .requestMatchers(
                                 HttpMethod.POST,
-                                "/api/bookings/*/face-check-in"
+                                "/api/bookings/*/face-check-in",
+                                "/api/bookings/face-readiness"
                         ).hasRole("MANAGER")
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/error").permitAll()

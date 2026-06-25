@@ -4,26 +4,23 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import java.time.Instant;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class EkycStatusResponse {
-    private String status; // "VERIFIED", "PENDING", "REJECTED", "NOT_FOUND"
-    private String message;
+public class EkycIdentitySummaryResponse {
+    private String status;
     private String fullName;
     private String idNumber;
     private String dateOfBirth;
-    private String address;
     private String gender;
     private String hometown;
     private String provinceCode;
     private String provinceName;
     private Instant verifiedAt;
-    private String rejectionReason;
-    private String requestId;
     private String frontImage;
     private String backImage;
     private String faceImage;
