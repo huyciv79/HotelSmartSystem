@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.example.hotelsmartbookingbackend.dto.response.RoomStatusResponse;
+import java.util.List;
+
 
 @RestController
 @RequestMapping("/api/rooms")
@@ -67,6 +70,34 @@ public class RoomController {
             @Valid @RequestBody UpdateRoomRequest request) {
         RoomDetailDTO updated = roomService.updateRoom(id, request);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật phòng thành công", updated));
+    }
+    @GetMapping("/status")
+    public ResponseEntity<ApiResponse<List<RoomStatusResponse>>> getAllRoomStatuses() {
+
+        List<RoomStatusResponse> result =
+                roomService.getAllRoomStatuses();
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Lấy trạng thái phòng thành công",
+                        result
+                )
+        );
+    }
+    @GetMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<RoomStatusResponse>> getRoomStatus(
+            @PathVariable Integer id
+    ) {
+
+        RoomStatusResponse result =
+                roomService.getRoomStatus(id);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Lấy trạng thái phòng thành công",
+                        result
+                )
+        );
     }
 }
 
