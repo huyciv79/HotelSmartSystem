@@ -41,17 +41,23 @@ class Settings(BaseSettings):
     # ── CCCD field detection (YOLOv11 on Hugging Face) ─────────────────────
     HF_TOKEN: Optional[str] = None
     HF_REPO_ID: str = "phamminhanh2004/hotel-cccd-ocr-v11"
+    HF_ONNX_MODEL_FILE: str = "best.onnx"
     HF_MODEL_FILE: str = "best.pt"
     HF_REVISION: Optional[str] = None
+    OCR_REVISION: Optional[str] = None
+    TROCR_REVISION: Optional[str] = None
     CCCD_YOLO_IMAGE_SIZE: int = 640
     CCCD_YOLO_CONFIDENCE: float = 0.15
     CCCD_YOLO_IOU: float = 0.50
     CCCD_YOLO_AGNOSTIC_NMS: bool = True
 
     # ── VietOCR ─────────────────────────────────────────────────────────────
+    VIETOCR_REPO_ID: Optional[str] = None
+    VIETOCR_WEIGHTS_FILE: str = "vgg_transformer.pth"
+    VIETOCR_REVISION: Optional[str] = None
     VIETOCR_CONFIG: str = "vgg_transformer"
     VIETOCR_CONFIG_PATH: str = "config/vietocr-vgg-transformer.yml"
-    VIETOCR_WEIGHTS_URL: str = "https://vocr.vn/data/vietocr/vgg_transformer.pth"
+    VIETOCR_WEIGHTS_URL: Optional[str] = None
     OCR_DEVICE: str = "auto"                # auto | cpu | cuda | cuda:0
     OCR_CROP_HEIGHT: int = 80
     OCR_PADDING_PIXELS: int = 6

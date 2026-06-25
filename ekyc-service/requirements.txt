@@ -29,6 +29,8 @@ torchvision>=0.16.0,<1.0.0
 ultralytics>=8.3.0,<9.0.0
 vietocr==0.3.13
 huggingface-hub>=0.27.0,<2.0.0
+onnxruntime>=1.18.0,<2.0.0
+streamlit>=1.36.0,<2.0.0
 
 # Deep Learning Backend
 tensorflow==2.17.0
@@ -36,3 +38,7 @@ tf-keras==2.17.0
 
 # Logging & Utilities
 python-dotenv==1.0.1
+
+onnx>=1.16.0,<1.17.0
+ml-dtypes>=0.3.1,<0.5.0
+onnxruntime>=1.18.0,<2.0.0

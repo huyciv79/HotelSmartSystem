@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Camera,
   CheckCircle2,
+  FileText,
+  ImageIcon,
   KeyRound,
   Loader2,
   RefreshCcw,
@@ -56,6 +58,140 @@ const INITIAL_READINESS = {
   code: 'IDLE',
   reason: 'Đưa một khuôn mặt vào giữa khung để hệ thống kiểm tra.',
 };
+
+const formatIdentityValue = (value) => {
+  if (value === null || value === undefined) return '—';
+  const text = String(value).trim();
+  return text || '—';
+};
+
+const isVerifiedIdentity = (identity) =>
+  String(identity?.status || '').trim().toUpperCase() === 'VERIFIED';
+
+function IdentityInfoRow({ label, value }) {
+  return (
+    <div className="border-b border-white/5 pb-3">
+      <span className="block text-[9px] font-bold uppercase tracking-widest text-white/40">
+        {label}
+      </span>
+      <span className="mt-1.5 block text-xs font-black uppercase tracking-wider text-white break-words">
+        {formatIdentityValue(value)}
+      </span>
+    </div>
+  );
+}
+
+function IdentityDocumentTile({ label, src }) {
+  const [hasError, setHasError] = useState(!src);
+
+  useEffect(() => {
+    setHasError(!src);
+  }, [src]);
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <span className="text-[9px] uppercase tracking-widest text-white/40 font-bold">
+        {label}
+      </span>
+      <div className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden border border-white/10 bg-white/[0.03]">
+        {hasError ? (
+          <div className="flex flex-col items-center gap-2 px-3 text-center">
+            <ImageIcon size={18} className="text-slate-600" />
+            <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">
+              Chưa có ảnh
+            </span>
+          </div>
+        ) : (
+          <img
+            src={src}
+            alt={label}
+            onError={() => setHasError(true)}
+            className="h-full w-full object-cover"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function IdentitySummaryPanel({ identity }) {
+  if (!identity) {
+    return (
+      <div className="border border-amber-900/50 bg-amber-950/20 p-4">
+        <div className="flex items-start gap-3">
+          <FileText size={18} className="mt-0.5 text-amber-300" />
+          <div>
+            <span className="block text-[10px] font-black uppercase tracking-widest text-amber-300">
+              Chưa có dữ liệu eKYC
+            </span>
+            <p className="mt-1 mb-0 text-[10px] font-bold uppercase tracking-wider leading-relaxed text-amber-100/60">
+              Booking này chưa trả về hồ sơ danh tính để đối chiếu nhanh tại quầy.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const verified = isVerifiedIdentity(identity);
+  const hometown = identity.hometown || identity.provinceName;
+
+  return (
+    <div className="space-y-5 border border-neutral-800 bg-neutral-950 p-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-green-900/50 bg-green-950/30">
+            <ShieldCheck size={20} className="text-green-400" />
+          </div>
+          <div>
+            <span className="block text-[10px] font-black uppercase tracking-[0.22em] text-green-400">
+              {verified ? 'ĐÃ XÁC MINH DANH TÍNH' : 'HỒ SƠ eKYC ĐANG THEO DÕI'}
+            </span>
+            <span className="mt-1.5 block text-[10px] font-black uppercase tracking-widest text-white">
+              {verified
+                ? 'ĐÃ KÍCH HOẠT FACEID EXPRESS CHECK-IN'
+                : 'FACEID CHECK-IN CẦN HỒ SƠ VERIFIED'}
+            </span>
+            {identity.verifiedAt && (
+              <span className="mt-2 block text-[8px] font-bold uppercase tracking-widest text-slate-500">
+                Đã xác minh vào {new Date(identity.verifiedAt).toLocaleDateString('vi-VN')}
+              </span>
+            )}
+          </div>
+        </div>
+        <span className="w-fit border border-green-900/40 bg-green-950/20 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-green-300">
+          {formatIdentityValue(identity.status)}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <IdentityInfoRow label="Họ và tên" value={identity.fullName} />
+        <IdentityInfoRow label="Số CCCD/CMND" value={identity.idNumber} />
+        <IdentityInfoRow label="Ngày sinh" value={identity.dateOfBirth} />
+        <IdentityInfoRow label="Giới tính" value={identity.gender} />
+        <IdentityInfoRow label="Quê quán (suy từ CCCD)" value={hometown} />
+        <IdentityInfoRow label="Mã tỉnh CCCD" value={identity.provinceCode} />
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+          <FileText size={14} className="text-primary" />
+          <h5 className="m-0 text-xs font-black uppercase tracking-widest text-white">
+            Tài liệu đã tải lên
+          </h5>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <IdentityDocumentTile label="Mặt trước CCCD" src={identity.frontImage} />
+          <IdentityDocumentTile label="Mặt sau CCCD" src={identity.backImage} />
+          <IdentityDocumentTile
+            label="Ảnh chân dung (Selfie)"
+            src={identity.faceImage}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function FaceCheckInStation({
   bookings,
@@ -645,6 +781,10 @@ export default function FaceCheckInStation({
                   eKYC required
                 </span>
               </div>
+
+              <IdentitySummaryPanel
+                identity={selectedBooking.ekycIdentity}
+              />
 
               {result ? (
                 <div className="min-h-[475px] flex flex-col items-center justify-center text-center bg-green-950/10 border border-green-900/40 p-8">

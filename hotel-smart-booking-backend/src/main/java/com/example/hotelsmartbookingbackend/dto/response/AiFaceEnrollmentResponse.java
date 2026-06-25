@@ -34,4 +34,33 @@ public class AiFaceEnrollmentResponse {
     private String detectorUsed;
 
     private List<Double> embedding;
+
+    @JsonProperty("angle_embeddings")
+    private List<FaceAngleEmbedding> angleEmbeddings;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FaceAngleEmbedding {
+        private String pose;
+
+        private List<Double> embedding;
+
+        @JsonProperty("yaw_score")
+        private Double yawScore;
+
+        @JsonProperty("pitch_score")
+        private Double pitchScore;
+
+        @JsonProperty("quality_score")
+        private Double qualityScore;
+
+        @JsonProperty("liveness_score")
+        private Double livenessScore;
+
+        private Boolean available;
+
+        @JsonProperty("fail_reason")
+        private String failReason;
+    }
 }

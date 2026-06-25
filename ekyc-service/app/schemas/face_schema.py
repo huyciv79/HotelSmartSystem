@@ -20,6 +20,17 @@ class FrameValidationResponse(BaseModel):
     face_threshold: Optional[float] = None
 
 
+class FaceAngleEmbedding(BaseModel):
+    pose: str
+    embedding: List[float]
+    yaw_score: Optional[float] = None
+    pitch_score: Optional[float] = None
+    quality_score: Optional[float] = None
+    liveness_score: Optional[float] = None
+    available: bool = True
+    fail_reason: Optional[str] = None
+
+
 class FaceEnrollmentResponse(BaseModel):
     enrolled: bool
     liveness_passed: bool
@@ -32,6 +43,10 @@ class FaceEnrollmentResponse(BaseModel):
             "Face template 512 chiều tổng hợp từ các góc chính diện, trái, phải, "
             "lên và xuống sau khi vượt qua liveness."
         ),
+    )
+    angle_embeddings: List[FaceAngleEmbedding] = Field(
+        default_factory=list,
+        description="Per-pose embeddings and scan metadata captured during enrollment.",
     )
 
 

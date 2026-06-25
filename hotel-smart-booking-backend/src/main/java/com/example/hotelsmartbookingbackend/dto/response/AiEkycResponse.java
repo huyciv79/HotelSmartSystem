@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * DTO ánh xạ phản hồi OCR CCCD từ Python AI Service.
  * Endpoint: POST http://localhost:8000/api/v1/ai/verify-ekyc
@@ -43,5 +46,35 @@ public class AiEkycResponse {
      */
     @JsonProperty("date_of_birth")
     private String dateOfBirth;
+
+    @JsonProperty("gender")
+    private String gender;
+
+    @JsonProperty("hometown")
+    private String hometown;
+
+    @JsonProperty("validation_passed")
+    private Boolean validationPassed;
+
+    @JsonProperty("validation_errors")
+    private List<String> validationErrors;
+
+    @JsonProperty("validation_warnings")
+    private List<String> validationWarnings;
+
+    @JsonProperty("logic_gender")
+    private String logicGender;
+
+    @JsonProperty("logic_birth_year")
+    private Integer logicBirthYear;
+
+    @JsonProperty("province_code")
+    private String provinceCode;
+
+    @JsonProperty("province_name")
+    private String provinceName;
+
+    @JsonProperty("corrected_fields")
+    private Map<String, String> correctedFields;
 
 }

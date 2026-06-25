@@ -22,7 +22,8 @@ router = APIRouter(
     summary="Trích xuất thông tin mặt trước CCCD",
     description=(
         "Tải ảnh CCCD, dùng YOLOv11 phát hiện các vùng id_number, full_name và dob, "
-        "sau đó dùng VietOCR để đọc tiếng Việt. API này không nhận selfie, "
+        "sau đó dùng VietOCR để đọc tiếng Việt. Giới tính và quê quán/tỉnh thành được suy từ số CCCD, "
+        "không đọc từ vùng giới tính/quê quán bằng OCR. API này không nhận selfie, "
         "không tạo embedding và không so sánh khuôn mặt."
     ),
     responses={
@@ -59,7 +60,7 @@ async def verify_ekyc(payload: EKYCRequest) -> EKYCResponse:
         )
 
     try:
-        id_card_number, full_name, date_of_birth = extract_id_card_details(front_img)
+        details = extract_id_card_details(front_img)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -73,7 +74,19 @@ async def verify_ekyc(payload: EKYCRequest) -> EKYCResponse:
         ) from exc
 
     return EKYCResponse(
-        id_card_number=id_card_number,
-        full_name=full_name,
-        date_of_birth=date_of_birth,
+        id_card_number=details.get("id_card_number"),
+        full_name=details.get("full_name"),
+        date_of_birth=details.get("date_of_birth"),
+        gender=details.get("gender"),
+        hometown=details.get("hometown"),
+        validation_passed=details.get("validation_passed", False),
+        validation_errors=details.get("validation_errors", []),
+        validation_warnings=details.get("validation_warnings", []),
+        logic_gender=details.get("logic_gender"),
+        logic_birth_year=details.get("logic_birth_year"),
+        province_code=details.get("province_code"),
+        province_name=details.get("province_name"),
+        corrected_fields=details.get("corrected_fields", {}),
+        raw_fields=details.get("raw_fields", {}),
+        detection_confidences=details.get("detection_confidences", {}),
     )

@@ -611,6 +611,45 @@ async def enroll_face(
             detail=str(exc),
         ) from exc
 
+    angle_embeddings = [
+        {
+            "pose": "center",
+            "embedding": embeddings[0],
+            "yaw_score": center_analysis["yaw_score"],
+            "pitch_score": center_analysis["pitch_score"],
+            "liveness_score": passive_liveness.get("liveness_score"),
+            "available": True,
+        },
+        {
+            "pose": "left",
+            "embedding": embeddings[1],
+            "yaw_score": left_analysis["yaw_score"],
+            "pitch_score": left_analysis["pitch_score"],
+            "available": True,
+        },
+        {
+            "pose": "right",
+            "embedding": embeddings[2],
+            "yaw_score": right_analysis["yaw_score"],
+            "pitch_score": right_analysis["pitch_score"],
+            "available": True,
+        },
+        {
+            "pose": "up",
+            "embedding": embeddings[3],
+            "yaw_score": up_analysis["yaw_score"],
+            "pitch_score": up_analysis["pitch_score"],
+            "available": True,
+        },
+        {
+            "pose": "down",
+            "embedding": embeddings[4],
+            "yaw_score": down_analysis["yaw_score"],
+            "pitch_score": down_analysis["pitch_score"],
+            "available": True,
+        },
+    ]
+
     return FaceEnrollmentResponse(
         enrolled=True,
         liveness_passed=True,
@@ -619,6 +658,7 @@ async def enroll_face(
         model_used=settings.DEEPFACE_MODEL,
         detector_used=settings.FACE_RECOGNITION_DETECTOR,
         embedding=face_template,
+        angle_embeddings=angle_embeddings,
     )
 
 

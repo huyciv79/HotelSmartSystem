@@ -6,6 +6,7 @@ import com.example.hotelsmartbookingbackend.dto.response.AiFaceReadinessResponse
 import com.example.hotelsmartbookingbackend.dto.response.AiFaceVerificationResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
+import com.example.hotelsmartbookingbackend.dto.response.EkycIdentitySummaryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.RoomAccessResponse;
 import com.example.hotelsmartbookingbackend.entity.Booking;
 import com.example.hotelsmartbookingbackend.entity.BookingRoomAccess;
@@ -22,6 +23,7 @@ import com.example.hotelsmartbookingbackend.repository.RoomRepository;
 import com.example.hotelsmartbookingbackend.repository.RoomtypeRepository;
 import com.example.hotelsmartbookingbackend.repository.UserRepository;
 import com.example.hotelsmartbookingbackend.service.BookingService;
+import com.example.hotelsmartbookingbackend.service.SupabaseStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -80,6 +82,8 @@ public class BookingServiceImpl implements BookingService {
     private final UserRepository userRepository;
     private final EkycProfileRepository ekycProfileRepository;
     private final FaceembeddingRepository faceembeddingRepository;
+    private final AesEncryptionService aesEncryptionService;
+    private final SupabaseStorageService supabaseStorageService;
     private final WebClient webClient;
 
     @Value("${ai.service.face-verify-url:http://localhost:8000/api/v1/face/verify}")
@@ -366,8 +370,75 @@ public class BookingServiceImpl implements BookingService {
                 .roomKeyGeneratedAt(detail.getRoomkeygeneratedat())
                 .roomKeyExpiresAt(detail.getRoomkeyexpiredat())
                 .roomAccesses(roomAccesses)
+                .ekycIdentity(mapEkycIdentitySummary(booking.getUserid()))
                 .createdAt(booking.getCreatedat())
                 .build();
+    }
+
+    private EkycIdentitySummaryResponse mapEkycIdentitySummary(User customer) {
+        if (customer == null) {
+            return null;
+        }
+
+        return ekycProfileRepository.findTopByUseridOrderByCreatedatDesc(customer)
+                .map(profile -> {
+                    String idNumber = decryptOrNull(profile.getIdcardnumber());
+                    String fullName = decryptOrNull(profile.getFullname());
+                    String dateOfBirth = decryptOrNull(profile.getDateofbirth());
+                    String gender = decryptOrNull(profile.getGender());
+                    String hometown = decryptOrNull(profile.getHometown());
+                    String provinceName = decryptOrNull(profile.getProvincename());
+
+                    return EkycIdentitySummaryResponse.builder()
+                            .status(profile.getStatus())
+                            .fullName(fullName != null ? fullName : customer.getFullname())
+                            .idNumber(maskIdNumber(idNumber))
+                            .dateOfBirth(dateOfBirth)
+                            .gender(gender)
+                            .hometown(hometown != null ? hometown : provinceName)
+                            .provinceCode(profile.getProvincecode())
+                            .provinceName(provinceName)
+                            .verifiedAt(profile.getVerifiedat())
+                            .frontImage(signedUrlOrNull(profile.getFrontimage()))
+                            .backImage(signedUrlOrNull(profile.getBackimage()))
+                            .faceImage(signedUrlOrNull(profile.getFaceimage()))
+                            .build();
+                })
+                .orElse(null);
+    }
+
+    private String decryptOrNull(String encryptedValue) {
+        if (encryptedValue == null || encryptedValue.isBlank()) {
+            return null;
+        }
+        try {
+            return aesEncryptionService.decrypt(encryptedValue);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String signedUrlOrNull(String pathOrUrl) {
+        if (pathOrUrl == null || pathOrUrl.isBlank()) {
+            return null;
+        }
+        try {
+            return supabaseStorageService.getSignedUrl(pathOrUrl);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String maskIdNumber(String idNumber) {
+        if (idNumber == null || idNumber.isBlank()) {
+            return null;
+        }
+        if (idNumber.length() <= 5) {
+            return "*".repeat(idNumber.length());
+        }
+        return idNumber.substring(0, 2)
+                + "*".repeat(Math.max(0, idNumber.length() - 5))
+                + idNumber.substring(idNumber.length() - 3);
     }
 
     private BookingHistoryResponse mapToHistoryResponse(
@@ -410,6 +481,9 @@ public class BookingServiceImpl implements BookingService {
                 .roomKeyStatus(detail.getRoomkeystatus())
                 .roomKeyExpiresAt(detail.getRoomkeyexpiredat())
                 .roomAccesses(roomAccesses)
+                .ekycIdentity(includeRoomPassword && isFaceIdMethod(booking.getCheckinmethod())
+                        ? mapEkycIdentitySummary(booking.getUserid())
+                        : null)
                 .build();
     }
 
@@ -967,6 +1041,12 @@ public class BookingServiceImpl implements BookingService {
             return "FaceID";
         }
         return checkInMethod;
+    }
+
+    private boolean isFaceIdMethod(String checkInMethod) {
+        return "Face Recognition".equalsIgnoreCase(checkInMethod)
+                || "Face ID".equalsIgnoreCase(checkInMethod)
+                || "FaceID".equalsIgnoreCase(checkInMethod);
     }
 
 }

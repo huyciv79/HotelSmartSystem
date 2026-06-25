@@ -1,8 +1,7 @@
 """Pydantic schemas for CCCD field extraction."""
 
-from typing import Optional
+from typing import Dict, List, Optional
 from pydantic import BaseModel, HttpUrl, Field
-
 
 # ---------------------------------------------------------------------------
 # Request – chỉ cần URL hai mặt CCCD
@@ -48,6 +47,20 @@ class EKYCResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Response lỗi
 # ---------------------------------------------------------------------------
+    gender: Optional[str] = Field(None, description="Gioi tinh suy tu chu so thu 4 cua CCCD")
+    hometown: Optional[str] = Field(None, description="Que quan/tinh thanh suy tu 3 so dau CCCD")
+    validation_passed: bool = Field(False, description="Ket qua cross-field validation")
+    validation_errors: List[str] = Field(default_factory=list)
+    validation_warnings: List[str] = Field(default_factory=list)
+    logic_gender: Optional[str] = None
+    logic_birth_year: Optional[int] = None
+    province_code: Optional[str] = None
+    province_name: Optional[str] = None
+    corrected_fields: Dict[str, str] = Field(default_factory=dict)
+    raw_fields: Dict[str, Optional[str]] = Field(default_factory=dict)
+    detection_confidences: Dict[str, float] = Field(default_factory=dict)
+
+
 class ErrorResponse(BaseModel):
     success: bool = False
     message: str
