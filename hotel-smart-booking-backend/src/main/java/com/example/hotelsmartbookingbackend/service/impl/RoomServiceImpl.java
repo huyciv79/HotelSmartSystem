@@ -17,6 +17,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import com.example.hotelsmartbookingbackend.dto.response.RoomStatusResponse;
 
 import java.time.Instant;
 import java.util.List;
@@ -129,6 +131,94 @@ public class RoomServiceImpl implements RoomService {
                 .createdAt(room.getCreatedat())
                 .updatedAt(room.getUpdatedat())
                 .build();
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public List<RoomStatusResponse> getAllRoomStatuses() {
+
+        return roomRepository.findAll()
+                .stream()
+                .map(room ->
+                        RoomStatusResponse.builder()
+                                .roomId(room.getId())
+                                .roomNumber(room.getRoomnumber())
+                                .status(room.getStatus())
+                                .updatedAt(room.getUpdatedat())
+                                .build())
+                .toList();
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public RoomStatusResponse getRoomStatus(Integer roomId) {
+
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Không tìm thấy phòng với mã: " + roomId
+                        ));
+
+        return RoomStatusResponse.builder()
+                .roomId(room.getId())
+                .roomNumber(room.getRoomnumber())
+                .status(room.getStatus())
+                .updatedAt(room.getUpdatedat())
+                .build();
+    }
+    @Override
+    @Transactional
+    public RoomStatusResponse updateRoomStatus(
+            Integer roomId,
+            UpdateRoomRequest request
+    ) {
+
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Không tìm thấy phòng với mã: " + roomId
+                        ));
+
+        String provided = request.getStatus();
+
+        if (provided == null || provided.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Trạng thái phòng không được để trống"
+            );
+        }
+
+        boolean valid = ALLOWED_STATUSES
+                .stream()
+                .anyMatch(
+                        s -> s.equalsIgnoreCase(provided)
+                );
+
+        if (!valid) {
+            throw new IllegalArgumentException(
+                    "Trạng thái không hợp lệ"
+            );
+        }
+
+        String matched = ALLOWED_STATUSES
+                .stream()
+                .filter(
+                        s -> s.equalsIgnoreCase(provided)
+                )
+                .findFirst()
+                .get();
+
+        room.setStatus(matched);
+        room.setUpdatedat(Instant.now());
+
+        roomRepository.save(room);
+
+        RoomStatusResponse response =
+                RoomStatusResponse.builder()
+                        .roomId(room.getId())
+                        .roomNumber(room.getRoomnumber())
+                        .status(room.getStatus())
+                        .updatedAt(room.getUpdatedat())
+                        .build();
+
+        return response;
     }
 }
 
