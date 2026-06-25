@@ -1,19 +1,25 @@
 package com.example.hotelsmartbookingbackend.service.impl;
 
+import com.example.hotelsmartbookingbackend.dto.request.BookingFilter;
+import com.example.hotelsmartbookingbackend.dto.request.CancelBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CreateBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CreateGroupBookingRequest;
+import com.example.hotelsmartbookingbackend.dto.request.UpdateBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.response.AiFaceReadinessResponse;
 import com.example.hotelsmartbookingbackend.dto.response.AiFaceVerificationResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
 import com.example.hotelsmartbookingbackend.dto.response.EkycIdentitySummaryResponse;
+import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
 import com.example.hotelsmartbookingbackend.dto.response.RoomAccessResponse;
+
 import com.example.hotelsmartbookingbackend.entity.Booking;
 import com.example.hotelsmartbookingbackend.entity.BookingRoomAccess;
 import com.example.hotelsmartbookingbackend.entity.Bookingdetail;
 import com.example.hotelsmartbookingbackend.entity.Room;
 import com.example.hotelsmartbookingbackend.entity.Roomtype;
 import com.example.hotelsmartbookingbackend.entity.User;
+
 import com.example.hotelsmartbookingbackend.repository.BookingRepository;
 import com.example.hotelsmartbookingbackend.repository.BookingRoomAccessRepository;
 import com.example.hotelsmartbookingbackend.repository.BookingdetailRepository;
@@ -22,11 +28,20 @@ import com.example.hotelsmartbookingbackend.repository.FaceembeddingRepository;
 import com.example.hotelsmartbookingbackend.repository.RoomRepository;
 import com.example.hotelsmartbookingbackend.repository.RoomtypeRepository;
 import com.example.hotelsmartbookingbackend.repository.UserRepository;
+
 import com.example.hotelsmartbookingbackend.service.BookingService;
 import com.example.hotelsmartbookingbackend.service.SupabaseStorageService;
+
+import com.example.hotelsmartbookingbackend.specification.BookingSpecification;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
@@ -43,13 +58,14 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -1049,4 +1065,122 @@ public class BookingServiceImpl implements BookingService {
                 || "FaceID".equalsIgnoreCase(checkInMethod);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<BookingHistoryResponse> filterBookings(BookingFilter criteria) {
+        int page = criteria.getPage() != null ? criteria.getPage() : 0;
+        int pageSize = criteria.getPageSize() != null ? criteria.getPageSize() : 10;
+        String sortBy = criteria.getSortBy() != null ? criteria.getSortBy() : "createdat";
+        Sort.Direction direction = criteria.getSortDirection() != null && criteria.getSortDirection().equalsIgnoreCase("DESC") 
+            ? Sort.Direction.DESC : Sort.Direction.ASC;
+    
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy));
+    
+        Page<Booking> bookings = bookingRepository.findAll(new BookingSpecification(criteria), pageable);
+    
+        List<BookingHistoryResponse> content = bookings.getContent().stream()
+            .map(this::mapToBookingHistoryResponse)
+            .collect(Collectors.toList());
+    
+        return PageResponse.<BookingHistoryResponse>builder()
+            .content(content)
+            .page(bookings.getNumber())
+            .size(bookings.getSize())
+            .totalElements(bookings.getTotalElements())
+            .totalPages(bookings.getTotalPages())
+            .first(bookings.isFirst())
+            .last(bookings.isLast())
+            .build();
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse updateBooking(Integer bookingId, UpdateBookingRequest request, String staffEmail) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng với ID: " + bookingId));
+    
+        User staff = userRepository.findByEmail(staffEmail)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
+    
+        if (booking.getStatus().equalsIgnoreCase("Cancelled") || booking.getStatus().equalsIgnoreCase("Checked Out")) {
+            throw new RuntimeException("Không thể cập nhật đơn đặt phòng đã hủy hoặc đã trả phòng");
+        }
+    
+        booking.setSpecialrequests(request.getSpecialRequests());
+    
+        if (request.getDiscountAmount() != null && request.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+           booking.setDiscountamount(request.getDiscountAmount());
+           BigDecimal newFinalAmount = booking.getTotalamount()
+               .subtract(request.getDiscountAmount())
+               .subtract(booking.getTaxamount());
+           booking.setFinalamount(newFinalAmount);
+        }
+    
+        booking.setUpdatedat(Instant.now());
+        Booking updatedBooking = bookingRepository.save(booking);
+    
+        return mapToBookingResponse(updatedBooking);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse cancelBooking(Integer bookingId, CancelBookingRequest request, String staffEmail) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng với ID: " + bookingId));
+    
+        User staff = userRepository.findByEmail(staffEmail)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
+    
+        if (booking.getStatus().equalsIgnoreCase("Cancelled")) {
+            throw new RuntimeException("Đơn đặt phòng này đã được hủy trước đó");
+        }
+    
+        if (booking.getStatus().equalsIgnoreCase("Checked Out")) {
+            throw new RuntimeException("Không thể hủy đơn đặt phòng đã trả phòng");
+        }
+    
+        booking.setStatus("Cancelled");
+        booking.setCancellationreason(request.getCancellationReason());
+        booking.setCancelledat(Instant.now());
+        booking.setCancelledby(staff);
+        booking.setUpdatedat(Instant.now());
+
+        Bookingdetail detail = bookingdetailRepository
+                .findByBookingid_Id(bookingId)
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy chi tiết đơn đặt phòng"));
+
+        detail.setStatus("Cancelled");
+        detail.setUpdatedat(Instant.now());
+        bookingdetailRepository.save(detail);
+    
+        Booking cancelledBooking = bookingRepository.save(booking);
+    
+        return mapToBookingResponse(cancelledBooking);
+    }
+
+    private BookingHistoryResponse mapToBookingHistoryResponse(Booking booking) {
+        return BookingHistoryResponse.builder()
+                .bookingId(booking.getId())
+                .bookingNumber(booking.getBookingreference())
+                .bookingDate(booking.getCreatedat())
+                .status(booking.getStatus())
+                .checkInMethod(booking.getCheckinmethod())
+                .totalAmount(booking.getTotalamount())
+                .build();
+    }
+    private BookingResponse mapToBookingResponse(Booking booking) {
+        return BookingResponse.builder()
+                .bookingId(booking.getId())
+                .bookingReference(booking.getBookingreference())
+                .bookingType(booking.getBookingtype())
+                .checkInMethod(booking.getCheckinmethod())
+                .totalAmount(booking.getTotalamount())
+                .finalAmount(booking.getFinalamount())
+                .paidAmount(booking.getPaidamount())
+                .status(booking.getStatus())
+                .specialRequests(booking.getSpecialrequests())
+                .createdAt(booking.getCreatedat())
+                .build();
+    }
 }
