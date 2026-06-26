@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getBookingDetail } from '../services/bookingService';
+import { submitRefundRequest } from '../services/refundService';
 import { useToast, ToastContainer } from '../components/Toast';
 import {
   getFeedbackByBookingId,
@@ -29,6 +30,34 @@ export default function BookingDetail({ setActivePage }) {
   const [feedbackImages, setFeedbackImages] = useState([]);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [isEditingFeedback, setIsEditingFeedback] = useState(false);
+
+  // Refund related states
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [refundReason, setRefundReason] = useState('');
+  const [isSubmittingRefund, setIsSubmittingRefund] = useState(false);
+
+  const handleRefundSubmit = async (e) => {
+    e.preventDefault();
+    if (!refundReason.trim()) {
+      showToast('Vui lòng nhập lý do hoàn tiền', 'warning');
+      return;
+    }
+    setIsSubmittingRefund(true);
+    try {
+      const response = await submitRefundRequest(booking.bookingId, refundReason);
+      if (response && response.success) {
+        showToast('Đã gửi yêu cầu hoàn tiền thành công! Yêu cầu đang chờ duyệt.', 'success');
+        setIsRefundModalOpen(false);
+        setRefundReason('');
+        setBooking(prev => ({ ...prev, status: 'Refund Pending' }));
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Lỗi khi gửi yêu cầu hoàn tiền.', 'error');
+    } finally {
+      setIsSubmittingRefund(false);
+    }
+  };
 
   const fetchFeedback = async (bookingId) => {
     try {
@@ -297,6 +326,9 @@ export default function BookingDetail({ setActivePage }) {
   };
 
   const finalAmount = booking.finalAmount || booking.totalAmount || 0;
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isFutureCheckIn = booking.checkInDate > todayStr;
+  const canRequestRefund = (booking.status === 'Paid' || booking.status === 'Partially Paid') && isFutureCheckIn;
 
   return (
     <>
@@ -338,6 +370,8 @@ export default function BookingDetail({ setActivePage }) {
                   ? 'bg-slate-200 text-slate-700'
                   : booking.status === 'Paid'
                   ? 'bg-green-100 text-green-700'
+                  : booking.status === 'Refund Pending'
+                  ? 'bg-amber-100 text-amber-700'
                   : booking.status === 'Partially Paid'
                   ? 'bg-indigo-100 text-indigo-700'
                   : 'bg-yellow-100 text-yellow-700'
@@ -350,6 +384,8 @@ export default function BookingDetail({ setActivePage }) {
                   ? t('status_checked_out', 'Đã trả phòng') 
                   : booking.status === 'Paid' 
                   ? t('status_paid', 'Đã thanh toán') 
+                  : booking.status === 'Refund Pending'
+                  ? 'Chờ hoàn tiền'
                   : booking.status === 'Partially Paid'
                   ? t('status_partially_paid', 'Đã cọc 30%')
                   : t('status_confirmed', 'Đã xác nhận')}
@@ -494,7 +530,7 @@ export default function BookingDetail({ setActivePage }) {
                 )}
 
                 {/* Cancel button (available before Checked-in) */}
-                {booking.status !== 'Cancelled' && currentStatusIdx < 2 && (
+                {booking.status !== 'Cancelled' && currentStatusIdx < 2 && !canRequestRefund && booking.status !== 'Refund Pending' && (
                   <button
                     onClick={handleCancelBooking}
                     className="bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-1.5 h-11"
@@ -502,6 +538,24 @@ export default function BookingDetail({ setActivePage }) {
                     <span className="material-symbols-outlined text-lg">cancel</span>
                     {t('bd_btn_cancel', 'Hủy đặt phòng')}
                   </button>
+                )}
+
+                {/* Refund button (available when Paid/Partially Paid in future) */}
+                {booking.status !== 'Cancelled' && currentStatusIdx < 2 && canRequestRefund && booking.status !== 'Refund Pending' && (
+                  <button
+                    onClick={() => setIsRefundModalOpen(true)}
+                    className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-1.5 h-11"
+                  >
+                    <span className="material-symbols-outlined text-lg">payments</span>
+                    Yêu cầu hoàn tiền
+                  </button>
+                )}
+
+                {booking.status === 'Refund Pending' && (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold px-4 py-2.5 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">hourglass_empty</span>
+                    Yêu cầu hoàn tiền đang chờ phê duyệt
+                  </div>
                 )}
 
                 {/* Request button (available when Checked-in) */}
@@ -812,6 +866,84 @@ export default function BookingDetail({ setActivePage }) {
                     </>
                   ) : (
                     <span>Gửi đánh giá</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* REFUND REQUEST MODAL */}
+      {isRefundModalOpen && (
+        <div className="fixed inset-0 z-[5000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border-2 border-primary/20 max-w-lg w-full p-6 relative shadow-2xl animate-scale-in text-slate-800 font-['Montserrat']">
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setIsRefundModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 border-none bg-transparent cursor-pointer p-1"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="bg-rose-600 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 absolute top-0 left-0">
+              Yêu cầu hoàn tiền đặt phòng
+            </div>
+
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mt-4 mb-1 text-left">
+              {booking.roomTypeName}
+            </h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider border-b border-gray-100 pb-3 mb-4 text-left">
+              Mã đặt phòng: {booking.bookingReference}
+            </p>
+
+            <div className="bg-amber-50 border border-amber-200 p-4 mb-4 text-left">
+              <div className="flex gap-2 text-amber-850">
+                <AlertCircle className="shrink-0 w-4 h-4 mt-0.5 text-amber-800" />
+                <div className="text-xs font-semibold leading-relaxed text-amber-850">
+                  <p className="font-bold mb-1 text-amber-800">Chính sách và Lưu ý hoàn tiền:</p>
+                  <p className="mb-0.5 text-amber-800">1. Số tiền hoàn trả thực tế sẽ được tính toán dựa trên thời gian hủy phòng so với ngày nhận phòng thực tế.</p>
+                  <p className="mb-0.5 text-amber-800">2. Đặt phòng của quý khách sẽ bị hủy ngay khi yêu cầu hoàn tiền này được phê duyệt bởi ban quản lý.</p>
+                  <p className="text-amber-800">3. Quá trình xử lý giao dịch hoàn tiền có thể mất từ 1 - 3 ngày làm việc tùy thuộc vào phương thức thanh toán.</p>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleRefundSubmit} className="space-y-4 text-left">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-600 mb-1.5">Lý do yêu cầu hoàn tiền:</label>
+                <textarea
+                  rows="4"
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  placeholder="Vui lòng cung cấp chi tiết lý do bạn muốn hoàn tiền (ví dụ: Thay đổi lịch trình đột xuất, lý do sức khỏe...)"
+                  className="w-full p-3 border border-slate-300 text-xs font-medium focus:border-primary focus:outline-none placeholder-slate-400 leading-relaxed resize-none rounded-none bg-slate-50"
+                  required
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2.5 pt-2 text-[10px] font-black uppercase tracking-widest">
+                <button
+                  type="button"
+                  onClick={() => setIsRefundModalOpen(false)}
+                  className="px-5 py-2.5 border border-slate-300 text-slate-700 bg-white hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                  Quay lại
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingRefund}
+                  className="px-5 py-2.5 bg-rose-600 text-white hover:bg-rose-700 transition-all cursor-pointer border-none flex items-center gap-1.5"
+                >
+                  {isSubmittingRefund ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-t-2 border-white" />
+                      <span>Đang gửi...</span>
+                    </>
+                  ) : (
+                    <span>Xác nhận gửi</span>
                   )}
                 </button>
               </div>
