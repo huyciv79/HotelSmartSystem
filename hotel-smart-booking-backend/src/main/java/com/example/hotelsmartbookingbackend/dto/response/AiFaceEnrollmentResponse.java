@@ -18,13 +18,14 @@ import java.util.List;
 public class AiFaceEnrollmentResponse {
 
     private Boolean enrolled;
-    private Boolean matched;
-    private String message;
-    private Double distance;
-    private Double threshold;
 
-    @JsonProperty("similarity_percentage")
-    private Double similarityPercentage;
+    @JsonProperty("liveness_passed")
+    private Boolean livenessPassed;
+
+    @JsonProperty("active_liveness_passed")
+    private Boolean activeLivenessPassed;
+
+    private String message;
 
     @JsonProperty("model_used")
     private String modelUsed;
@@ -33,4 +34,33 @@ public class AiFaceEnrollmentResponse {
     private String detectorUsed;
 
     private List<Double> embedding;
+
+    @JsonProperty("angle_embeddings")
+    private List<FaceAngleEmbedding> angleEmbeddings;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FaceAngleEmbedding {
+        private String pose;
+
+        private List<Double> embedding;
+
+        @JsonProperty("yaw_score")
+        private Double yawScore;
+
+        @JsonProperty("pitch_score")
+        private Double pitchScore;
+
+        @JsonProperty("quality_score")
+        private Double qualityScore;
+
+        @JsonProperty("liveness_score")
+        private Double livenessScore;
+
+        private Boolean available;
+
+        @JsonProperty("fail_reason")
+        private String failReason;
+    }
 }

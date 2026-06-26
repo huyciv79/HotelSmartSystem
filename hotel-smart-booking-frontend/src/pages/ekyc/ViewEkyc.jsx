@@ -265,7 +265,12 @@ export default function ViewEkyc({ onBack, onRegister, onUpdate }) {
                 <InfoRow label="Họ và tên" value={ekycData?.fullName} />
                 <InfoRow label="Số CCCD/CMND" value={ekycData?.idNumber} />
                 <InfoRow label="Ngày sinh" value={ekycData?.dateOfBirth} />
-                <InfoRow label="Địa chỉ" value={ekycData?.address} />
+                <InfoRow label="Giới tính" value={ekycData?.gender} />
+                <InfoRow label="Quê quán (suy từ CCCD)" value={ekycData?.hometown || ekycData?.provinceName} />
+                <InfoRow
+                  label="Mã tỉnh CCCD"
+                  value={ekycData?.provinceCode}
+                />
               </div>
 
               {/* Uploaded Documents */}

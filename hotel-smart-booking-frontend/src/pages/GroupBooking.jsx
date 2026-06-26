@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { getRoomTypes } from '../services/roomService';
 import { createGroupBooking } from '../services/groupBookingService';
+import { getEkycProfile } from '../services/ekycService';
 import { useToast, ToastContainer } from '../components/Toast';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -29,6 +30,8 @@ export default function GroupBooking({ setActivePage }) {
   
   // Step 2 & 3 States
   const [checkInMethod, setCheckInMethod] = useState('Manual'); // 'Manual' | 'Face ID' | 'QR Code'
+  const [isEkycVerified, setIsEkycVerified] = useState(false);
+  const [isEkycLoading, setIsEkycLoading] = useState(true);
   const [specialRequests, setSpecialRequests] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   
@@ -66,6 +69,42 @@ export default function GroupBooking({ setActivePage }) {
     
     fetchRooms();
   }, [showToast, t]);
+
+  useEffect(() => {
+    const fetchEkycStatus = async () => {
+      try {
+        const response = await getEkycProfile();
+        setIsEkycVerified(
+          String(response?.data?.status || '').toUpperCase() === 'VERIFIED',
+        );
+      } catch (error) {
+        console.error('Không thể kiểm tra trạng thái eKYC:', error);
+        setIsEkycVerified(false);
+      } finally {
+        setIsEkycLoading(false);
+      }
+    };
+
+    fetchEkycStatus();
+  }, []);
+
+  const handleFaceIdSelection = () => {
+    if (isEkycLoading) {
+      showToast(t('group_ekyc_checking', 'Đang kiểm tra trạng thái eKYC, vui lòng chờ.'), 'info');
+      return;
+    }
+    if (!isEkycVerified) {
+      showToast(
+        t(
+          'group_ekyc_required',
+          'Bạn phải hoàn thành đăng ký eKYC trước khi sử dụng check-in bằng FaceID.',
+        ),
+        'warning',
+      );
+      return;
+    }
+    setCheckInMethod('Face ID');
+  };
 
   // Reset availability status when dates or room changes
   useEffect(() => {
@@ -203,6 +242,12 @@ export default function GroupBooking({ setActivePage }) {
     const tempErrors = {};
     if (!checkInMethod) {
       tempErrors.checkInMethod = t('group_error_checkin_required', 'Vui lòng chọn phương thức nhận phòng');
+    }
+    if (checkInMethod === 'Face ID' && !isEkycVerified) {
+      tempErrors.checkInMethod = t(
+        'group_error_ekyc_required',
+        'Bạn chưa hoàn thành đăng ký eKYC để sử dụng FaceID',
+      );
     }
     setErrors(tempErrors);
     if (Object.keys(tempErrors).length === 0) {
@@ -650,16 +695,25 @@ export default function GroupBooking({ setActivePage }) {
 
                     {/* FaceID */}
                     <div 
-                      onClick={() => setCheckInMethod('Face ID')}
+                      onClick={handleFaceIdSelection}
+                      aria-disabled={isEkycLoading || !isEkycVerified}
                       className={`border p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 ${
                         checkInMethod === 'Face ID' 
                           ? 'border-primary bg-primary/5 text-primary shadow-md' 
-                          : 'border-slate-200 hover:border-primary/50 text-slate-700 bg-white'
+                          : isEkycLoading || !isEkycVerified
+                            ? 'border-slate-200 text-slate-400 bg-slate-100 cursor-not-allowed opacity-70'
+                            : 'border-slate-200 hover:border-primary/50 text-slate-700 bg-white'
                       }`}
                     >
                       <span className="material-symbols-outlined text-3xl mb-3">face</span>
                       <span className="text-[12px] font-black uppercase tracking-wider block">{t('group_checkin_face_title', 'Face ID eKYC')}</span>
-                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">{t('group_checkin_face_desc', 'Quét khuôn mặt cả đoàn')}</span>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">
+                        {isEkycLoading
+                          ? t('group_ekyc_checking_short', 'Đang kiểm tra eKYC')
+                          : isEkycVerified
+                            ? t('group_checkin_face_desc', 'Xác minh chủ booking')
+                            : t('group_ekyc_required_short', 'Cần đăng ký eKYC trước')}
+                      </span>
                     </div>
 
                     {/* Manual */}

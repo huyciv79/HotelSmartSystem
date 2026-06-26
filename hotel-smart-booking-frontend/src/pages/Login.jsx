@@ -43,9 +43,8 @@ export default function Login({ setActivePage }) {
       // Save tokens/user information to localStorage
       let loggedInUser = null;
       if (response && response.data) {
-        const { accessToken, refreshToken, email, fullName, role } = response.data;
+        const { accessToken, email, fullName, role } = response.data;
         if (accessToken) localStorage.setItem('accessToken', accessToken);
-        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
         
         const userObj = { email, fullName, role };
         localStorage.setItem('user', JSON.stringify(userObj));

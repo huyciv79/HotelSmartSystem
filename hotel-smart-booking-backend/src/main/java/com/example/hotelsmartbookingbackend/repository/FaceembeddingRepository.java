@@ -27,6 +27,16 @@ public interface FaceembeddingRepository extends JpaRepository<Faceembedding, In
     )
     Optional<String> findEmbeddingTextByUserId(@Param("userId") Integer userId);
 
+    @Query(
+            value = """
+                    SELECT embeddingid
+                    FROM faceembeddings
+                    WHERE userid = :userId
+                    """,
+            nativeQuery = true
+    )
+    Optional<Integer> findEmbeddingIdByUserId(@Param("userId") Integer userId);
+
     /**
      * Upsert embedding: cập nhật nếu đã tồn tại cho user này.
      * Sử dụng native query với ON CONFLICT của PostgreSQL.

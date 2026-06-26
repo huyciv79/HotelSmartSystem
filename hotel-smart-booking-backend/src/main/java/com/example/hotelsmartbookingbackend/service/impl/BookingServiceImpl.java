@@ -1,17 +1,25 @@
 package com.example.hotelsmartbookingbackend.service.impl;
 
+import com.example.hotelsmartbookingbackend.dto.request.BookingFilter;
+import com.example.hotelsmartbookingbackend.dto.request.CancelBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CreateBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CreateGroupBookingRequest;
+import com.example.hotelsmartbookingbackend.dto.request.UpdateBookingRequest;
+import com.example.hotelsmartbookingbackend.dto.response.AiFaceReadinessResponse;
 import com.example.hotelsmartbookingbackend.dto.response.AiFaceVerificationResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
+import com.example.hotelsmartbookingbackend.dto.response.EkycIdentitySummaryResponse;
+import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
 import com.example.hotelsmartbookingbackend.dto.response.RoomAccessResponse;
+
 import com.example.hotelsmartbookingbackend.entity.Booking;
 import com.example.hotelsmartbookingbackend.entity.BookingRoomAccess;
 import com.example.hotelsmartbookingbackend.entity.Bookingdetail;
 import com.example.hotelsmartbookingbackend.entity.Room;
 import com.example.hotelsmartbookingbackend.entity.Roomtype;
 import com.example.hotelsmartbookingbackend.entity.User;
+
 import com.example.hotelsmartbookingbackend.repository.BookingRepository;
 import com.example.hotelsmartbookingbackend.repository.BookingRoomAccessRepository;
 import com.example.hotelsmartbookingbackend.repository.BookingdetailRepository;
@@ -20,10 +28,20 @@ import com.example.hotelsmartbookingbackend.repository.FaceembeddingRepository;
 import com.example.hotelsmartbookingbackend.repository.RoomRepository;
 import com.example.hotelsmartbookingbackend.repository.RoomtypeRepository;
 import com.example.hotelsmartbookingbackend.repository.UserRepository;
+
 import com.example.hotelsmartbookingbackend.service.BookingService;
+import com.example.hotelsmartbookingbackend.service.SupabaseStorageService;
+
+import com.example.hotelsmartbookingbackend.specification.BookingSpecification;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
@@ -40,13 +58,14 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -79,10 +98,15 @@ public class BookingServiceImpl implements BookingService {
     private final UserRepository userRepository;
     private final EkycProfileRepository ekycProfileRepository;
     private final FaceembeddingRepository faceembeddingRepository;
+    private final AesEncryptionService aesEncryptionService;
+    private final SupabaseStorageService supabaseStorageService;
     private final WebClient webClient;
 
     @Value("${ai.service.face-verify-url:http://localhost:8000/api/v1/face/verify}")
     private String aiFaceVerifyUrl;
+
+    @Value("${ai.service.face-readiness-url:http://localhost:8000/api/v1/face/check-readiness}")
+    private String aiFaceReadinessUrl;
 
     @Override
     @Transactional
@@ -136,6 +160,24 @@ public class BookingServiceImpl implements BookingService {
         User customer = userRepository.findByEmail(customerEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
+        String normalizedCheckInMethod = normalizeCheckInMethod(checkInMethod);
+        if ("FaceID".equalsIgnoreCase(normalizedCheckInMethod)) {
+            boolean ekycVerified = ekycProfileRepository.existsByUseridAndStatus(
+                    customer,
+                    "Verified"
+            );
+            boolean faceRegistered = faceembeddingRepository
+                    .findEmbeddingTextByUserId(customer.getId())
+                    .filter(embedding -> !embedding.isBlank())
+                    .isPresent();
+
+            if (!ekycVerified || !faceRegistered) {
+                throw new RuntimeException(
+                        "Bạn phải hoàn thành đăng ký eKYC và khuôn mặt trước khi chọn check-in bằng FaceID"
+                );
+            }
+        }
+
         Roomtype roomtype = roomtypeRepository.findByIdForUpdate(roomTypeId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy loại phòng"));
 
@@ -159,7 +201,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setUserid(customer);
         booking.setBookingreference(generateBookingReference(now));
         booking.setBookingtype(bookingType);
-        booking.setCheckinmethod(normalizeCheckInMethod(checkInMethod));
+        booking.setCheckinmethod(normalizedCheckInMethod);
         booking.setTotalamount(totalAmount);
         booking.setPaidamount(BigDecimal.ZERO);
         booking.setDepositamount(BigDecimal.ZERO);
@@ -344,8 +386,75 @@ public class BookingServiceImpl implements BookingService {
                 .roomKeyGeneratedAt(detail.getRoomkeygeneratedat())
                 .roomKeyExpiresAt(detail.getRoomkeyexpiredat())
                 .roomAccesses(roomAccesses)
+                .ekycIdentity(mapEkycIdentitySummary(booking.getUserid()))
                 .createdAt(booking.getCreatedat())
                 .build();
+    }
+
+    private EkycIdentitySummaryResponse mapEkycIdentitySummary(User customer) {
+        if (customer == null) {
+            return null;
+        }
+
+        return ekycProfileRepository.findTopByUseridOrderByCreatedatDesc(customer)
+                .map(profile -> {
+                    String idNumber = decryptOrNull(profile.getIdcardnumber());
+                    String fullName = decryptOrNull(profile.getFullname());
+                    String dateOfBirth = decryptOrNull(profile.getDateofbirth());
+                    String gender = decryptOrNull(profile.getGender());
+                    String hometown = decryptOrNull(profile.getHometown());
+                    String provinceName = decryptOrNull(profile.getProvincename());
+
+                    return EkycIdentitySummaryResponse.builder()
+                            .status(profile.getStatus())
+                            .fullName(fullName != null ? fullName : customer.getFullname())
+                            .idNumber(maskIdNumber(idNumber))
+                            .dateOfBirth(dateOfBirth)
+                            .gender(gender)
+                            .hometown(hometown != null ? hometown : provinceName)
+                            .provinceCode(profile.getProvincecode())
+                            .provinceName(provinceName)
+                            .verifiedAt(profile.getVerifiedat())
+                            .frontImage(signedUrlOrNull(profile.getFrontimage()))
+                            .backImage(signedUrlOrNull(profile.getBackimage()))
+                            .faceImage(signedUrlOrNull(profile.getFaceimage()))
+                            .build();
+                })
+                .orElse(null);
+    }
+
+    private String decryptOrNull(String encryptedValue) {
+        if (encryptedValue == null || encryptedValue.isBlank()) {
+            return null;
+        }
+        try {
+            return aesEncryptionService.decrypt(encryptedValue);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String signedUrlOrNull(String pathOrUrl) {
+        if (pathOrUrl == null || pathOrUrl.isBlank()) {
+            return null;
+        }
+        try {
+            return supabaseStorageService.getSignedUrl(pathOrUrl);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String maskIdNumber(String idNumber) {
+        if (idNumber == null || idNumber.isBlank()) {
+            return null;
+        }
+        if (idNumber.length() <= 5) {
+            return "*".repeat(idNumber.length());
+        }
+        return idNumber.substring(0, 2)
+                + "*".repeat(Math.max(0, idNumber.length() - 5))
+                + idNumber.substring(idNumber.length() - 3);
     }
 
     private BookingHistoryResponse mapToHistoryResponse(
@@ -388,6 +497,9 @@ public class BookingServiceImpl implements BookingService {
                 .roomKeyStatus(detail.getRoomkeystatus())
                 .roomKeyExpiresAt(detail.getRoomkeyexpiredat())
                 .roomAccesses(roomAccesses)
+                .ekycIdentity(includeRoomPassword && isFaceIdMethod(booking.getCheckinmethod())
+                        ? mapEkycIdentitySummary(booking.getUserid())
+                        : null)
                 .build();
     }
 
@@ -419,17 +531,23 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse performFaceCheckIn(
             Integer bookingId,
             MultipartFile selfieImage,
-            MultipartFile leftImage,
-            MultipartFile rightImage,
-            MultipartFile upImage,
-            MultipartFile downImage,
+            MultipartFile challengeImage,
+            MultipartFile challengeImage2,
+            MultipartFile challengeImage3,
+            String challengeDirection,
             String actorEmail
     ) {
         validateSelfie(selfieImage);
-        validateSelfie(leftImage);
-        validateSelfie(rightImage);
-        validateSelfie(upImage);
-        validateSelfie(downImage);
+        validateSelfie(challengeImage);
+        validateSelfie(challengeImage2);
+        validateSelfie(challengeImage3);
+        String normalizedChallengeDirection = challengeDirection == null
+                ? ""
+                : challengeDirection.trim().toLowerCase();
+        if (!normalizedChallengeDirection.equals("left")
+                && !normalizedChallengeDirection.equals("right")) {
+            throw new RuntimeException("Hướng thử thách FaceID không hợp lệ");
+        }
 
         User actor = userRepository.findByEmail(actorEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
@@ -470,26 +588,82 @@ public class BookingServiceImpl implements BookingService {
         AiFaceVerificationResponse verification = callFaceVerificationService(
                 registeredEmbedding,
                 selfieImage,
-                leftImage,
-                rightImage,
-                upImage,
-                downImage
+                challengeImage,
+                challengeImage2,
+                challengeImage3,
+                normalizedChallengeDirection
         );
         if (!Boolean.TRUE.equals(verification.getLivenessPassed())) {
             String livenessMessage = verification.getMessage() != null
                     && !verification.getMessage().isBlank()
                     ? verification.getMessage()
                     : "Không vượt qua kiểm tra liveness";
-            throw new RuntimeException(
-                    livenessMessage
-                            + " Vui lòng dùng khuôn mặt thật trước camera, không dùng ảnh hoặc màn hình");
+            if (Boolean.FALSE.equals(verification.getActiveLivenessPassed())) {
+                throw new RuntimeException(livenessMessage);
+            }
+            throw new RuntimeException(livenessMessage
+                    + " Vui lòng dùng khuôn mặt thật trước camera, không dùng ảnh hoặc màn hình");
         }
         if (!Boolean.TRUE.equals(verification.getVerified())
                 || !Boolean.TRUE.equals(verification.getMatched())) {
-            throw new RuntimeException("Khuôn mặt không khớp với hồ sơ eKYC đã đăng ký");
+            String mismatchMessage = verification.getMessage() != null
+                    && !verification.getMessage().isBlank()
+                    ? verification.getMessage()
+                    : "Check-in bị từ chối: khuôn mặt hiện tại không khớp với khuôn mặt đã đăng ký eKYC.";
+            throw new RuntimeException(mismatchMessage);
         }
 
         return completeCheckIn(booking, detail, actor);
+    }
+
+    @Override
+    public AiFaceReadinessResponse checkFaceReadiness(
+            MultipartFile selfieImage,
+            String actorEmail
+    ) {
+        validateSelfie(selfieImage);
+
+        User actor = userRepository.findByEmail(actorEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+        if (!"manager".equalsIgnoreCase(actor.getRole().name())) {
+            throw new RuntimeException("Chỉ Manager mới được kiểm tra camera FaceID");
+        }
+
+        MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+        addFaceImagePart(
+                bodyBuilder,
+                "selfie_image",
+                selfieImage,
+                "face-readiness.jpg"
+        );
+
+        try {
+            AiFaceReadinessResponse response = webClient.post()
+                    .uri(aiFaceReadinessUrl)
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                    .retrieve()
+                    .bodyToMono(AiFaceReadinessResponse.class)
+                    .timeout(Duration.ofSeconds(30))
+                    .block();
+
+            if (response == null) {
+                throw new RuntimeException("Face readiness API trả về phản hồi rỗng");
+            }
+            return response;
+        } catch (WebClientResponseException ex) {
+            throw new RuntimeException(
+                    "Face readiness API lỗi: " + ex.getResponseBodyAsString(),
+                    ex
+            );
+        } catch (RuntimeException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new RuntimeException(
+                    "Không thể kết nối tới dịch vụ kiểm tra camera FaceID",
+                    ex
+            );
+        }
     }
 
     private BookingResponse completeCheckIn(
@@ -655,20 +829,36 @@ public class BookingServiceImpl implements BookingService {
     private AiFaceVerificationResponse callFaceVerificationService(
             String registeredEmbedding,
             MultipartFile selfieImage,
-            MultipartFile leftImage,
-            MultipartFile rightImage,
-            MultipartFile upImage,
-            MultipartFile downImage
+            MultipartFile challengeImage,
+            MultipartFile challengeImage2,
+            MultipartFile challengeImage3,
+            String challengeDirection
     ) {
         MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
         bodyBuilder.part("registered_embedding", registeredEmbedding)
                 .contentType(MediaType.TEXT_PLAIN);
 
         addFaceImagePart(bodyBuilder, "selfie_image", selfieImage, "face-center.jpg");
-        addFaceImagePart(bodyBuilder, "left_image", leftImage, "face-left.jpg");
-        addFaceImagePart(bodyBuilder, "right_image", rightImage, "face-right.jpg");
-        addFaceImagePart(bodyBuilder, "up_image", upImage, "face-up.jpg");
-        addFaceImagePart(bodyBuilder, "down_image", downImage, "face-down.jpg");
+        addFaceImagePart(
+                bodyBuilder,
+                "challenge_image",
+                challengeImage,
+                "face-challenge.jpg"
+        );
+        addFaceImagePart(
+                bodyBuilder,
+                "challenge_image_2",
+                challengeImage2,
+                "face-challenge-2.jpg"
+        );
+        addFaceImagePart(
+                bodyBuilder,
+                "challenge_image_3",
+                challengeImage3,
+                "face-challenge-3.jpg"
+        );
+        bodyBuilder.part("challenge_direction", challengeDirection)
+                .contentType(MediaType.TEXT_PLAIN);
 
         try {
             AiFaceVerificationResponse response = webClient.post()
@@ -869,4 +1059,128 @@ public class BookingServiceImpl implements BookingService {
         return checkInMethod;
     }
 
+    private boolean isFaceIdMethod(String checkInMethod) {
+        return "Face Recognition".equalsIgnoreCase(checkInMethod)
+                || "Face ID".equalsIgnoreCase(checkInMethod)
+                || "FaceID".equalsIgnoreCase(checkInMethod);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<BookingHistoryResponse> filterBookings(BookingFilter criteria) {
+        int page = criteria.getPage() != null ? criteria.getPage() : 0;
+        int pageSize = criteria.getPageSize() != null ? criteria.getPageSize() : 10;
+        String sortBy = criteria.getSortBy() != null ? criteria.getSortBy() : "createdat";
+        Sort.Direction direction = criteria.getSortDirection() != null && criteria.getSortDirection().equalsIgnoreCase("DESC") 
+            ? Sort.Direction.DESC : Sort.Direction.ASC;
+    
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy));
+    
+        Page<Booking> bookings = bookingRepository.findAll(new BookingSpecification(criteria), pageable);
+    
+        List<BookingHistoryResponse> content = bookings.getContent().stream()
+            .map(this::mapToBookingHistoryResponse)
+            .collect(Collectors.toList());
+    
+        return PageResponse.<BookingHistoryResponse>builder()
+            .content(content)
+            .page(bookings.getNumber())
+            .size(bookings.getSize())
+            .totalElements(bookings.getTotalElements())
+            .totalPages(bookings.getTotalPages())
+            .first(bookings.isFirst())
+            .last(bookings.isLast())
+            .build();
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse updateBooking(Integer bookingId, UpdateBookingRequest request, String staffEmail) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng với ID: " + bookingId));
+    
+        User staff = userRepository.findByEmail(staffEmail)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
+    
+        if (booking.getStatus().equalsIgnoreCase("Cancelled") || booking.getStatus().equalsIgnoreCase("Checked Out")) {
+            throw new RuntimeException("Không thể cập nhật đơn đặt phòng đã hủy hoặc đã trả phòng");
+        }
+    
+        booking.setSpecialrequests(request.getSpecialRequests());
+    
+        if (request.getDiscountAmount() != null && request.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+           booking.setDiscountamount(request.getDiscountAmount());
+           BigDecimal newFinalAmount = booking.getTotalamount()
+               .subtract(request.getDiscountAmount())
+               .subtract(booking.getTaxamount());
+           booking.setFinalamount(newFinalAmount);
+        }
+    
+        booking.setUpdatedat(Instant.now());
+        Booking updatedBooking = bookingRepository.save(booking);
+    
+        return mapToBookingResponse(updatedBooking);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse cancelBooking(Integer bookingId, CancelBookingRequest request, String staffEmail) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng với ID: " + bookingId));
+    
+        User staff = userRepository.findByEmail(staffEmail)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
+    
+        if (booking.getStatus().equalsIgnoreCase("Cancelled")) {
+            throw new RuntimeException("Đơn đặt phòng này đã được hủy trước đó");
+        }
+    
+        if (booking.getStatus().equalsIgnoreCase("Checked Out")) {
+            throw new RuntimeException("Không thể hủy đơn đặt phòng đã trả phòng");
+        }
+    
+        booking.setStatus("Cancelled");
+        booking.setCancellationreason(request.getCancellationReason());
+        booking.setCancelledat(Instant.now());
+        booking.setCancelledby(staff);
+        booking.setUpdatedat(Instant.now());
+
+        Bookingdetail detail = bookingdetailRepository
+                .findByBookingid_Id(bookingId)
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy chi tiết đơn đặt phòng"));
+
+        detail.setStatus("Cancelled");
+        detail.setUpdatedat(Instant.now());
+        bookingdetailRepository.save(detail);
+    
+        Booking cancelledBooking = bookingRepository.save(booking);
+    
+        return mapToBookingResponse(cancelledBooking);
+    }
+
+    private BookingHistoryResponse mapToBookingHistoryResponse(Booking booking) {
+        return BookingHistoryResponse.builder()
+                .bookingId(booking.getId())
+                .bookingNumber(booking.getBookingreference())
+                .bookingDate(booking.getCreatedat())
+                .status(booking.getStatus())
+                .checkInMethod(booking.getCheckinmethod())
+                .totalAmount(booking.getTotalamount())
+                .build();
+    }
+    private BookingResponse mapToBookingResponse(Booking booking) {
+        return BookingResponse.builder()
+                .bookingId(booking.getId())
+                .bookingReference(booking.getBookingreference())
+                .bookingType(booking.getBookingtype())
+                .checkInMethod(booking.getCheckinmethod())
+                .totalAmount(booking.getTotalamount())
+                .finalAmount(booking.getFinalamount())
+                .paidAmount(booking.getPaidamount())
+                .status(booking.getStatus())
+                .specialRequests(booking.getSpecialrequests())
+                .createdAt(booking.getCreatedat())
+                .build();
+    }
 }
