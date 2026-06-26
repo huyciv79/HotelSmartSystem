@@ -50,8 +50,15 @@ dependencies {
 
     // Thumbnailator
     implementation 'net.coobird:thumbnailator:0.4.20'
+
+    // OpenPDF for statement PDF generation
+    implementation 'com.github.librepdf:openpdf:2.0.3'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+bootRun {
+    jvmArgs = ["-Xms64m", "-Xmx256m", "-XX:MaxMetaspaceSize=128m", "-XX:CICompilerCount=2", "-XX:ParallelGCThreads=2", "-XX:ConcGCThreads=2"]
 }

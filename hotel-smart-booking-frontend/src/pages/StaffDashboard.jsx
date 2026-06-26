@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 import { getRoomTypes } from '../services/roomService';
 import { createRoomType, updateRoomType, deleteRoomType, getRooms, updateRoom } from '../services/roomManagementService';
-import { getBookingHistory, getAllBookings, checkInBooking, checkOutBooking } from '../services/bookingService';
+import { 
+  getBookingHistory, 
+  getAllBookings, 
+  checkInBooking, 
+  checkOutBooking,
+  getStatementPdf
+} from '../services/bookingService';
 import { getUserProfile } from '../services/userService';
 import Profile from './Profile';
 import { useToast, ToastContainer } from '../components/Toast';
@@ -328,6 +334,23 @@ export default function StaffDashboard({ setActivePage }) {
     localStorage.setItem(`booking_actualcheckin_${bookingId}`, new Date().toISOString());
   };
 
+  const handleDownloadPdf = async (bookingId, bookingRef) => {
+    try {
+      const blob = await getStatementPdf(bookingId);
+      const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Statement_${bookingRef}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      showToast('Đã tải xuống Statement PDF thành công!', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Không thể kết xuất PDF bảng sao kê.', 'error');
+    }
+  };
+
   // Filter bookings for receptionist
   const filteredBookings = bookings.filter(bk =>
     bk.guestName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -611,6 +634,12 @@ export default function StaffDashboard({ setActivePage }) {
                                   className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
                                 >
                                   <span className="material-symbols-outlined text-xs">info</span> Chi tiết
+                                </button>
+                                <button
+                                  onClick={() => handleDownloadPdf(bk.id, bk.bookingReference)}
+                                  className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
+                                >
+                                  <span className="material-symbols-outlined text-xs">download</span> Tải PDF
                                 </button>
                                 {isConfirmed && (
                                   <>

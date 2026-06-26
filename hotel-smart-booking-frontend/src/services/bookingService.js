@@ -76,3 +76,10 @@ export const faceCheckInBooking = async (
   );
   return response.data;
 };
+
+export const getStatementPdf = async (bookingId) => {
+  const response = await axiosInstance.get(`/bookings/${bookingId}/statement/pdf`, {
+    responseType: 'blob'
+  });
+  return response.data;
+};
