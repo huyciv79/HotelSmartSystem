@@ -1,18 +1,15 @@
-"""
-Pydantic schemas cho eKYC endpoint – phiên bản tự động hóa
-"""
+"""Pydantic schemas for CCCD field extraction."""
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 from pydantic import BaseModel, HttpUrl, Field
 
-
 # ---------------------------------------------------------------------------
-# Request – chỉ cần 3 URL ảnh, KHÔNG cần số CCCD
+# Request – chỉ cần URL hai mặt CCCD
 # ---------------------------------------------------------------------------
 class EKYCRequest(BaseModel):
     """
     Body gửi lên endpoint POST /api/v1/ai/verify-ekyc.
-    Client chỉ cần gửi 3 URL ảnh; số CCCD sẽ được hệ thống tự bóc tách.
+    Client gửi URL hai mặt CCCD; YOLOv11 + VietOCR đọc thông tin mặt trước.
     """
     front_image_url: HttpUrl = Field(
         ...,
@@ -24,47 +21,46 @@ class EKYCRequest(BaseModel):
         description="URL ảnh mặt sau CCCD/CMND",
         example="https://example.com/cccd_back.jpg",
     )
-    face_image_url: HttpUrl = Field(
-        ...,
-        description="URL ảnh selfie của người dùng",
-        example="https://example.com/selfie.jpg",
-    )
 
 
-# ---------------------------------------------------------------------------
-# Response – trả về số CCCD đọc được + vector embedding 512 chiều
-# ---------------------------------------------------------------------------
+# Response – chỉ trả về dữ liệu OCR CCCD
 class EKYCResponse(BaseModel):
     """
     Response trả về từ endpoint POST /api/v1/ai/verify-ekyc.
 
-    Spring Boot đọc hai trường này để:
-      - Lưu id_card_number vào cột IDCardNumber của bảng eKYC_Profiles
-      - Lưu embedding vào bảng FaceEmbeddings
+    Face embedding được đăng ký riêng qua POST /api/v1/face/enroll.
     """
     id_card_number: Optional[str] = Field(
         None,
-        description="Số CCCD/CMND bóc tách từ ảnh (None nếu không đọc được)",
+        description="Số CCCD/CMND đọc từ vùng id_number (None nếu không đọc được)",
     )
     full_name: Optional[str] = Field(
         None,
-        description="Họ và tên bóc tách từ ảnh (None nếu không đọc được)",
+        description="Họ và tên đọc từ vùng full_name (None nếu không đọc được)",
     )
     date_of_birth: Optional[str] = Field(
         None,
-        description="Ngày sinh bóc tách từ ảnh (None nếu không đọc được, định dạng dd/mm/yyyy)",
-    )
-    embedding: List[float] = Field(
-        ...,
-        description="Vector khuôn mặt 512 chiều trích xuất từ ảnh selfie",
-        min_length=512,
-        max_length=512,
+        description="Ngày sinh đọc từ vùng dob (None nếu không đọc được, định dạng dd/mm/yyyy)",
     )
 
 
 # ---------------------------------------------------------------------------
 # Response lỗi
 # ---------------------------------------------------------------------------
+    gender: Optional[str] = Field(None, description="Gioi tinh suy tu chu so thu 4 cua CCCD")
+    hometown: Optional[str] = Field(None, description="Que quan/tinh thanh suy tu 3 so dau CCCD")
+    validation_passed: bool = Field(False, description="Ket qua cross-field validation")
+    validation_errors: List[str] = Field(default_factory=list)
+    validation_warnings: List[str] = Field(default_factory=list)
+    logic_gender: Optional[str] = None
+    logic_birth_year: Optional[int] = None
+    province_code: Optional[str] = None
+    province_name: Optional[str] = None
+    corrected_fields: Dict[str, str] = Field(default_factory=dict)
+    raw_fields: Dict[str, Optional[str]] = Field(default_factory=dict)
+    detection_confidences: Dict[str, float] = Field(default_factory=dict)
+
+
 class ErrorResponse(BaseModel):
     success: bool = False
     message: str

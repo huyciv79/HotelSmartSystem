@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { getRoomTypes } from '../services/roomService';
 import { createBooking } from '../services/bookingService';
+import { getEkycProfile } from '../services/ekycService';
 import { useToast, ToastContainer } from '../components/Toast';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -28,6 +29,8 @@ export default function Booking({ setActivePage }) {
   
   // Step 2 & 3 States
   const [checkInMethod, setCheckInMethod] = useState('Manual'); // 'Manual' | 'FaceID' | 'QR Code'
+  const [isEkycVerified, setIsEkycVerified] = useState(false);
+  const [isEkycLoading, setIsEkycLoading] = useState(true);
   const [specialRequests, setSpecialRequests] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   
@@ -63,6 +66,39 @@ export default function Booking({ setActivePage }) {
     
     fetchRooms();
   }, [showToast]);
+
+  useEffect(() => {
+    const fetchEkycStatus = async () => {
+      try {
+        const response = await getEkycProfile();
+        setIsEkycVerified(
+          String(response?.data?.status || '').toUpperCase() === 'VERIFIED',
+        );
+      } catch (error) {
+        console.error('Không thể kiểm tra trạng thái eKYC:', error);
+        setIsEkycVerified(false);
+      } finally {
+        setIsEkycLoading(false);
+      }
+    };
+
+    fetchEkycStatus();
+  }, []);
+
+  const handleFaceIdSelection = () => {
+    if (isEkycLoading) {
+      showToast('Đang kiểm tra trạng thái eKYC, vui lòng chờ.', 'info');
+      return;
+    }
+    if (!isEkycVerified) {
+      showToast(
+        'Bạn phải hoàn thành đăng ký eKYC trước khi sử dụng check-in bằng FaceID.',
+        'warning',
+      );
+      return;
+    }
+    setCheckInMethod('FaceID');
+  };
 
   // Reset availability status when dates or room changes
   useEffect(() => {
@@ -161,6 +197,9 @@ export default function Booking({ setActivePage }) {
     const tempErrors = {};
     if (!checkInMethod) {
       tempErrors.checkInMethod = 'Vui lòng chọn phương thức nhận phòng';
+    }
+    if (checkInMethod === 'FaceID' && !isEkycVerified) {
+      tempErrors.checkInMethod = 'Bạn chưa hoàn thành đăng ký eKYC để sử dụng FaceID';
     }
     setErrors(tempErrors);
     if (Object.keys(tempErrors).length === 0) {
@@ -503,16 +542,25 @@ export default function Booking({ setActivePage }) {
 
                     {/* FaceID Option */}
                     <div 
-                      onClick={() => setCheckInMethod('FaceID')}
+                      onClick={handleFaceIdSelection}
+                      aria-disabled={isEkycLoading || !isEkycVerified}
                       className={`border p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 ${
                         checkInMethod === 'FaceID' 
                           ? 'border-primary bg-primary/5 text-primary shadow-md' 
-                          : 'border-slate-200 hover:border-primary/50 text-slate-700 bg-white'
+                          : isEkycLoading || !isEkycVerified
+                            ? 'border-slate-200 text-slate-400 bg-slate-100 cursor-not-allowed opacity-70'
+                            : 'border-slate-200 hover:border-primary/50 text-slate-700 bg-white'
                       }`}
                     >
                       <span className="material-symbols-outlined text-3xl mb-3">face</span>
                       <span className="text-[12px] font-black uppercase tracking-wider block">FaceID eKYC</span>
-                      <span className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">{t('booking_checkin_face_sub', 'Nhận diện khuôn mặt')}</span>
+                      <span className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">
+                        {isEkycLoading
+                          ? 'Đang kiểm tra eKYC'
+                          : isEkycVerified
+                            ? t('booking_checkin_face_sub', 'Nhận diện khuôn mặt')
+                            : 'Cần đăng ký eKYC trước'}
+                      </span>
                     </div>
 
                     {/* Manual Option */}

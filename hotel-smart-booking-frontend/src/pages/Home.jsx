@@ -4,7 +4,7 @@ import { useLanguage } from '../context/LanguageContext';
 
 export default function Home({ setActivePage }) {
   const { t } = useLanguage();
-  const [selectedHotel, setSelectedHotel] = useState('Chọn Khách sạn');
+  const [selectedHotel, setSelectedHotel] = useState('Elysian Hotel Can Tho');
   const [bookingDate, setBookingDate] = useState('02/06/2026 - 03/06/2026');
   const [guests, setGuests] = useState('1 Người lớn, 0 Trẻ em');
   const [isRewardsShrunk, setIsRewardsShrunk] = useState(false);
@@ -118,9 +118,6 @@ export default function Home({ setActivePage }) {
               <div className="flex items-center justify-between border-b border-on-surface py-2">
                 <select value={selectedHotel} onChange={(e) => setSelectedHotel(e.target.value)}
                   className="w-full bg-transparent border-none focus:ring-0 font-bold text-sm p-0 outline-none cursor-pointer">
-                  <option>{t('select_hotel')}</option>
-                  <option>Elysian Hotel Saigon Centre</option>
-                  <option>Elysian Hotel Danang Centre</option>
                   <option>Elysian Hotel Can Tho</option>
                 </select>
                 <span className="material-symbols-outlined text-secondary ml-2">location_on</span>
@@ -302,36 +299,7 @@ export default function Home({ setActivePage }) {
         </div>
       </section>
 
-      {/* ── SẮP RA MẮT ───────────────────────────────────────────────────── */}
-      <section className="bg-surface-container-low pb-24 px-4 md:px-16">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-0 items-center scroll-reveal">
-          {/* Left text */}
-          <div className="space-y-4 pr-0 md:pr-12 py-12">
-            <p className="text-secondary text-xs uppercase tracking-widest font-bold">{t('coming_soon')}</p>
-            <h2 className="font-bold text-[28px] md:text-[36px] text-primary leading-tight m-0">
-              Elysian Hotel Hanoi
-            </h2>
-            <p className="text-secondary text-sm leading-relaxed">
-              {t('coming_desc')}
-            </p>
-          </div>
 
-          {/* Right image with skew + counter */}
-          <div className="relative">
-            <div className="overflow-hidden aspect-[4/5]" style={{ clipPath: 'polygon(10% 0, 100% 0, 100% 100%, 0 100%)' }}>
-              <img
-                className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
-                alt="Elysian Hotel Hanoi architectural rendering"
-                src="https://images.unsplash.com/photo-1621847468516-1ed5d0df56fe?w=800&q=80"
-              />
-            </div>
-            {/* Counter badge */}
-            <div className="absolute bottom-8 left-0 -translate-x-1/3 bg-white px-6 py-5 shadow-lg border border-outline-variant hidden md:flex items-center justify-center" style={{ clipPath: 'polygon(0 0, 85% 0, 100% 100%, 15% 100%)' }}>
-              <span className="font-bold text-base text-on-surface">1/1</span>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <section 
         ref={rewardsRef} 

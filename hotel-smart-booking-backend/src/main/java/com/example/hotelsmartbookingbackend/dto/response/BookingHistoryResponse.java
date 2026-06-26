@@ -38,4 +38,5 @@ public class BookingHistoryResponse {
     private String roomKeyStatus;
     private Instant roomKeyExpiresAt;
     private List<RoomAccessResponse> roomAccesses;
+    private EkycIdentitySummaryResponse ekycIdentity;
 }

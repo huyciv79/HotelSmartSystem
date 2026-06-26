@@ -186,7 +186,7 @@ const RoomTypesManager = ({
                 </td>
                 <td className="p-4 font-semibold text-slate-500">
                   {room.bedType || 'King Bed'} <br />
-                  {room.roomSize || room.roomsize || 35} m²
+                  {room.area || room.roomSize || room.roomsize || 35} m²
                 </td>
                 <td className="p-4">
                   {room.adultCapacity || room.adultcapacity || 2} NL • {room.childCapacity || room.childcapacity || 1} TE

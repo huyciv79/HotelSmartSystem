@@ -2,7 +2,7 @@ package com.example.hotelsmartbookingbackend.controller;
 
 import com.example.hotelsmartbookingbackend.dto.request.ForgotPasswordRequest;
 import com.example.hotelsmartbookingbackend.dto.request.LoginRequest;
-import com.example.hotelsmartbookingbackend.dto.request.RefreshTokenRequest;
+
 import com.example.hotelsmartbookingbackend.dto.request.RegisterRequest;
 import com.example.hotelsmartbookingbackend.dto.request.VerifyOtpRequest;
 import com.example.hotelsmartbookingbackend.dto.request.VerifyForgotOtpRequest;
@@ -55,22 +55,7 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<LoginResponse>> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
-        try {
-            LoginResponse loginResponse = authService.refreshToken(request);
-            return ResponseEntity.ok(ApiResponse.success("Làm mới token thành công", loginResponse));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(e.getMessage()));
-        }
-    }
 
-    @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<String>> logout(@Valid @RequestBody RefreshTokenRequest request) {
-        authService.logout(request.getRefreshToken());
-        return ResponseEntity.ok(ApiResponse.success("Đăng xuất thành công", null));
-    }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {

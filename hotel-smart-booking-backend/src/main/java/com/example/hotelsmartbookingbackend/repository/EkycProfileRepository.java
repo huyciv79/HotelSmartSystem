@@ -57,7 +57,6 @@ public interface EkycProfileRepository extends JpaRepository<EkycProfile, Intege
 
     /**
      * Cập nhật số CCCD bóc tách tự động từ OCR vào bản ghi EkycProfile.
-     * Được gọi ngay sau markAsVerified() để ghi số CCCD đọc được từ ảnh.
      */
     @Modifying
     @Query("""
@@ -80,6 +79,7 @@ public interface EkycProfileRepository extends JpaRepository<EkycProfile, Intege
 
     /**
      * Cập nhật cả AES ciphertext lẫn HMAC hash cùng một lúc.
+     * Hometown được suy từ 3 số đầu CCCD, không lấy từ OCR quê quán.
      */
     @Modifying
     @Query("""
@@ -87,14 +87,22 @@ public interface EkycProfileRepository extends JpaRepository<EkycProfile, Intege
             SET e.idcardnumber     = :idCardNumber,
                 e.idcardnumberhash = :idCardNumberHash,
                 e.fullname         = :fullName,
-                e.dateofbirth      = :dateOfBirth
+                e.dateofbirth      = :dateOfBirth,
+                e.gender           = :gender,
+                e.hometown         = :hometown,
+                e.provincecode     = :provinceCode,
+                e.provincename     = :provinceName
             WHERE e.id = :ekycId
             """)
     void updateIdCardDetailsAndHash(@Param("ekycId")           Integer ekycId,
                                     @Param("idCardNumber")     String  idCardNumber,
                                     @Param("idCardNumberHash") String  idCardNumberHash,
                                     @Param("fullName")         String  fullName,
-                                    @Param("dateOfBirth")      String  dateOfBirth);
+                                    @Param("dateOfBirth")      String  dateOfBirth,
+                                    @Param("gender")           String  gender,
+                                    @Param("hometown")         String  hometown,
+                                    @Param("provinceCode")     String  provinceCode,
+                                    @Param("provinceName")     String  provinceName);
 
     /**
      * Kiểm tra số CCCD (qua HMAC-SHA256 fingerprint) đã được đăng ký bởi user khác chưa.

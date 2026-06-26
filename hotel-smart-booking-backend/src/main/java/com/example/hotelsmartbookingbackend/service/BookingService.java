@@ -6,6 +6,13 @@ import com.example.hotelsmartbookingbackend.dto.request.WalkInBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
 import com.example.hotelsmartbookingbackend.dto.response.InvoiceResponse;
+import com.example.hotelsmartbookingbackend.dto.request.BookingFilter;
+import com.example.hotelsmartbookingbackend.dto.request.UpdateBookingRequest;
+import com.example.hotelsmartbookingbackend.dto.request.CancelBookingRequest;
+import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
+import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
+import com.example.hotelsmartbookingbackend.dto.response.AiFaceReadinessResponse;
+import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -27,10 +34,15 @@ public interface BookingService {
     BookingResponse performFaceCheckIn(
             Integer bookingId,
             MultipartFile selfieImage,
-            MultipartFile leftImage,
-            MultipartFile rightImage,
-            MultipartFile upImage,
-            MultipartFile downImage,
+            MultipartFile challengeImage,
+            MultipartFile challengeImage2,
+            MultipartFile challengeImage3,
+            String challengeDirection,
+            String actorEmail
+    );
+
+    AiFaceReadinessResponse checkFaceReadiness(
+            MultipartFile selfieImage,
             String actorEmail
     );
 
@@ -43,5 +55,10 @@ public interface BookingService {
     InvoiceResponse getInvoiceDetails(Integer bookingId, String actorEmail);
 
     void addServiceToBooking(Integer bookingId, AddServiceRequest request, String staffEmail);
+    PageResponse<BookingHistoryResponse> filterBookings(BookingFilter criteria);
+
+    BookingResponse updateBooking(Integer bookingId, UpdateBookingRequest request, String staffEmail);
+
+    BookingResponse cancelBooking(Integer bookingId, CancelBookingRequest request, String staffEmail);
 }
 

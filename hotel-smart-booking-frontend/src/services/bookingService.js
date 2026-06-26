@@ -54,17 +54,17 @@ export const checkOutBooking = async (bookingId) => {
 export const faceCheckInBooking = async (
   bookingId,
   selfieImage,
-  leftImage,
-  rightImage,
-  upImage,
-  downImage,
+  challengeImage,
+  challengeImage2,
+  challengeImage3,
+  challengeDirection,
 ) => {
   const formData = new FormData();
   formData.append('selfieImage', selfieImage);
-  formData.append('leftImage', leftImage);
-  formData.append('rightImage', rightImage);
-  formData.append('upImage', upImage);
-  formData.append('downImage', downImage);
+  formData.append('challengeImage', challengeImage);
+  formData.append('challengeImage2', challengeImage2);
+  formData.append('challengeImage3', challengeImage3);
+  formData.append('challengeDirection', challengeDirection);
 
   const response = await axiosInstance.post(
     `/bookings/${bookingId}/face-check-in`,
@@ -84,5 +84,25 @@ export const createWalkInBooking = async (walkInData) => {
 
 export const getInvoiceDetails = async (bookingId) => {
   const response = await axiosInstance.get(`/bookings/${bookingId}/invoice`);
+export const getStatementPdf = async (bookingId) => {
+  const response = await axiosInstance.get(`/bookings/${bookingId}/statement/pdf`, {
+    responseType: 'blob'
+  });
+/**
+ * Check whether the camera currently sees exactly one centered, close-enough face.
+ * POST /api/bookings/face-readiness
+ */
+export const checkFaceReadiness = async (selfieImage) => {
+  const formData = new FormData();
+  formData.append('selfieImage', selfieImage);
+
+  const response = await axiosInstance.post(
+    '/bookings/face-readiness',
+    formData,
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30000,
+    },
+  );
   return response.data;
 };

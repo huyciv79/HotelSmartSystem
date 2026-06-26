@@ -46,6 +46,22 @@ public class EkycProfile {
     private String dateofbirth;
 
     @Size(max = 512)
+    @Column(name = "gender", length = 512)
+    private String gender;
+
+    @Size(max = 512)
+    @Column(name = "hometown", length = 512)
+    private String hometown;
+
+    @Size(max = 20)
+    @Column(name = "provincecode", length = 20)
+    private String provincecode;
+
+    @Size(max = 512)
+    @Column(name = "provincename", length = 512)
+    private String provincename;
+
+    @Size(max = 512)
     @Column(name = "frontimage", length = 512)
     private String frontimage;
 

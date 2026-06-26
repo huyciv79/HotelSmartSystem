@@ -23,6 +23,8 @@ import Payment from './pages/Payment';
 import BookingDetail from './pages/BookingDetail';
 import GroupBooking from './pages/GroupBooking';
 import StaffDashboard from './pages/StaffDashboard';
+import AiAssistant from './pages/AiAssistant';
+import AiFloatingBubble from './components/AiFloatingBubble';
 
 function DashboardRoute() {
   const navigate = useNavigate();
@@ -50,7 +52,12 @@ function DashboardRoute() {
     return <StaffDashboard setActivePage={setActivePage} />;
   }
 
-  return <Dashboard setActivePage={setActivePage} />;
+  return (
+    <>
+      <Dashboard setActivePage={setActivePage} />
+      <AiFloatingBubble setActivePage={setActivePage} activePage="dashboard" />
+    </>
+  );
 }
 
 function MainSite() {
@@ -116,6 +123,8 @@ function MainSite() {
         return <Payment setActivePage={setActivePage} />;
       case 'booking-detail':
         return <BookingDetail setActivePage={setActivePage} />;
+      case 'ai-assistant':
+        return <AiAssistant setActivePage={setActivePage} />;
       default:
         return <Home setActivePage={setActivePage} />;
     }
@@ -132,6 +141,7 @@ function MainSite() {
 
       <main className="flex-grow">{renderPage()}</main>
       <Footer setActivePage={setActivePage} />
+      <AiFloatingBubble setActivePage={setActivePage} activePage={activePage} />
     </div>
   );
 }
