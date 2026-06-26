@@ -159,7 +159,8 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
     { id: 'residences', label: t('nav_residences') },
     { id: 'experiences', label: t('nav_experiences') },
     { id: 'events', label: t('nav_events') },
-    { id: 'offers', label: t('nav_offers') }
+    { id: 'offers', label: t('nav_offers') },
+    { id: 'ai-assistant', label: t('nav_ai_assistant', 'TRỢ LÝ AI') }
   ];
 
   const handleNavClick = (id) => {

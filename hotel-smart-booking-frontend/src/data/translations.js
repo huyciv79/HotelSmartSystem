@@ -2,6 +2,7 @@ export const translations = {
   VN: {
     // Navbar
     nav_hotels: 'KHÁCH SẠN',
+    nav_ai_assistant: 'TRỢ LÝ AI',
     nav_residences: 'ELYSIAN RESIDENCES',
     nav_experiences: 'TRẢI NGHIỆM ELYSIAN',
     nav_events: 'HỘI NGHỊ & SỰ KIỆN',
@@ -317,6 +318,7 @@ export const translations = {
   EN: {
     // Navbar
     nav_hotels: 'HOTELS',
+    nav_ai_assistant: 'AI ASSISTANT',
     nav_residences: 'ELYSIAN RESIDENCES',
     nav_experiences: 'ELYSIAN EXPERIENCES',
     nav_events: 'MEETINGS & EVENTS',
@@ -632,6 +634,7 @@ export const translations = {
   JP: {
     // Navbar
     nav_hotels: 'ホテル',
+    nav_ai_assistant: 'AIアシスタント',
     nav_residences: 'エリシアン レジデンス',
     nav_experiences: 'エリシアン エクスペリエンス',
     nav_events: '会議＆イベント',
@@ -947,6 +950,7 @@ export const translations = {
   KR: {
     // Navbar
     nav_hotels: '호텔',
+    nav_ai_assistant: 'AI 어시스턴트',
     nav_residences: '엘리시안 레지던스',
     nav_experiences: '엘리시안 익스피리언스',
     nav_events: '미팅 & 이벤트',
@@ -1262,6 +1266,7 @@ export const translations = {
   CN: {
     // Navbar
     nav_hotels: '酒店',
+    nav_ai_assistant: 'AI 助手',
     nav_residences: '极乐澜庭公馆',
     nav_experiences: '极乐体验',
     nav_events: '会议与活动',
