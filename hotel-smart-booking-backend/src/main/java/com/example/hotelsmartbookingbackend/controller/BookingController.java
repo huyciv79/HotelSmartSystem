@@ -11,6 +11,7 @@ import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
 import com.example.hotelsmartbookingbackend.service.BookingService;
+import com.example.hotelsmartbookingbackend.service.PdfService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ import java.util.List;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final PdfService pdfService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<BookingResponse>> createBooking(
@@ -150,6 +152,24 @@ public class BookingController {
         BookingResponse response = bookingService.performCheckOut(bookingId, staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Trả phòng thành công", response));
     }
+
+
+
+    @GetMapping("/{bookingId}/statement/pdf")
+    public ResponseEntity<byte[]> getStatementPdf(
+            @PathVariable Integer bookingId,
+            Authentication authentication) {
+        String actorEmail = resolveCustomerEmail(authentication);
+        byte[] pdfBytes = pdfService.generateInvoicePdf(bookingId, actorEmail);
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("filename", "statement-" + bookingId + ".pdf");
+        headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+
+        return new ResponseEntity<>(pdfBytes, headers, org.springframework.http.HttpStatus.OK);
+    }
+
 
     @PostMapping("/receptionist/filter")
     @Operation(
