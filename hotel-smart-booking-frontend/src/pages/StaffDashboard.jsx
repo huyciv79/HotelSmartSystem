@@ -103,6 +103,63 @@ export default function StaffDashboard({ setActivePage }) {
   };
 
   useEffect(() => {
+    let socket = null;
+    
+    const connectWebSocket = () => {
+      try {
+        socket = new WebSocket('ws://localhost:8080/ws/websocket');
+        
+        socket.onopen = () => {
+          socket.send("CONNECT\naccept-version:1.1,1.2\n\n\x00");
+        };
+        
+        socket.onmessage = (event) => {
+          const raw = event.data;
+          if (raw.startsWith("CONNECTED")) {
+            socket.send("SUBSCRIBE\nid:sub-frontend\ndestination:/topic/room-status\n\n\x00");
+            console.log('WebSocket STOMP connected and subscribed.');
+          } else if (raw.includes("/topic/room-status")) {
+            const bodyStart = raw.indexOf('{');
+            const bodyEnd = raw.lastIndexOf('}');
+            if (bodyStart !== -1 && bodyEnd !== -1) {
+              try {
+                const bodyStr = raw.substring(bodyStart, bodyEnd + 1);
+                const data = JSON.parse(bodyStr);
+                
+                showToast(`Phòng ${data.roomNumber} đã chuyển sang trạng thái: ${data.status}`, 'info');
+                fetchRealRooms(roomsCurrentPage);
+                fetchRealBookings();
+              } catch (ex) {
+                console.error('Lỗi phân giải tin nhắn WebSocket:', ex);
+              }
+            }
+          }
+        };
+        
+        socket.onerror = (err) => {
+          console.error('Lỗi kết nối WebSocket:', err);
+        };
+        
+        socket.onclose = () => {
+          console.log('Kết nối WebSocket đã đóng. Đang thử kết nối lại sau 5s...');
+          setTimeout(connectWebSocket, 5000);
+        };
+      } catch (e) {
+        console.error('Không thể tạo kết nối WebSocket:', e);
+      }
+    };
+    
+    connectWebSocket();
+    
+    return () => {
+      if (socket) {
+        socket.onclose = null;
+        socket.close();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const fetchProfile = async () => {
       try {
         const token = localStorage.getItem('accessToken');

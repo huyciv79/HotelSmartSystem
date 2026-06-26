@@ -10,6 +10,7 @@ import com.example.hotelsmartbookingbackend.repository.RoomRepository;
 import com.example.hotelsmartbookingbackend.repository.RoomtypeRepository;
 import com.example.hotelsmartbookingbackend.entity.Roomtype;
 import com.example.hotelsmartbookingbackend.service.RoomService;
+import com.example.hotelsmartbookingbackend.service.WebSocketService;
 import com.example.hotelsmartbookingbackend.specification.RoomSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,6 +29,7 @@ public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
     private final RoomtypeRepository roomtypeRepository;
+    private final WebSocketService webSocketService;
 
     private static final Set<String> ALLOWED_STATUSES = Set.of(
             "Available",
@@ -99,6 +101,9 @@ public class RoomServiceImpl implements RoomService {
 
         room.setUpdatedat(Instant.now());
         Room updatedRoom = roomRepository.save(room);
+
+        // Broadcast status update via WebSocket
+        webSocketService.broadcastRoomStatus(updatedRoom.getId(), updatedRoom.getRoomnumber(), updatedRoom.getStatus());
 
         return mapToDetailDTO(updatedRoom);
     }
