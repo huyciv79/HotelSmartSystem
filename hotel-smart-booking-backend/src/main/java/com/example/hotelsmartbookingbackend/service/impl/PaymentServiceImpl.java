@@ -22,6 +22,9 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.Duration;
 import java.util.UUID;
+import com.example.hotelsmartbookingbackend.dto.request.ManualPaymentRequest;
+import com.example.hotelsmartbookingbackend.entity.User;
+import com.example.hotelsmartbookingbackend.repository.UserRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +34,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaypalService paypalService;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final UserRepository userRepository;
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PaymentServiceImpl.class);
     private static final String ORDER_BOOKING_PREFIX = "paypal:order_booking:";
@@ -219,6 +223,70 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setRefundedamount(BigDecimal.ZERO);
         payment.setPaymentdate(Instant.now());
         payment.setNotes("Direct Bank Transfer payment. Approved by system.");
+
+        paymentRepository.save(payment);
+
+        // 2. Update Booking paid amount and status
+        booking.setPaidamount(booking.getPaidamount().add(chargeAmount));
+        if (isFirstPayment && isPartial) {
+            booking.setDepositamount(chargeAmount);
+        }
+        booking.setUpdatedat(Instant.now());
+
+        if (booking.getPaidamount().compareTo(booking.getFinalamount()) >= 0) {
+            booking.setStatus("Paid");
+        } else if (booking.getPaidamount().compareTo(BigDecimal.ZERO) > 0) {
+            booking.setStatus("Partially Paid");
+        }
+
+        bookingRepository.save(booking);
+    }
+
+    @Override
+    @Transactional
+    public void processManualPayment(ManualPaymentRequest request, String staffEmail) {
+        User staff = userRepository.findByEmail(staffEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
+
+        if (!"receptionist".equalsIgnoreCase(staff.getRole().name()) && !"manager".equalsIgnoreCase(staff.getRole().name())) {
+            throw new RuntimeException("Bạn không có quyền thực hiện chức năng này");
+        }
+
+        Booking booking = bookingRepository.findById(request.getBookingId())
+                .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + request.getBookingId()));
+
+        if ("Paid".equalsIgnoreCase(booking.getStatus())) {
+            throw new RuntimeException("Booking is already fully paid");
+        }
+        if ("Cancelled".equalsIgnoreCase(booking.getStatus())) {
+            throw new RuntimeException("Booking has been cancelled");
+        }
+
+        BigDecimal remainingBalance = booking.getFinalamount().subtract(booking.getPaidamount());
+        BigDecimal chargeAmount = request.getAmount();
+
+        if (chargeAmount == null || chargeAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Payment amount must be greater than zero");
+        }
+        if (chargeAmount.compareTo(remainingBalance) > 0) {
+            throw new RuntimeException("Payment amount exceeds remaining balance of " + remainingBalance);
+        }
+
+        // 1. Create Payment Record in Database
+        Payment payment = new Payment();
+        payment.setBookingid(booking);
+        payment.setAmount(chargeAmount);
+        payment.setPaymentmethod(request.getPaymentMethod());
+
+        boolean isFirstPayment = booking.getPaidamount().compareTo(BigDecimal.ZERO) == 0;
+        boolean isPartial = chargeAmount.compareTo(booking.getFinalamount()) < 0;
+
+        payment.setPaymenttype(request.getPaymentType() != null ? request.getPaymentType() : (isFirstPayment && isPartial ? "Deposit" : "Booking Payment"));
+        payment.setTransactioncode("MANUAL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        payment.setStatus("Completed");
+        payment.setRefundedamount(BigDecimal.ZERO);
+        payment.setPaymentdate(Instant.now());
+        payment.setNotes(request.getNotes() != null ? request.getNotes() : "Counter payment approved by " + staff.getFullname());
 
         paymentRepository.save(payment);
 

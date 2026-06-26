@@ -2,11 +2,15 @@ package com.example.hotelsmartbookingbackend.service;
 
 import com.example.hotelsmartbookingbackend.dto.request.CreateBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CreateGroupBookingRequest;
+import com.example.hotelsmartbookingbackend.dto.request.WalkInBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
+import com.example.hotelsmartbookingbackend.dto.response.InvoiceResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+
+import com.example.hotelsmartbookingbackend.dto.request.AddServiceRequest;
 
 public interface BookingService {
 
@@ -33,4 +37,11 @@ public interface BookingService {
     BookingResponse performCheckOut(Integer bookingId, String staffEmail);
 
     List<BookingHistoryResponse> getAllBookingsForStaff(String staffEmail);
+
+    BookingResponse createWalkInBooking(WalkInBookingRequest request, String staffEmail);
+
+    InvoiceResponse getInvoiceDetails(Integer bookingId, String actorEmail);
+
+    void addServiceToBooking(Integer bookingId, AddServiceRequest request, String staffEmail);
 }
+

@@ -2,9 +2,12 @@ package com.example.hotelsmartbookingbackend.controller;
 
 import com.example.hotelsmartbookingbackend.dto.request.CreateBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CreateGroupBookingRequest;
+import com.example.hotelsmartbookingbackend.dto.request.WalkInBookingRequest;
+import com.example.hotelsmartbookingbackend.dto.request.AddServiceRequest;
 import com.example.hotelsmartbookingbackend.dto.response.ApiResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
+import com.example.hotelsmartbookingbackend.dto.response.InvoiceResponse;
 import com.example.hotelsmartbookingbackend.service.BookingService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -119,6 +122,34 @@ public class BookingController {
         String staffEmail = resolveCustomerEmail(authentication);
         BookingResponse response = bookingService.performCheckOut(bookingId, staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Trả phòng thành công", response));
+    }
+
+    @PostMapping("/walk-in")
+    public ResponseEntity<ApiResponse<BookingResponse>> createWalkInBooking(
+            @Valid @RequestBody WalkInBookingRequest request,
+            Authentication authentication) {
+        String staffEmail = resolveCustomerEmail(authentication);
+        BookingResponse response = bookingService.createWalkInBooking(request, staffEmail);
+        return ResponseEntity.ok(ApiResponse.success("Đặt phòng trực tiếp (Walk-in) thành công", response));
+    }
+
+    @GetMapping("/{bookingId}/invoice")
+    public ResponseEntity<ApiResponse<InvoiceResponse>> getInvoice(
+            @PathVariable Integer bookingId,
+            Authentication authentication) {
+        String actorEmail = resolveCustomerEmail(authentication);
+        InvoiceResponse response = bookingService.getInvoiceDetails(bookingId, actorEmail);
+        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin hóa đơn thành công", response));
+    }
+
+    @PostMapping("/{bookingId}/services")
+    public ResponseEntity<ApiResponse<String>> addService(
+            @PathVariable Integer bookingId,
+            @Valid @RequestBody AddServiceRequest request,
+            Authentication authentication) {
+        String staffEmail = resolveCustomerEmail(authentication);
+        bookingService.addServiceToBooking(bookingId, request, staffEmail);
+        return ResponseEntity.ok(ApiResponse.success("Thêm dịch vụ vào đơn đặt phòng thành công", "SUCCESS"));
     }
 
     private String resolveCustomerEmail(Authentication authentication) {

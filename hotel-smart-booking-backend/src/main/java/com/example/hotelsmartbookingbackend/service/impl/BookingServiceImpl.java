@@ -2,9 +2,12 @@ package com.example.hotelsmartbookingbackend.service.impl;
 
 import com.example.hotelsmartbookingbackend.dto.request.CreateBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CreateGroupBookingRequest;
+import com.example.hotelsmartbookingbackend.dto.request.WalkInBookingRequest;
+import com.example.hotelsmartbookingbackend.dto.request.AddServiceRequest;
 import com.example.hotelsmartbookingbackend.dto.response.AiFaceVerificationResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
+import com.example.hotelsmartbookingbackend.dto.response.InvoiceResponse;
 import com.example.hotelsmartbookingbackend.dto.response.RoomAccessResponse;
 import com.example.hotelsmartbookingbackend.entity.Booking;
 import com.example.hotelsmartbookingbackend.entity.BookingRoomAccess;
@@ -12,6 +15,9 @@ import com.example.hotelsmartbookingbackend.entity.Bookingdetail;
 import com.example.hotelsmartbookingbackend.entity.Room;
 import com.example.hotelsmartbookingbackend.entity.Roomtype;
 import com.example.hotelsmartbookingbackend.entity.User;
+import com.example.hotelsmartbookingbackend.entity.Payment;
+import com.example.hotelsmartbookingbackend.entity.Bookingservice;
+import com.example.hotelsmartbookingbackend.enums.Role;
 import com.example.hotelsmartbookingbackend.repository.BookingRepository;
 import com.example.hotelsmartbookingbackend.repository.BookingRoomAccessRepository;
 import com.example.hotelsmartbookingbackend.repository.BookingdetailRepository;
@@ -20,7 +26,11 @@ import com.example.hotelsmartbookingbackend.repository.FaceembeddingRepository;
 import com.example.hotelsmartbookingbackend.repository.RoomRepository;
 import com.example.hotelsmartbookingbackend.repository.RoomtypeRepository;
 import com.example.hotelsmartbookingbackend.repository.UserRepository;
+import com.example.hotelsmartbookingbackend.repository.PaymentRepository;
+import com.example.hotelsmartbookingbackend.repository.BookingserviceRepository;
+import com.example.hotelsmartbookingbackend.repository.ServiceRepository;
 import com.example.hotelsmartbookingbackend.service.BookingService;
+import com.example.hotelsmartbookingbackend.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -34,6 +44,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.UUID;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
@@ -80,6 +92,10 @@ public class BookingServiceImpl implements BookingService {
     private final EkycProfileRepository ekycProfileRepository;
     private final FaceembeddingRepository faceembeddingRepository;
     private final WebClient webClient;
+    private final PaymentRepository paymentRepository;
+    private final BookingserviceRepository bookingserviceRepository;
+    private final WebSocketService webSocketService;
+    private final ServiceRepository serviceRepository;
 
     @Value("${ai.service.face-verify-url:http://localhost:8000/api/v1/face/verify}")
     private String aiFaceVerifyUrl;
@@ -567,6 +583,9 @@ public class BookingServiceImpl implements BookingService {
 
             room.setStatus(ROOM_STATUS_OCCUPIED);
             room.setUpdatedat(now);
+
+            // Broadcast room status change via WebSocket
+            webSocketService.broadcastRoomStatus(room.getId(), room.getRoomnumber(), ROOM_STATUS_OCCUPIED);
         }
 
         BookingRoomAccess primaryAccess = roomAccesses.get(0);
@@ -622,12 +641,15 @@ public class BookingServiceImpl implements BookingService {
                 bookingRoomAccessRepository.findByBookingid_IdOrderByRoomid_RoomnumberAsc(bookingId);
         for (BookingRoomAccess access : roomAccesses) {
             Room room = access.getRoomid();
-            room.setStatus(AVAILABLE_ROOM_STATUS);
+            room.setStatus("Cleaning");
             room.setUpdatedat(now);
             access.setRoomkeyaccess(null);
             access.setRoomkeyexpiredat(now);
             access.setRoomkeystatus(ROOM_KEY_STATUS_EXPIRED);
             access.setUpdatedat(now);
+
+            // Broadcast room status change via WebSocket
+            webSocketService.broadcastRoomStatus(room.getId(), room.getRoomnumber(), "Cleaning");
         }
         if (!roomAccesses.isEmpty()) {
             roomRepository.saveAll(roomAccesses.stream()
@@ -643,9 +665,12 @@ public class BookingServiceImpl implements BookingService {
 
         if (roomAccesses.isEmpty() && detail.getRoomid() != null) {
             Room room = detail.getRoomid();
-            room.setStatus(AVAILABLE_ROOM_STATUS);
+            room.setStatus("Cleaning");
             room.setUpdatedat(now);
             roomRepository.save(room);
+
+            // Broadcast room status change via WebSocket
+            webSocketService.broadcastRoomStatus(room.getId(), room.getRoomnumber(), "Cleaning");
         }
         bookingdetailRepository.save(detail);
 
@@ -869,4 +894,254 @@ public class BookingServiceImpl implements BookingService {
         return checkInMethod;
     }
 
+    @Override
+    @Transactional
+    public BookingResponse createWalkInBooking(WalkInBookingRequest request, String staffEmail) {
+        User staff = userRepository.findByEmail(staffEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
+
+        if (!"receptionist".equalsIgnoreCase(staff.getRole().name()) && !"manager".equalsIgnoreCase(staff.getRole().name())) {
+            throw new RuntimeException("Bạn không có quyền thực hiện chức năng này");
+        }
+
+        validateDates(request.getCheckInDate(), request.getCheckOutDate());
+        validateGuestCounts(request.getNumberOfAdults(), request.getNumberOfChildren());
+
+        User customer = userRepository.findByEmail(request.getCustomerEmail()).orElse(null);
+        if (customer == null) {
+            customer = new User();
+            customer.setEmail(request.getCustomerEmail());
+            customer.setFullname(request.getCustomerFullname());
+            customer.setPhonenumber(request.getCustomerPhonenumber());
+            customer.setRole(Role.customer);
+            customer.setPasswordhash("");
+            customer.setStatus("Active");
+            customer.setCreatedat(Instant.now());
+            customer = userRepository.save(customer);
+        }
+
+        Roomtype roomtype = roomtypeRepository.findById(request.getRoomTypeId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy loại phòng"));
+
+        if (!"Active".equalsIgnoreCase(roomtype.getStatus())) {
+            throw new RuntimeException("Loại phòng hiện không hoạt động");
+        }
+
+        assertCapacity(roomtype, request.getQuantity(), request.getNumberOfAdults(), request.getNumberOfChildren());
+        assertAvailability(roomtype, request.getCheckInDate(), request.getCheckOutDate(), request.getQuantity());
+
+        Instant now = Instant.now();
+        long nights = ChronoUnit.DAYS.between(request.getCheckInDate(), request.getCheckOutDate());
+        BigDecimal totalAmount = roomtype.getBaseprice()
+                .multiply(BigDecimal.valueOf(request.getQuantity()))
+                .multiply(BigDecimal.valueOf(nights));
+
+        BigDecimal taxAmount = totalAmount.multiply(new BigDecimal("0.10")).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal finalAmount = totalAmount.add(taxAmount).setScale(2, RoundingMode.HALF_UP);
+
+        Booking booking = new Booking();
+        booking.setUserid(customer);
+        booking.setBookingreference(generateBookingReference(now));
+        booking.setBookingtype("Walk-in");
+        booking.setCheckinmethod("Manual");
+        booking.setTotalamount(totalAmount);
+        booking.setPaidamount(BigDecimal.ZERO);
+        booking.setDepositamount(BigDecimal.ZERO);
+        booking.setDiscountamount(BigDecimal.ZERO);
+        booking.setTaxamount(taxAmount);
+        booking.setServicechargeamount(BigDecimal.ZERO);
+        booking.setFinalamount(finalAmount);
+        booking.setStatus("Confirmed");
+        booking.setSpecialrequests(request.getSpecialRequests());
+        booking.setCreatedat(now);
+        booking.setUpdatedat(now);
+        booking.setCreatedby(staff);
+
+        Booking savedBooking = bookingRepository.save(booking);
+
+        Bookingdetail detail = new Bookingdetail();
+        detail.setBookingid(savedBooking);
+        detail.setRoomtypeid(roomtype);
+        detail.setQuantity(request.getQuantity());
+        detail.setExpectedcheckin(toInstant(request.getCheckInDate()));
+        detail.setExpectedcheckout(toInstant(request.getCheckOutDate()));
+        detail.setPriceatbooking(roomtype.getBaseprice());
+        detail.setNumberofadults(request.getNumberOfAdults());
+        detail.setNumberofchildren(request.getNumberOfChildren());
+        detail.setStatus("Active");
+        detail.setCreatedat(now);
+        detail.setUpdatedat(now);
+
+        bookingdetailRepository.save(detail);
+
+        // Record upfront payment if any
+        if (request.getPaidAmount() != null && request.getPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
+            Payment payment = new Payment();
+            payment.setBookingid(savedBooking);
+            payment.setAmount(request.getPaidAmount());
+            payment.setPaymentmethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "Cash");
+            payment.setPaymenttype("Booking Payment");
+            payment.setTransactioncode("WALKIN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+            payment.setStatus("Completed");
+            payment.setRefundedamount(BigDecimal.ZERO);
+            payment.setPaymentdate(now);
+            payment.setNotes("Walk-in payment recorded at creation.");
+            paymentRepository.save(payment);
+
+            savedBooking.setPaidamount(request.getPaidAmount());
+            if (savedBooking.getPaidamount().compareTo(savedBooking.getFinalamount()) >= 0) {
+                savedBooking.setStatus("Paid");
+            } else {
+                savedBooking.setStatus("Partially Paid");
+            }
+            bookingRepository.save(savedBooking);
+        }
+
+        // Perform immediate check-in for walk-in booking
+        return completeCheckIn(savedBooking, detail, staff);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public InvoiceResponse getInvoiceDetails(Integer bookingId, String actorEmail) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
+
+        User actor = userRepository.findByEmail(actorEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        boolean isStaff = "receptionist".equalsIgnoreCase(actor.getRole().name())
+                || "manager".equalsIgnoreCase(actor.getRole().name());
+
+        if (!isStaff && !actor.getId().equals(booking.getUserid().getId())) {
+            throw new RuntimeException("Bạn không có quyền xem hóa đơn này");
+        }
+
+        Bookingdetail detail = bookingdetailRepository.findByBookingid_Id(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đặt phòng"));
+
+        List<BookingRoomAccess> roomAccesses = bookingRoomAccessRepository
+                .findByBookingid_IdOrderByRoomid_RoomnumberAsc(bookingId);
+        List<String> assignedRooms = new ArrayList<>();
+        if (!roomAccesses.isEmpty()) {
+            assignedRooms = roomAccesses.stream()
+                    .map(access -> access.getRoomid().getRoomnumber())
+                    .toList();
+        } else if (detail.getRoomid() != null) {
+            assignedRooms = List.of(detail.getRoomid().getRoomnumber());
+        }
+
+        List<Bookingservice> bookingservices = bookingserviceRepository.findByBookingid_Id(bookingId);
+        List<InvoiceResponse.ServiceChargeItem> serviceItems = bookingservices.stream()
+                .map(bs -> InvoiceResponse.ServiceChargeItem.builder()
+                        .usageId(bs.getId())
+                        .serviceName(bs.getNote() != null && !bs.getNote().isBlank() ? bs.getNote() : "Dịch vụ phụ thu")
+                        .quantity(bs.getQuantity())
+                        .unitPrice(bs.getUnitprice())
+                        .totalPrice(bs.getTotalprice())
+                        .implementedAt(bs.getImplementedat())
+                        .note(bs.getNote())
+                        .build())
+                .toList();
+
+        BigDecimal serviceTotal = bookingservices.stream()
+                .map(Bookingservice::getTotalprice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<Payment> payments = paymentRepository.findByBookingid_Id(bookingId);
+        List<InvoiceResponse.PaymentItem> paymentItems = payments.stream()
+                .map(p -> InvoiceResponse.PaymentItem.builder()
+                        .paymentId(p.getId())
+                        .amount(p.getAmount())
+                        .paymentMethod(p.getPaymentmethod())
+                        .paymentType(p.getPaymenttype())
+                        .transactionCode(p.getTransactioncode())
+                        .status(p.getStatus())
+                        .refundedAmount(p.getRefundedamount())
+                        .paymentDate(p.getPaymentdate())
+                        .notes(p.getNotes())
+                        .build())
+                .toList();
+
+        long nights = ChronoUnit.DAYS.between(toLocalDate(detail.getExpectedcheckin()), toLocalDate(detail.getExpectedcheckout()));
+        BigDecimal roomRate = detail.getPriceatbooking();
+        BigDecimal roomTotal = roomRate.multiply(BigDecimal.valueOf(detail.getQuantity())).multiply(BigDecimal.valueOf(nights));
+        BigDecimal taxAmount = booking.getTaxamount();
+        BigDecimal discountAmount = booking.getDiscountamount();
+        BigDecimal finalAmount = booking.getFinalamount();
+        BigDecimal paidAmount = booking.getPaidamount();
+        BigDecimal dueAmount = finalAmount.subtract(paidAmount);
+
+        return InvoiceResponse.builder()
+                .bookingId(booking.getId())
+                .bookingReference(booking.getBookingreference())
+                .bookingType(booking.getBookingtype())
+                .customerName(booking.getUserid().getFullname())
+                .customerEmail(booking.getUserid().getEmail())
+                .customerPhone(booking.getUserid().getPhonenumber())
+                .checkInDate(toLocalDate(detail.getExpectedcheckin()))
+                .checkOutDate(toLocalDate(detail.getExpectedcheckout()))
+                .nights(nights)
+                .roomTypeName(detail.getRoomtypeid().getName())
+                .quantity(detail.getQuantity())
+                .assignedRooms(assignedRooms)
+                .roomRate(roomRate)
+                .roomTotal(roomTotal)
+                .services(serviceItems)
+                .serviceTotal(serviceTotal)
+                .taxAmount(taxAmount)
+                .discountAmount(discountAmount)
+                .finalAmount(finalAmount)
+                .paidAmount(paidAmount)
+                .dueAmount(dueAmount)
+                .payments(paymentItems)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public void addServiceToBooking(Integer bookingId, AddServiceRequest request, String staffEmail) {
+        User staff = userRepository.findByEmail(staffEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
+
+        if (!"receptionist".equalsIgnoreCase(staff.getRole().name()) && !"manager".equalsIgnoreCase(staff.getRole().name())) {
+            throw new RuntimeException("Bạn không có quyền thực hiện chức năng này");
+        }
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
+
+        if ("Cancelled".equalsIgnoreCase(booking.getStatus()) || "Checked-out".equalsIgnoreCase(booking.getStatus())) {
+            throw new RuntimeException("Không thể thêm dịch vụ cho đơn đặt phòng ở trạng thái này");
+        }
+
+        com.example.hotelsmartbookingbackend.entity.Service service = serviceRepository.findById(request.getServiceId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy dịch vụ"));
+
+        if (Boolean.FALSE.equals(service.getIsactive())) {
+            throw new RuntimeException("Dịch vụ hiện không hoạt động");
+        }
+
+        BigDecimal unitPrice = service.getPrice();
+        BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(request.getQuantity()));
+
+        Bookingservice usage = new Bookingservice();
+        usage.setBookingid(booking);
+        usage.setQuantity(request.getQuantity());
+        usage.setUnitprice(unitPrice);
+        usage.setTotalprice(totalPrice);
+        usage.setImplementedat(Instant.now());
+        usage.setNote(request.getNote() != null && !request.getNote().isBlank()
+                ? request.getNote() : service.getName());
+        usage.setStatus("Active");
+
+        bookingserviceRepository.save(usage);
+
+        // Update booking service charge and final amounts
+        booking.setServicechargeamount(booking.getServicechargeamount().add(totalPrice));
+        booking.setFinalamount(booking.getFinalamount().add(totalPrice));
+        booking.setUpdatedat(Instant.now());
+
+        bookingRepository.save(booking);
+    }
 }

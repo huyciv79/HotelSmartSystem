@@ -76,3 +76,13 @@ export const faceCheckInBooking = async (
   );
   return response.data;
 };
+
+export const createWalkInBooking = async (walkInData) => {
+  const response = await axiosInstance.post('/bookings/walk-in', walkInData);
+  return response.data;
+};
+
+export const getInvoiceDetails = async (bookingId) => {
+  const response = await axiosInstance.get(`/bookings/${bookingId}/invoice`);
+  return response.data;
+};
