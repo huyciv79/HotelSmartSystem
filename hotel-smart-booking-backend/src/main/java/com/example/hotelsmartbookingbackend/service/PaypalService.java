@@ -9,4 +9,5 @@ public interface PaypalService {
     String getAccessToken();
     PaypalOrderResponse createPaypalOrder(Integer bookingId, BigDecimal amount, String idempotencyKey);
     PaypalCaptureResponse capturePaypalOrder(String paypalOrderId, String idempotencyKey);
+    void refundPaypalCapture(String captureId, BigDecimal usdAmount, String idempotencyKey);
 }
