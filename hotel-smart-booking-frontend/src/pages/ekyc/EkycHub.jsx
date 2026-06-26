@@ -11,7 +11,7 @@ const SCREEN = {
 };
 
 /**
- * Top-level eKYC hub. Manages navigation between all sub-screens.
+ * Top-level eKYC hub. Manages navigation between all sub-screens. 
  * @param {() => void} onBack - Navigate back to dashboard/parent
  */
 export default function EkycHub({ onBack }) {

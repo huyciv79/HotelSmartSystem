@@ -8,13 +8,9 @@ export default function Payment({ setActivePage }) {
   const { toasts, showToast, dismissToast } = useToast();
   
   const [booking, setBooking] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('card'); // 'card' | 'qr' | 'bank'
-  const [payOption, setPayOption] = useState('deposit'); // 'deposit' | 'full'
+  const [paymentMethod, setPaymentMethod] = useState('paypal');
+  const [payOption, setPayOption] = useState('deposit');
   const [paidThisTime, setPaidThisTime] = useState(0);
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardName, setCardName] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -91,66 +87,28 @@ export default function Payment({ setActivePage }) {
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
     
-    if (paymentMethod === 'card') {
-      if (!cardNumber || !cardName || !cardExpiry || !cardCvv) {
-        showToast(t('payment_toast_card_required', 'Vui lòng điền đầy đủ thông tin thẻ tín dụng.'), 'error');
-        return;
-      }
-    }
-
-    if (paymentMethod === 'paypal') {
-      setIsProcessing(true);
-      try {
-        const idempotencyKey = `create-${Date.now()}`;
-        const response = await axiosInstance.post('/payments/paypal/create-order', {
-          bookingId: booking.bookingId || booking.id || 1,
-          amount: parseFloat(payAmountVnd),
-          paymentOption: paidAmountVnd > 0 ? 'FULL' : (payOption === 'deposit' ? 'DEPOSIT' : 'FULL')
-        }, {
-          headers: {
-            'Idempotency-Key': idempotencyKey
-          }
-        });
- 
-        const result = response.data;
-        if (result.success && result.data.approveUrl) {
-          window.location.href = result.data.approveUrl;
-        } else {
-          showToast(result.message || 'Không thể tạo đơn hàng PayPal.', 'error');
-          setIsProcessing(false);
-        }
-      } catch (err) {
-        showToast('Lỗi kết nối đến server.', 'error');
-        setIsProcessing(false);
-      }
-      return;
-    }
-
-    // Call real backend endpoint for Card, Bank Transfer, and QR Pay to make them fully functional
     setIsProcessing(true);
     try {
-      const prefix = paymentMethod === 'card' ? 'CARD' : 'BANK';
-      const randomTx = `${prefix}-${Math.floor(10000000 + Math.random() * 90000000)}`;
-      
-      const response = await axiosInstance.post('/payments/paypal/bank-transfer', {
+      const idempotencyKey = `create-${Date.now()}`;
+      const response = await axiosInstance.post('/payments/paypal/create-order', {
         bookingId: booking.bookingId || booking.id || 1,
-        amount: payAmountVnd,
-        transactionCode: randomTx
+        amount: parseFloat(payAmountVnd),
+        paymentOption: paidAmountVnd > 0 ? 'FULL' : (payOption === 'deposit' ? 'DEPOSIT' : 'FULL')
+      }, {
+        headers: {
+          'Idempotency-Key': idempotencyKey
+        }
       });
-
+ 
       const result = response.data;
-      if (result.success) {
-        setIsSuccess(true);
-        setPaidThisTime(payAmountVnd);
-        showToast('Thanh toán thành công!', 'success');
-        sessionStorage.removeItem('currentBooking');
+      if (result.success && result.data.approveUrl) {
+        window.location.href = result.data.approveUrl;
       } else {
-        showToast(result.message || 'Lỗi khi xác thực thanh toán.', 'error');
+        showToast(result.message || 'Không thể tạo đơn hàng PayPal.', 'error');
+        setIsProcessing(false);
       }
     } catch (err) {
-      const errMsg = err.response?.data?.message || 'Lỗi kết nối đến server khi xác thực thanh toán.';
-      showToast(errMsg, 'error');
-    } finally {
+      showToast('Lỗi kết nối đến server.', 'error');
       setIsProcessing(false);
     }
   };
@@ -296,52 +254,10 @@ export default function Payment({ setActivePage }) {
                 {t('payment_subtitle', 'Lựa chọn phương thức thanh toán an toàn để hoàn tất đặt phòng')}
               </p>
 
-              {/* Payment Methods selector */}
-              <div className="flex border-b border-slate-200 mb-6">
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('card')}
-                  className={`flex-1 py-3.5 text-center text-xs font-extrabold uppercase tracking-widest transition-all cursor-pointer border-none bg-transparent ${
-                    paymentMethod === 'card' 
-                      ? 'text-primary border-b-2 border-primary' 
-                      : 'text-slate-500 hover:text-primary'
-                  }`}
-                >
-                  {t('payment_method_card', 'Thẻ tín dụng')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('qr')}
-                  className={`flex-1 py-3.5 text-center text-xs font-extrabold uppercase tracking-widest transition-all cursor-pointer border-none bg-transparent ${
-                    paymentMethod === 'qr' 
-                      ? 'text-primary border-b-2 border-primary' 
-                      : 'text-slate-500 hover:text-primary'
-                  }`}
-                >
-                  {t('payment_method_qr', 'Mã QR Pay')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('bank')}
-                  className={`flex-1 py-3.5 text-center text-xs font-extrabold uppercase tracking-widest transition-all cursor-pointer border-none bg-transparent ${
-                    paymentMethod === 'bank' 
-                      ? 'text-primary border-b-2 border-primary' 
-                      : 'text-slate-500 hover:text-primary'
-                  }`}
-                >
-                  {t('payment_method_bank', 'Chuyển khoản')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('paypal')}
-                  className={`flex-1 py-3.5 text-center text-xs font-extrabold uppercase tracking-widest transition-all cursor-pointer border-none bg-transparent ${
-                    paymentMethod === 'paypal' 
-                      ? 'text-primary border-b-2 border-primary' 
-                      : 'text-slate-500 hover:text-primary'
-                  }`}
-                >
-                  PayPal
-                </button>
+              {/* Payment Method Details */}
+              <div className="mb-6 pb-2 border-b border-gray-100 flex items-center gap-2">
+                <span className="text-xs font-extrabold uppercase tracking-widest text-slate-700">Phương thức thanh toán:</span>
+                <span className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 text-xs font-black tracking-widest uppercase">PayPal</span>
               </div>
 
               {/* Payment Option Selection (Deposit 30% vs Full 100%) */}
@@ -386,149 +302,24 @@ export default function Payment({ setActivePage }) {
 
               {/* Payment Form Submission */}
               <form onSubmit={handlePaymentSubmit} className="space-y-6">
-                {paymentMethod === 'card' && (
-                  <div className="space-y-6">
-                    {/* Card Number */}
-                    <div className="space-y-2">
-                      <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('payment_card_number', 'Số thẻ')}</label>
-                      <input 
-                        type="text"
-                        placeholder="4111 2222 3333 4444"
-                        value={cardNumber}
-                        onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 '))}
-                        maxLength="19"
-                        className="w-full bg-transparent border-b border-on-surface py-2 font-bold text-sm outline-none focus:border-primary"
-                      />
-                    </div>
-
-                    {/* Card Name */}
-                    <div className="space-y-2">
-                      <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('payment_card_name', 'Tên trên thẻ')}</label>
-                      <input 
-                        type="text"
-                        placeholder="NGUYEN VAN A"
-                        value={cardName}
-                        onChange={(e) => setCardName(e.target.value.toUpperCase())}
-                        className="w-full bg-transparent border-b border-on-surface py-2 font-bold text-sm outline-none focus:border-primary"
-                      />
-                    </div>
-
-                    {/* Expiry & CVV */}
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('payment_card_expiry', 'Hạn dùng (MM/YY)')}</label>
-                        <input 
-                          type="text"
-                          placeholder="12/28"
-                          value={cardExpiry}
-                          onChange={(e) => {
-                            let val = e.target.value.replace(/\D/g, '');
-                            if (val.length > 2) val = val.substring(0, 2) + '/' + val.substring(2, 4);
-                            setCardExpiry(val);
-                          }}
-                          maxLength="5"
-                          className="w-full bg-transparent border-b border-on-surface py-2 font-bold text-sm outline-none focus:border-primary"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('payment_card_cvv', 'CVV / CVC')}</label>
-                        <input 
-                          type="password"
-                          placeholder="•••"
-                          value={cardCvv}
-                          onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
-                          maxLength="3"
-                          className="w-full bg-transparent border-b border-on-surface py-2 font-bold text-sm outline-none focus:border-primary"
-                        />
-                      </div>
-                    </div>
+                <div className="space-y-4 bg-slate-50 border border-slate-200 p-6 text-slate-700 text-center">
+                  <div className="w-16 h-16 bg-blue-50/50 border border-blue-200 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <svg className="w-8 h-8 text-blue-600 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20.007 6.78c-.288-1.547-1.332-2.73-3.003-3.414C15.82 2.9 14.183 2.72 12.235 2.72H6.284a1.002 1.002 0 0 0-.985.845L2.518 21.055a.5.5 0 0 0 .493.576h4.556a.5.5 0 0 0 .492-.424l1.378-8.72a1 1 0 0 1 .986-.844h2.247c3.155 0 5.67-1.282 6.398-4.832.336-1.637.159-2.922-.72-3.83z"></path>
+                    </svg>
                   </div>
-                )}
-
-                {paymentMethod === 'qr' && (
-                  <div className="space-y-4 text-center py-6 bg-slate-50 border border-slate-200 rounded-lg p-4">
-                    <div className="w-full max-w-[280px] bg-white border border-slate-200 shadow-md rounded-lg mx-auto p-4 flex flex-col items-center justify-center">
-                      <img 
-                        src={`https://img.vietqr.io/image/MB-98899399999-compact.png?amount=${Math.round(payAmountVnd)}&addInfo=${booking.bookingReference}&accountName=LUONG%20THE%20KIET`}
-                        alt="VietQR MB Bank LUONG THE KIET"
-                        className="w-full h-auto object-contain rounded"
-                      />
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-slate-900 uppercase tracking-widest mb-1">Quét mã VietQR bằng ứng dụng ngân hàng</p>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Mã QR đã chứa thông tin số tiền và nội dung chuyển khoản tự động.</p>
-                    </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-900 uppercase tracking-widest mb-1">Thanh toán qua cổng PayPal</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Hệ thống sẽ chuyển hướng bạn sang trang thanh toán bảo mật của PayPal (Sandbox).</p>
                   </div>
-                )}
-
-                {paymentMethod === 'bank' && (
-                  <div className="space-y-4 bg-slate-50 border border-slate-200 p-6 text-slate-700 rounded-lg">
-                    <p className="text-[11px] font-black text-slate-900 uppercase tracking-widest border-b border-slate-200 pb-2 mb-3">Thông tin chuyển khoản ngân hàng</p>
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                      <div className="md:col-span-7 space-y-2.5 text-xs font-bold">
-                        <div className="flex justify-between">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider">Ngân hàng:</span>
-                          <span className="text-slate-900">MB BANK (Ngân hàng Quân Đội)</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider">Số tài khoản:</span>
-                          <span className="text-slate-950 font-black tracking-wider">98899399999</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider">Chủ tài khoản:</span>
-                          <span className="text-slate-900 uppercase">LUONG THE KIET</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider">Số tiền:</span>
-                          <span className="text-primary font-black">
-                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(payAmountVnd)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between border-t border-slate-200 pt-3">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider">Nội dung chuyển khoản:</span>
-                          <span className="text-primary font-black tracking-widest uppercase">{booking.bookingReference}</span>
-                        </div>
-                      </div>
-                      <div className="md:col-span-5 flex flex-col items-center justify-center border-l border-dashed border-slate-300 pl-4">
-                        <img 
-                          src={`https://img.vietqr.io/image/MB-98899399999-qr_only.png?amount=${Math.round(payAmountVnd)}&addInfo=${booking.bookingReference}&accountName=LUONG%20THE%20KIET`}
-                          alt="VietQR MB Bank Quick Scan"
-                          className="w-24 h-24 border border-slate-200 rounded bg-white p-1"
-                        />
-                        <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider mt-1">Quét mã nhanh</span>
-                      </div>
-                    </div>
-                    <div className="bg-primary/5 p-3 text-[9px] text-slate-500 font-semibold leading-relaxed border-l-2 border-primary uppercase tracking-wider mt-4">
-                      Vui lòng điền CHÍNH XÁC nội dung chuyển khoản để hệ thống đối soát tự động. Sau khi hoàn thành chuyển khoản, bấm nút xác nhận bên dưới.
-                    </div>
-                  </div>
-                )}
-                {paymentMethod === 'paypal' && (
-                  <div className="space-y-4 bg-slate-50 border border-slate-200 p-6 text-slate-700 text-center">
-                    <div className="w-16 h-16 bg-blue-50/50 border border-blue-200 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <svg className="w-8 h-8 text-blue-600 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20.007 6.78c-.288-1.547-1.332-2.73-3.003-3.414C15.82 2.9 14.183 2.72 12.235 2.72H6.284a1.002 1.002 0 0 0-.985.845L2.518 21.055a.5.5 0 0 0 .493.576h4.556a.5.5 0 0 0 .492-.424l1.378-8.72a1 1 0 0 1 .986-.844h2.247c3.155 0 5.67-1.282 6.398-4.832.336-1.637.159-2.922-.72-3.83z"></path>
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-slate-900 uppercase tracking-widest mb-1">Thanh toán qua cổng PayPal</p>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Hệ thống sẽ chuyển hướng bạn sang trang thanh toán bảo mật của PayPal (Sandbox).</p>
-                    </div>
-                  </div>
-                )}
+                </div>
 
                 {/* Submit button */}
                 <button 
                   type="submit"
                   className="w-full bg-primary text-on-primary font-bold py-4 uppercase tracking-widest hover:brightness-110 active:scale-98 transition-all cursor-pointer border-none flex items-center justify-center gap-2 h-12"
                 >
-                  {paymentMethod === 'card' 
-                    ? `XÁC NHẬN THANH TOÁN THẺ (${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(payAmountVnd)})` 
-                    : paymentMethod === 'qr' 
-                    ? 'TÔI ĐÃ QUÉT MÃ QR THÀNH CÔNG' 
-                    : paymentMethod === 'paypal'
-                    ? `THANH TOÁN QUA PAYPAL (${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(payAmountVnd)})`
-                    : 'TÔI ĐÃ CHUYỂN KHOẢN THÀNH CÔNG'}
+                  THANH TOÁN QUA PAYPAL ({new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(payAmountVnd)})
                 </button>
               </form>
             </div>
