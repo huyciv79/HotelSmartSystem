@@ -13,6 +13,7 @@ import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
 import com.example.hotelsmartbookingbackend.dto.response.InvoiceResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
+import com.example.hotelsmartbookingbackend.dto.response.QrTokenResponse;
 import com.example.hotelsmartbookingbackend.service.BookingService;
 import com.example.hotelsmartbookingbackend.service.PdfService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -91,6 +92,22 @@ public class BookingController {
         String staffEmail = resolveCustomerEmail(authentication);
         BookingResponse response = bookingService.performCheckIn(bookingId, staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Nhận phòng thành công", response));
+    }
+
+    @PostMapping("/{bookingId}/qr-token")
+    @Operation(
+            summary = "Tao QR token check-in",
+            description = "Khach hang da Verified eKYC tao token QR ngan han cho booking QR Code chua check-in."
+    )
+    public ResponseEntity<ApiResponse<QrTokenResponse>> generateQrCheckInToken(
+            @PathVariable Integer bookingId,
+            Authentication authentication) {
+        String customerEmail = resolveCustomerEmail(authentication);
+        QrTokenResponse response = bookingService.generateQrCheckInToken(bookingId, customerEmail);
+        return ResponseEntity.ok(ApiResponse.success(
+                "Tao ma QR check-in thanh cong",
+                response
+        ));
     }
 
     @PostMapping(

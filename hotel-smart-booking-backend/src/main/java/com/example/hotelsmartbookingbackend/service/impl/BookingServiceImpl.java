@@ -17,6 +17,7 @@ import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
 import com.example.hotelsmartbookingbackend.dto.response.EkycIdentitySummaryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
+import com.example.hotelsmartbookingbackend.dto.response.QrTokenResponse;
 import com.example.hotelsmartbookingbackend.dto.response.RoomAccessResponse;
 
 import com.example.hotelsmartbookingbackend.entity.Booking;
@@ -77,6 +78,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -98,6 +100,7 @@ public class BookingServiceImpl implements BookingService {
     private static final String ROOM_KEY_STATUS_EXPIRED = "Expired";
     private static final String ROOM_STATUS_OCCUPIED = "Occupied";
     private static final int DEFAULT_SINGLE_BOOKING_QUANTITY = 1;
+    private static final int QR_TOKEN_RANDOM_BYTES = 32;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final List<String> INVENTORY_HOLDING_BOOKING_STATUSES =
             List.of("Pending", "Confirmed", "Checked In");
@@ -127,6 +130,9 @@ public class BookingServiceImpl implements BookingService {
 
     @Value("${ai.service.face-readiness-url:http://localhost:8000/api/v1/face/check-readiness}")
     private String aiFaceReadinessUrl;
+
+    @Value("${booking.qr-token-ttl-minutes:15}")
+    private long qrTokenTtlMinutes;
 
     @Override
     @Transactional
@@ -181,21 +187,11 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
         String normalizedCheckInMethod = normalizeCheckInMethod(checkInMethod);
-        if ("FaceID".equalsIgnoreCase(normalizedCheckInMethod)) {
-            boolean ekycVerified = ekycProfileRepository.existsByUseridAndStatus(
-                    customer,
-                    "Verified"
-            );
-            boolean faceRegistered = faceembeddingRepository
-                    .findEmbeddingTextByUserId(customer.getId())
-                    .filter(embedding -> !embedding.isBlank())
-                    .isPresent();
-
-            if (!ekycVerified || !faceRegistered) {
-                throw new RuntimeException(
-                        "Bạn phải hoàn thành đăng ký eKYC và khuôn mặt trước khi chọn check-in bằng FaceID"
-                );
-            }
+        if (isFaceIdMethod(normalizedCheckInMethod)) {
+            validateFaceIdBookingEligibility(customer);
+        }
+        if (isQrCodeMethod(normalizedCheckInMethod)) {
+            validateQrCodeBookingEligibility(customer);
         }
 
         Roomtype roomtype = roomtypeRepository.findByIdForUpdate(roomTypeId)
@@ -596,7 +592,7 @@ public class BookingServiceImpl implements BookingService {
                 && !"FaceID".equalsIgnoreCase(booking.getCheckinmethod())) {
             throw new RuntimeException("Đơn đặt phòng này không sử dụng phương thức FaceID");
         }
-        validateFaceCheckInDate(detail);
+        validateCheckInDateWindow(detail);
 
         if (!ekycProfileRepository.existsByUseridAndStatus(customer, "Verified")) {
             throw new RuntimeException(
@@ -636,6 +632,72 @@ public class BookingServiceImpl implements BookingService {
                     : "Check-in bị từ chối: khuôn mặt hiện tại không khớp với khuôn mặt đã đăng ký eKYC.";
             throw new RuntimeException(mismatchMessage);
         }
+
+        return completeCheckIn(booking, detail, actor);
+    }
+
+    @Override
+    @Transactional
+    public QrTokenResponse generateQrCheckInToken(Integer bookingId, String customerEmail) {
+        Bookingdetail detail = bookingdetailRepository.findBookingDetail(bookingId, customerEmail)
+                .orElseThrow(() -> new RuntimeException("Khong tim thay booking QR Code cua ban"));
+        Booking booking = detail.getBookingid();
+        User customer = booking.getUserid();
+        if (customer == null) {
+            throw new RuntimeException("Booking chua duoc lien ket voi tai khoan khach hang");
+        }
+
+        validateQrBookingForCheckIn(booking, detail, customer);
+
+        Instant now = Instant.now();
+        Instant expiresAt = calculateQrTokenExpiry(now, detail);
+        String token = generateUniqueQrToken();
+
+        detail.setQrcodevalue(token);
+        detail.setQrcodegeneratedat(now);
+        detail.setQrcodeexpiredat(expiresAt);
+        detail.setUpdatedat(now);
+        bookingdetailRepository.save(detail);
+
+        return QrTokenResponse.builder()
+                .bookingId(booking.getId())
+                .bookingReference(booking.getBookingreference())
+                .token(token)
+                .qrPayload(token)
+                .generatedAt(now)
+                .expiresAt(expiresAt)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse performQrCheckIn(String qrToken, String actorEmail) {
+        if (qrToken == null || qrToken.isBlank()) {
+            throw new RuntimeException("Ma QR check-in khong hop le");
+        }
+
+        User actor = userRepository.findByEmail(actorEmail)
+                .orElseThrow(() -> new RuntimeException("Khong tim thay nguoi dung"));
+
+        String token = qrToken.trim();
+        Bookingdetail detail = bookingdetailRepository.findByQrcodevalueForUpdate(token)
+                .orElseThrow(() -> new RuntimeException("Ma QR check-in khong hop le hoac da het hieu luc"));
+
+        Instant now = Instant.now();
+        if (detail.getQrcodeexpiredat() == null || !now.isBefore(detail.getQrcodeexpiredat())) {
+            clearQrToken(detail, now);
+            bookingdetailRepository.save(detail);
+            throw new RuntimeException("Ma QR check-in da het hieu luc");
+        }
+
+        Booking booking = detail.getBookingid();
+        User customer = booking.getUserid();
+        if (customer == null) {
+            throw new RuntimeException("Booking chua duoc lien ket voi tai khoan khach hang");
+        }
+
+        validateQrCheckInActor(actor, customer);
+        validateQrBookingForCheckIn(booking, detail, customer);
 
         return completeCheckIn(booking, detail, actor);
     }
@@ -779,6 +841,7 @@ public class BookingServiceImpl implements BookingService {
         detail.setActualcheckin(now);
         detail.setCheckedinat(now);
         detail.setCheckedinby(checkedInBy);
+        clearQrToken(detail, now);
         detail.setUpdatedat(now);
 
         booking.setStatus("Checked-in");
@@ -953,7 +1016,7 @@ public class BookingServiceImpl implements BookingService {
         }
     }
 
-    private void validateFaceCheckInDate(Bookingdetail detail) {
+    private void validateCheckInDateWindow(Bookingdetail detail) {
         LocalDate today = LocalDate.now(HOTEL_ZONE);
         LocalDate checkInDate = toLocalDate(detail.getExpectedcheckin());
         LocalDate checkOutDate = toLocalDate(detail.getExpectedcheckout());
@@ -964,6 +1027,114 @@ public class BookingServiceImpl implements BookingService {
         if (!today.isBefore(checkOutDate)) {
             throw new RuntimeException("Đơn đặt phòng đã quá thời gian nhận phòng");
         }
+    }
+
+    private void validateFaceIdBookingEligibility(User customer) {
+        boolean ekycVerified = ekycProfileRepository.existsByUseridAndStatus(
+                customer,
+                "Verified"
+        );
+        boolean faceRegistered = faceembeddingRepository
+                .findEmbeddingTextByUserId(customer.getId())
+                .filter(embedding -> !embedding.isBlank())
+                .isPresent();
+
+        if (!ekycVerified || !faceRegistered) {
+            throw new RuntimeException(
+                    "Ban phai hoan thanh dang ky eKYC va khuon mat truoc khi chon check-in bang FaceID"
+            );
+        }
+    }
+
+    private void validateQrCodeBookingEligibility(User customer) {
+        if (!ekycProfileRepository.existsByUseridAndStatus(customer, "Verified")) {
+            throw new RuntimeException(
+                    "Ban phai hoan thanh dang ky eKYC truoc khi chon check-in bang QR Code"
+            );
+        }
+    }
+
+    private void validateQrBookingForCheckIn(
+            Booking booking,
+            Bookingdetail detail,
+            User customer
+    ) {
+        if (!isQrCodeMethod(booking.getCheckinmethod())) {
+            throw new RuntimeException("Don dat phong nay khong su dung phuong thuc QR Code");
+        }
+        validateCheckInEligibleStatus(booking);
+        validateBookingNotCheckedIn(booking, detail);
+        validateCheckInDateWindow(detail);
+        validateQrCodeBookingEligibility(customer);
+    }
+
+    private void validateCheckInEligibleStatus(Booking booking) {
+        if (!"Confirmed".equalsIgnoreCase(booking.getStatus()) &&
+                !"Partially Paid".equalsIgnoreCase(booking.getStatus()) &&
+                !"Paid".equalsIgnoreCase(booking.getStatus())) {
+            throw new RuntimeException("Don dat phong khong o trang thai co the nhan phong");
+        }
+    }
+
+    private void validateBookingNotCheckedIn(Booking booking, Bookingdetail detail) {
+        if (detail.getActualcheckin() != null
+                || "Checked-in".equalsIgnoreCase(booking.getStatus())
+                || "Checked In".equalsIgnoreCase(booking.getStatus())) {
+            throw new RuntimeException("Booking nay da duoc check-in");
+        }
+    }
+
+    private void validateQrCheckInActor(User actor, User customer) {
+        boolean isOwner = actor.getId() != null && actor.getId().equals(customer.getId());
+        if (!isOwner && !isStaffCheckInActor(actor)) {
+            throw new RuntimeException("Ban khong co quyen check-in booking nay bang QR Code");
+        }
+    }
+
+    private boolean isStaffCheckInActor(User actor) {
+        return hasRole(actor, "receptionist") || hasRole(actor, "manager");
+    }
+
+    private boolean hasRole(User user, String role) {
+        return user != null
+                && user.getRole() != null
+                && role.equalsIgnoreCase(user.getRole().name());
+    }
+
+    private Instant calculateQrTokenExpiry(Instant generatedAt, Bookingdetail detail) {
+        long ttlMinutes = Math.max(1, qrTokenTtlMinutes);
+        Instant expiresAt = generatedAt.plus(Duration.ofMinutes(ttlMinutes));
+        Instant checkoutExpiry = toCheckoutExpiry(detail.getExpectedcheckout());
+        if (expiresAt.isAfter(checkoutExpiry)) {
+            expiresAt = checkoutExpiry;
+        }
+        if (!expiresAt.isAfter(generatedAt)) {
+            throw new RuntimeException("Khong the tao QR token cho booking da qua thoi gian nhan phong");
+        }
+        return expiresAt;
+    }
+
+    private String generateUniqueQrToken() {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            String token = generateQrToken();
+            if (!bookingdetailRepository.existsByQrcodevalue(token)) {
+                return token;
+            }
+        }
+        throw new RuntimeException("Khong the tao QR token check-in");
+    }
+
+    private String generateQrToken() {
+        byte[] randomBytes = new byte[QR_TOKEN_RANDOM_BYTES];
+        SECURE_RANDOM.nextBytes(randomBytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+    }
+
+    private void clearQrToken(Bookingdetail detail, Instant now) {
+        detail.setQrcodevalue(null);
+        detail.setQrcodegeneratedat(null);
+        detail.setQrcodeexpiredat(null);
+        detail.setUpdatedat(now);
     }
 
     private String generateRoomPassword() {
@@ -1088,6 +1259,11 @@ public class BookingServiceImpl implements BookingService {
                 || "Face ID".equalsIgnoreCase(checkInMethod)
                 || "FaceID".equalsIgnoreCase(checkInMethod)) {
             return "FaceID";
+        }
+        if ("QR".equalsIgnoreCase(checkInMethod)
+                || "QRCode".equalsIgnoreCase(checkInMethod)
+                || "QR Code".equalsIgnoreCase(checkInMethod)) {
+            return "QR Code";
         }
         return checkInMethod;
     }
@@ -1346,6 +1522,12 @@ public class BookingServiceImpl implements BookingService {
         return "Face Recognition".equalsIgnoreCase(checkInMethod)
                 || "Face ID".equalsIgnoreCase(checkInMethod)
                 || "FaceID".equalsIgnoreCase(checkInMethod);
+    }
+
+    private boolean isQrCodeMethod(String checkInMethod) {
+        return "QR".equalsIgnoreCase(checkInMethod)
+                || "QRCode".equalsIgnoreCase(checkInMethod)
+                || "QR Code".equalsIgnoreCase(checkInMethod);
     }
 
     @Override

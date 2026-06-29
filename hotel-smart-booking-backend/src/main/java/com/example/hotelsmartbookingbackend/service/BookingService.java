@@ -13,6 +13,7 @@ import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
 import com.example.hotelsmartbookingbackend.dto.response.AiFaceReadinessResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
+import com.example.hotelsmartbookingbackend.dto.response.QrTokenResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -40,6 +41,10 @@ public interface BookingService {
             String challengeDirection,
             String actorEmail
     );
+
+    QrTokenResponse generateQrCheckInToken(Integer bookingId, String customerEmail);
+
+    BookingResponse performQrCheckIn(String qrToken, String actorEmail);
 
     AiFaceReadinessResponse checkFaceReadiness(
             MultipartFile selfieImage,
