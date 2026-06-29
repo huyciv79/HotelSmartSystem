@@ -33,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import com.example.hotelsmartbookingbackend.repository.ServiceRepository;
 
 import java.util.List;
 
@@ -43,6 +44,7 @@ public class BookingController {
 
     private final BookingService bookingService;
     private final PdfService pdfService;
+    private final ServiceRepository serviceRepository;
 
     @PostMapping
     public ResponseEntity<ApiResponse<BookingResponse>> createBooking(
@@ -191,16 +193,6 @@ public class BookingController {
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin hóa đơn thành công", response));
     }
 
-    @PostMapping("/{bookingId}/services")
-    public ResponseEntity<ApiResponse<String>> addService(
-            @PathVariable Integer bookingId,
-            @Valid @RequestBody AddServiceRequest request,
-            Authentication authentication) {
-        String staffEmail = resolveCustomerEmail(authentication);
-        bookingService.addServiceToBooking(bookingId, request, staffEmail);
-        return ResponseEntity.ok(ApiResponse.success("Thêm dịch vụ vào đơn đặt phòng thành công", "SUCCESS"));
-    }
-
     @GetMapping("/{bookingId}/statement/pdf")
     public ResponseEntity<byte[]> getStatementPdf(
             @PathVariable Integer bookingId,
@@ -216,6 +208,15 @@ public class BookingController {
         return new ResponseEntity<>(pdfBytes, headers, org.springframework.http.HttpStatus.OK);
     }
 
+    @PostMapping("/{bookingId}/services")
+    public ResponseEntity<ApiResponse<String>> addService(
+            @PathVariable Integer bookingId,
+            @Valid @RequestBody AddServiceRequest request,
+            Authentication authentication) {
+        String staffEmail = resolveCustomerEmail(authentication);
+        bookingService.addServiceToBooking(bookingId, request, staffEmail);
+        return ResponseEntity.ok(ApiResponse.success("Thêm dịch vụ vào đơn đặt phòng thành công", "SUCCESS"));
+    }
 
     @PostMapping("/receptionist/filter")
     @Operation(
@@ -264,5 +265,10 @@ public class BookingController {
             throw new RuntimeException("Bạn cần đăng nhập để thực hiện chức năng này");
         }
         return authentication.getName();
+    }
+
+    @GetMapping("/services/all")
+    public ResponseEntity<ApiResponse<List<com.example.hotelsmartbookingbackend.entity.Service>>> getAllServices() {
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách dịch vụ thành công", serviceRepository.findAll()));
     }
 }

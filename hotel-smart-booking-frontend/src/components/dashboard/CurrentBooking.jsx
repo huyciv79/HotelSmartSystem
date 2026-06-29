@@ -45,9 +45,6 @@ const CurrentBooking = ({ booking, onViewDetail }) => {
       </div>
 
       <div className="p-6 bg-slate-50 border-t border-slate-150 flex flex-wrap gap-4 items-center">
-        <button className="px-6 py-2.5 bg-slate-900 hover:bg-slate-850 text-white font-bold uppercase text-[10px] tracking-widest transition-all cursor-pointer border-none rounded-none h-10">
-          {t("db_btn_request", "Gửi yêu cầu")}
-        </button>
         <button 
           onClick={onViewDetail}
           className="px-6 py-2.5 bg-primary hover:bg-slate-950 text-white font-bold uppercase text-[10px] tracking-widest transition-all cursor-pointer border-none parallelogram-btn h-10"

@@ -39,4 +39,12 @@ public class BookingHistoryResponse {
     private Instant roomKeyExpiresAt;
     private List<RoomAccessResponse> roomAccesses;
     private EkycIdentitySummaryResponse ekycIdentity;
+    
+    // Financial details for lobby operations
+    private BigDecimal paidAmount;
+    private BigDecimal depositAmount;
+    private BigDecimal serviceChargeAmount;
+    private BigDecimal taxAmount;
+    private BigDecimal discountAmount;
+    private BigDecimal finalAmount;
 }
