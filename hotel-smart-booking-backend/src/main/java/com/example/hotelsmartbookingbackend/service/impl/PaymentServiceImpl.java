@@ -170,10 +170,13 @@ public class PaymentServiceImpl implements PaymentService {
         }
         booking.setUpdatedat(Instant.now());
 
-        if (booking.getPaidamount().compareTo(booking.getFinalamount()) >= 0) {
-            booking.setStatus("Paid");
-        } else if (booking.getPaidamount().compareTo(BigDecimal.ZERO) > 0) {
-            booking.setStatus("Partially Paid");
+        if (!"Checked-in".equalsIgnoreCase(booking.getStatus()) && !"Checked In".equalsIgnoreCase(booking.getStatus()) 
+                && !"Staying".equalsIgnoreCase(booking.getStatus()) && !"Completed".equalsIgnoreCase(booking.getStatus())) {
+            if (booking.getPaidamount().compareTo(booking.getFinalamount()) >= 0) {
+                booking.setStatus("Paid");
+            } else if (booking.getPaidamount().compareTo(BigDecimal.ZERO) > 0) {
+                booking.setStatus("Partially Paid");
+            }
         }
 
         bookingRepository.save(booking);
@@ -233,10 +236,13 @@ public class PaymentServiceImpl implements PaymentService {
         }
         booking.setUpdatedat(Instant.now());
 
-        if (booking.getPaidamount().compareTo(booking.getFinalamount()) >= 0) {
-            booking.setStatus("Paid");
-        } else if (booking.getPaidamount().compareTo(BigDecimal.ZERO) > 0) {
-            booking.setStatus("Partially Paid");
+        if (!"Checked-in".equalsIgnoreCase(booking.getStatus()) && !"Checked In".equalsIgnoreCase(booking.getStatus()) 
+                && !"Staying".equalsIgnoreCase(booking.getStatus()) && !"Completed".equalsIgnoreCase(booking.getStatus())) {
+            if (booking.getPaidamount().compareTo(booking.getFinalamount()) >= 0) {
+                booking.setStatus("Paid");
+            } else if (booking.getPaidamount().compareTo(BigDecimal.ZERO) > 0) {
+                booking.setStatus("Partially Paid");
+            }
         }
 
         bookingRepository.save(booking);
@@ -297,10 +303,13 @@ public class PaymentServiceImpl implements PaymentService {
         }
         booking.setUpdatedat(Instant.now());
 
-        if (booking.getPaidamount().compareTo(booking.getFinalamount()) >= 0) {
-            booking.setStatus("Paid");
-        } else if (booking.getPaidamount().compareTo(BigDecimal.ZERO) > 0) {
-            booking.setStatus("Partially Paid");
+        if (!"Checked-in".equalsIgnoreCase(booking.getStatus()) && !"Checked In".equalsIgnoreCase(booking.getStatus()) 
+                && !"Staying".equalsIgnoreCase(booking.getStatus()) && !"Completed".equalsIgnoreCase(booking.getStatus())) {
+            if (booking.getPaidamount().compareTo(booking.getFinalamount()) >= 0) {
+                booking.setStatus("Paid");
+            } else if (booking.getPaidamount().compareTo(BigDecimal.ZERO) > 0) {
+                booking.setStatus("Partially Paid");
+            }
         }
 
         bookingRepository.save(booking);

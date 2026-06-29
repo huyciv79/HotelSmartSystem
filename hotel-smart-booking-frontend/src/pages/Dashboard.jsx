@@ -22,7 +22,7 @@ const mapRealToCurrentBooking = (bk) => {
   return {
     suiteName: bk.roomType,
     refCode: bk.bookingNumber || `BK-${bk.bookingId}`,
-    status: bk.status === 'Cancelled' ? 'Đã Hủy' : bk.status === 'Checked-in' || bk.status === 'Checked In' ? 'Đã nhận phòng' : bk.status === 'Checked-out' || bk.status === 'Checked Out' ? 'Đã trả phòng' : bk.status === 'Paid' ? 'Đã thanh toán' : bk.status === 'Partially Paid' ? 'Đã cọc 30%' : 'Chờ thanh toán',
+    status: bk.status === 'Cancelled' ? 'Đã Hủy' : bk.status === 'Checked-in' || bk.status === 'Checked In' ? 'Đã nhận phòng' : bk.status === 'Checked-out' || bk.status === 'Checked Out' || bk.status === 'Completed' ? 'Đã trả phòng' : bk.status === 'Paid' ? 'Đã thanh toán' : bk.status === 'Partially Paid' ? 'Đã cọc 30%' : 'Chờ thanh toán',
     checkIn: {
       date: bk.checkInDate,
       dayTime: 'Từ 2:00 PM (14:00)',
@@ -62,7 +62,7 @@ export default function Dashboard({ setActivePage }) {
     return {
       suiteName: bk.roomType,
       refCode: bk.bookingNumber || `BK-${bk.bookingId}`,
-      status: bk.status === 'Cancelled' ? t('status_cancelled', 'Đã Hủy') : bk.status === 'Checked-in' || bk.status === 'Checked In' ? t('status_checked_in', 'Đã nhận phòng') : bk.status === 'Checked-out' || bk.status === 'Checked Out' ? t('status_checked_out', 'Đã trả phòng') : t('status_confirmed', 'Đã xác nhận'),
+      status: bk.status === 'Cancelled' ? t('status_cancelled', 'Đã Hủy') : bk.status === 'Checked-in' || bk.status === 'Checked In' ? t('status_checked_in', 'Đã nhận phòng') : bk.status === 'Checked-out' || bk.status === 'Checked Out' || bk.status === 'Completed' ? t('status_checked_out', 'Đã trả phòng') : t('status_confirmed', 'Đã xác nhận'),
       checkIn: {
         date: bk.checkInDate,
         dayTime: t('db_booking_checkin_time_default', 'Từ 2:00 PM (14:00)'),
@@ -217,7 +217,7 @@ export default function Dashboard({ setActivePage }) {
                               ? 'bg-red-100 text-red-700'
                               : bk.status === 'Checked-in' || bk.status === 'Checked In'
                               ? 'bg-blue-100 text-blue-700'
-                              : bk.status === 'Checked-out' || bk.status === 'Checked Out'
+                              : bk.status === 'Checked-out' || bk.status === 'Checked Out' || bk.status === 'Completed'
                               ? 'bg-slate-200 text-slate-700'
                               : bk.status === 'Paid'
                               ? 'bg-green-100 text-green-700'
@@ -229,7 +229,7 @@ export default function Dashboard({ setActivePage }) {
                               ? 'Đã Hủy'
                               : bk.status === 'Checked-in' || bk.status === 'Checked In'
                               ? 'Đã nhận phòng'
-                              : bk.status === 'Checked-out' || bk.status === 'Checked Out'
+                              : bk.status === 'Checked-out' || bk.status === 'Checked Out' || bk.status === 'Completed'
                               ? 'Đã trả phòng'
                               : bk.status === 'Paid'
                               ? 'Đã thanh toán'

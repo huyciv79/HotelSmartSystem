@@ -112,6 +112,25 @@ export const checkFaceReadiness = async (selfieImage) => {
   return response.data;
 };
 
+
+export const processManualPayment = async (paymentData) => {
+  const response = await axiosInstance.post('/payments/manual', paymentData);
+  return response.data;
+};
+
+export const getAllServices = async () => {
+  const response = await axiosInstance.get('/bookings/services/all');
+  return response.data;
+};
+
+export const addServiceToBooking = async (bookingId, serviceId, quantity, note = '') => {
+  const response = await axiosInstance.post(`/bookings/${bookingId}/services`, {
+    serviceId,
+    quantity,
+    note
+  });
+  return response.data;
+};
 /**
  * Filter bookings using server-side pagination and criteria.
  * POST /api/bookings/receptionist/filter
@@ -120,6 +139,13 @@ export const checkFaceReadiness = async (selfieImage) => {
  */
 export const filterBookings = async (criteria) => {
   const response = await axiosInstance.post('/bookings/receptionist/filter', criteria);
+  return response.data;
+};
+
+export const cancelBooking = async (bookingId, cancellationReason) => {
+  const response = await axiosInstance.delete(`/bookings/receptionist/${bookingId}/cancel`, {
+    data: { cancellationReason }
+  });
   return response.data;
 };
 

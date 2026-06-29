@@ -24,6 +24,10 @@ public class BookingSpecification implements Specification<Booking> {
 
     @Override
     public Predicate toPredicate(Root<Booking> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+        if (query.getResultType() != Long.class && query.getResultType() != long.class) {
+            root.fetch("userid", jakarta.persistence.criteria.JoinType.LEFT);
+        }
+
         List<Predicate> predicates = new ArrayList<>();
 
         if (criteria.getStatus() != null && !criteria.getStatus().isEmpty()) {

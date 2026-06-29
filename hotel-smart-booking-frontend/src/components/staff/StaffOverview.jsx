@@ -16,8 +16,8 @@ const StaffOverview = ({
   const [carouselIndex, setCarouselIndex] = useState(0);
 
   // Calcs
-  const confirmedCount = bookings.filter(b => b.status === 'Confirmed').length;
-  const checkedInCount = bookings.filter(b => b.status === 'Checked In').length;
+  const confirmedCount = bookings.filter(b => ['confirmed', 'paid', 'partially paid'].includes(String(b.status || '').toLowerCase())).length;
+  const checkedInCount = bookings.filter(b => ['checked in', 'checked-in', 'staying'].includes(String(b.status || '').toLowerCase())).length;
 
   const nextCarousel = () => {
     if (roomTypes.length > 0) {
