@@ -27,6 +27,7 @@ import RoomTypesManager from '../components/staff/RoomTypesManager';
 import RoomsManager from '../components/staff/RoomsManager';
 import RevenueReports from '../components/staff/RevenueReports';
 import FaceCheckInStation from '../components/staff/FaceCheckInStation';
+import QrCheckInStation from '../components/staff/QrCheckInStation';
 
 // Mock Bookings Data for Receptionist/Manager Operation simulation
 const INITIAL_MOCK_BOOKINGS = [
@@ -443,6 +444,11 @@ export default function StaffDashboard({ setActivePage }) {
 
   // Check-in & Check-out simulations
   const startScanner = (booking, type) => {
+    if (type === 'qr') {
+      setActiveTab('qr-check-in');
+      return;
+    }
+
     setScanningBooking(booking);
     setScanType(type);
     setIsScanning(true);
@@ -774,6 +780,17 @@ export default function StaffDashboard({ setActivePage }) {
                   </div>
                 </div>
 
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('qr-check-in')}
+                    className="h-11 bg-primary px-5 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:brightness-110 border-none cursor-pointer inline-flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-base">qr_code_scanner</span>
+                    QR check-in
+                  </button>
+                </div>
+
                 {/* Simulated Scanning Modal popup */}
                 {isScanning && scanningBooking && (
                   <div className="bg-[#0f0f12] border-2 border-primary p-6 text-white text-center shadow-2xl relative animate-scale-in">
@@ -805,11 +822,15 @@ export default function StaffDashboard({ setActivePage }) {
                       </div>
                     ) : (
                       filteredBookings.map((bk) => {
-                        const isConfirmed = bk.status === 'Confirmed';
-                        const isCheckedIn = bk.status === 'Checked In';
+                        const normalizedStatus = String(bk.status || '').toLowerCase().replace('-', ' ');
+                        const isConfirmed = ['confirmed', 'paid', 'partially paid'].includes(normalizedStatus);
+                        const isCheckedIn = normalizedStatus === 'checked in';
+                        const normalizedMethod = String(bk.checkInMethod || '').toLowerCase();
                         const usesFaceId =
-                          bk.checkInMethod === 'Face Recognition' ||
-                          bk.checkInMethod === 'FaceID';
+                          normalizedMethod === 'face recognition' ||
+                          normalizedMethod === 'faceid' ||
+                          normalizedMethod === 'face id';
+                        const usesQrCode = normalizedMethod === 'qr code' || normalizedMethod === 'qr';
 
                         return (
                           <div key={bk.id} className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:bg-white/5 transition-colors">
@@ -875,28 +896,26 @@ export default function StaffDashboard({ setActivePage }) {
                                           setActiveTab('face-check-in');
                                           return;
                                         }
-                                        startScanner(bk, 'qr');
+                                        if (usesQrCode) {
+                                          startScanner(bk, 'qr');
+                                          return;
+                                        }
+                                        handleDirectCheckInOut(bk, 'Checked In');
                                       }}
                                       disabled={usesFaceId && !isManager}
                                       className="bg-primary hover:brightness-110 disabled:bg-neutral-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 border-none cursor-pointer flex items-center gap-1"
                                     >
                                       <span className="material-symbols-outlined text-xs">
-                                        {usesFaceId ? 'face' : 'qr_code_scanner'}
+                                        {usesFaceId ? 'face' : usesQrCode ? 'qr_code_scanner' : 'how_to_reg'}
                                       </span>
                                       {usesFaceId
                                         ? isManager
                                           ? 'FaceID tại sảnh'
                                           : 'Cần Manager'
-                                        : 'Quét nhận phòng'}
+                                        : usesQrCode
+                                        ? 'Quét QR'
+                                        : 'Check-in tại quầy'}
                                     </button>
-                                    {!usesFaceId && (
-                                      <button
-                                        onClick={() => handleDirectCheckInOut(bk, 'Checked In')}
-                                        className="bg-neutral-900 border border-neutral-800 text-white hover:bg-neutral-800 text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer"
-                                      >
-                                        Check-in nhanh
-                                      </button>
-                                    )}
                                   </>
                                 )}
                                 {isCheckedIn && (
@@ -921,6 +940,14 @@ export default function StaffDashboard({ setActivePage }) {
             {/* QUẢN LÝ LOẠI PHÒNG (MANAGER ROOM TYPES CRUD) */}
             {activeTab === 'face-check-in' && isManager && (
               <FaceCheckInStation
+                bookings={bookings}
+                showToast={showToast}
+                onCheckInCompleted={handleFaceCheckInCompleted}
+              />
+            )}
+
+            {activeTab === 'qr-check-in' && (
+              <QrCheckInStation
                 bookings={bookings}
                 showToast={showToast}
                 onCheckInCompleted={handleFaceCheckInCompleted}

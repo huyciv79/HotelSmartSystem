@@ -42,6 +42,16 @@ export const checkInBooking = async (bookingId) => {
   return response.data;
 };
 
+export const generateQrCheckInToken = async (bookingId) => {
+  const response = await axiosInstance.post(`/bookings/${bookingId}/qr-token`);
+  return response.data;
+};
+
+export const qrCheckInBooking = async (token) => {
+  const response = await axiosInstance.post('/checkin/qr', { token });
+  return response.data;
+};
+
 export const checkOutBooking = async (bookingId) => {
   const response = await axiosInstance.post(`/bookings/${bookingId}/check-out`);
   return response.data;

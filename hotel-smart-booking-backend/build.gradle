@@ -53,6 +53,10 @@ dependencies {
 
     // OpenPDF for statement PDF generation
     implementation 'com.github.librepdf:openpdf:2.0.3'
+
+    // QR code generation for check-in emails
+    implementation 'com.google.zxing:core:3.5.3'
+    implementation 'com.google.zxing:javase:3.5.3'
 }
 
 tasks.named('test') {
