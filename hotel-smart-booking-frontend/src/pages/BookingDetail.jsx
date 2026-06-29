@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { getBookingDetail } from '../services/bookingService';
+import { generateQrCheckInToken, getBookingDetail } from '../services/bookingService';
 import { submitRefundRequest } from '../services/refundService';
 import { useToast, ToastContainer } from '../components/Toast';
+import QrCheckInCard from '../components/booking/QrCheckInCard';
 import {
   getFeedbackByBookingId,
   createReview,
@@ -18,6 +19,9 @@ export default function BookingDetail({ setActivePage }) {
   const [booking, setBooking] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [qrTokenData, setQrTokenData] = useState(null);
+  const [isGeneratingQr, setIsGeneratingQr] = useState(false);
+  const [copiedQr, setCopiedQr] = useState(false);
 
   // Feedback related states
   const [feedback, setFeedback] = useState(null);
@@ -133,6 +137,37 @@ export default function BookingDetail({ setActivePage }) {
     setCopied(true);
     showToast(t('bd_btn_copied', 'Đã sao chép mã đặt phòng vào Clipboard!'), 'success');
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleGenerateQrToken = async () => {
+    if (!booking?.bookingId) return;
+
+    setIsGeneratingQr(true);
+    try {
+      const response = await generateQrCheckInToken(booking.bookingId);
+      setQrTokenData(response?.data || null);
+      showToast('Đã tạo mã QR check-in. Mã chỉ có hiệu lực ngắn hạn.', 'success');
+    } catch (err) {
+      console.error('Error generating QR check-in token:', err);
+      showToast(err.response?.data?.message || 'Không thể tạo mã QR check-in lúc này.', 'error');
+    } finally {
+      setIsGeneratingQr(false);
+    }
+  };
+
+  const handleCopyQrToken = async () => {
+    const value = qrTokenData?.qrPayload || qrTokenData?.token;
+    if (!value) return;
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedQr(true);
+      showToast('Đã sao chép mã QR check-in.', 'success');
+      setTimeout(() => setCopiedQr(false), 2000);
+    } catch (err) {
+      console.error('Error copying QR token:', err);
+      showToast('Không thể sao chép mã QR trên trình duyệt này.', 'error');
+    }
   };
 
   const handleCancelBooking = () => {
@@ -329,6 +364,12 @@ export default function BookingDetail({ setActivePage }) {
   const todayStr = new Date().toISOString().split('T')[0];
   const isFutureCheckIn = booking.checkInDate > todayStr;
   const canRequestRefund = (booking.status === 'Paid' || booking.status === 'Partially Paid') && isFutureCheckIn;
+  const isQrCheckInMethod = String(booking.checkInMethod || '').toLowerCase() === 'qr code';
+  const canUseQrCheckIn =
+    isQrCheckInMethod &&
+    booking.status !== 'Cancelled' &&
+    booking.status !== 'Refund Pending' &&
+    currentStatusIdx < 2;
 
   return (
     <>
@@ -474,6 +515,17 @@ export default function BookingDetail({ setActivePage }) {
                     </span>
                   </div>
                 </div>
+
+                {canUseQrCheckIn && (
+                  <QrCheckInCard
+                    booking={booking}
+                    qrTokenData={qrTokenData}
+                    isGenerating={isGeneratingQr}
+                    copied={copiedQr}
+                    onGenerate={handleGenerateQrToken}
+                    onCopy={handleCopyQrToken}
+                  />
+                )}
 
                 {booking.roomAccesses?.length > 0 && (
                   <div className="mt-6">

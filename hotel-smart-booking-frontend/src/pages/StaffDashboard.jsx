@@ -31,6 +31,7 @@ import RoomTypesManager from '../components/staff/RoomTypesManager';
 import RoomsManager from '../components/staff/RoomsManager';
 import RevenueReports from '../components/staff/RevenueReports';
 import FaceCheckInStation from '../components/staff/FaceCheckInStation';
+import QrCheckInStation from '../components/staff/QrCheckInStation';
 import BookingsTable from '../components/staff/BookingsTable';
 
 // Mock Bookings Data for Receptionist/Manager Operation simulation
@@ -714,6 +715,11 @@ export default function StaffDashboard({ setActivePage }) {
 
   // Check-in & Check-out simulations
   const startScanner = (booking, type) => {
+    if (type === 'qr') {
+      setActiveTab('qr-check-in');
+      return;
+    }
+
     setScanningBooking(booking);
     setScanType(type);
     setIsScanning(true);
@@ -1022,7 +1028,84 @@ export default function StaffDashboard({ setActivePage }) {
               />
             )}
 
+            {/* VẬN HÀNH SẢNH / CHECK-IN / CHECK-OUT */}
+            {activeTab === 'operations' && (
+              <div className="space-y-6 animate-scale-in">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 border-b border-neutral-900 pb-4">
+                  <div>
+                    <h3 className="text-white font-black text-base uppercase tracking-wider m-0">VẬN HÀNH SẢNH & CHECK-IN</h3>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Tìm kiếm khách hàng làm thủ tục nhận phòng hoặc trả phòng</p>
+                  </div>
+                </div>
 
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('qr-check-in')}
+                    className="h-11 bg-primary px-5 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:brightness-110 border-none cursor-pointer inline-flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-base">qr_code_scanner</span>
+                    QR check-in
+                  </button>
+                </div>
+
+                {/* Simulated Scanning Modal popup */}
+                {isScanning && scanningBooking && (
+                  <div className="bg-[#0f0f12] border-2 border-primary p-6 text-white text-center shadow-2xl relative animate-scale-in">
+                    <div className="flex flex-col items-center justify-center gap-4 py-6">
+                      <span className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></span>
+                      <h4 className="text-sm font-black uppercase tracking-widest text-primary m-0">
+                        {scanType === 'face' ? 'ĐANG QUÉT KHUÔN MẶT eKYC...' : 'ĐANG ĐỌC MÃ QR ĐOÀN...'}
+                      </h4>
+                      <p className="text-xs text-slate-400 font-bold uppercase tracking-wider max-w-sm">
+                        Đang xác thực thông tin đối sánh của khách hàng: {scanningBooking.guestName}
+                      </p>
+                    </div>
+                    <button onClick={completeScannerAction} className="bg-primary text-white font-black text-[10px] uppercase tracking-widest py-3.5 px-8 border-none cursor-pointer mt-4">
+                      Hoàn tất đối sánh và xác thực
+                    </button>
+                  </div>
+                )}
+
+                {/* Bookings Queue */}
+                <div className="bg-[#0f0f12] border border-neutral-900 shadow-md overflow-hidden">
+                  <div className="p-4 border-b border-neutral-900 bg-neutral-950/20 text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                    Danh sách đặt phòng cần xử lý trong ngày
+                  </div>
+
+                  <div className="divide-y divide-neutral-900/60">
+                    {filteredBookings.length === 0 ? (
+                      <div className="py-12 text-center text-slate-500 font-bold text-xs uppercase tracking-widest">
+                        Không tìm thấy lịch trình đặt phòng nào phù hợp
+                      </div>
+                    ) : (
+                      filteredBookings.map((bk) => {
+                        const normalizedStatus = String(bk.status || '').toLowerCase().replace('-', ' ');
+                        const isConfirmed = ['confirmed', 'paid', 'partially paid'].includes(normalizedStatus);
+                        const isCheckedIn = normalizedStatus === 'checked in';
+                        const normalizedMethod = String(bk.checkInMethod || '').toLowerCase();
+                        const usesFaceId =
+                          normalizedMethod === 'face recognition' ||
+                          normalizedMethod === 'faceid' ||
+                          normalizedMethod === 'face id';
+                        const usesQrCode = normalizedMethod === 'qr code' || normalizedMethod === 'qr';
+
+                        return (
+                          <div key={bk.id} className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:bg-white/5 transition-colors">
+                            <div className="space-y-1">
+                              <span className="inline-block px-2 py-0.5 text-[8px] font-black tracking-widest text-slate-400 bg-neutral-900 border border-neutral-800 uppercase mb-1">
+                                {bk.bookingType && bk.bookingType.toLowerCase() === 'group' ? 'ĐOÀN (GROUP)' : 'ĐƠN LẺ'}
+                              </span>
+                              <h5 className="text-sm font-black text-white uppercase tracking-wider m-0">
+                                {bk.guestName}
+                              </h5>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                Mã: {bk.bookingReference} • {bk.roomType}
+                              </p>
+                              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                                Ngày lưu trú: {bk.checkInDate} đến {bk.checkOutDate} ({bk.nights} đêm)
+                              </p>
+                            </div>
 
             {/* QUẢN LÝ ĐẶT PHÒNG (BOOKINGS MANAGEMENT TABLE) */}
             {activeTab === 'bookings' && (
@@ -1031,6 +1114,81 @@ export default function StaffDashboard({ setActivePage }) {
                   <h3 className="text-white font-black text-base uppercase tracking-wider m-0">QUẢN LÝ ĐƠN ĐẶT PHÒNG</h3>
                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Quản lý và tra cứu toàn bộ danh sách đơn đặt phòng từ hệ thống</p>
 
+                              <span className={`px-2.5 py-1 text-[8px] font-black uppercase tracking-widest ${
+                                isCheckedIn 
+                                  ? 'bg-blue-900/30 text-blue-400 border border-blue-900/50' 
+                                  : isConfirmed 
+                                  ? 'bg-green-900/30 text-green-400 border border-green-900/50' 
+                                  : 'bg-neutral-800 text-neutral-400 border border-neutral-700/50'
+                              }`}>
+                                {bk.status}
+                              </span>
+
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setSelectedBooking(bk)}
+                                  className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
+                                >
+                                  <span className="material-symbols-outlined text-xs">info</span> Chi tiết
+                                </button>
+                                <button
+                                  onClick={() => handleViewInvoice(bk.id)}
+                                  className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
+                                >
+                                  <span className="material-symbols-outlined text-xs">receipt_long</span> Hóa đơn
+                                </button>
+
+                                <button
+                                  onClick={() => handleDownloadPdf(bk.id, bk.bookingReference)}
+                                  className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
+                                >
+                                  <span className="material-symbols-outlined text-xs">download</span> Tải PDF
+                                </button>
+                                {isConfirmed && (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        if (usesFaceId && isManager) {
+                                          setActiveTab('face-check-in');
+                                          return;
+                                        }
+                                        if (usesQrCode) {
+                                          startScanner(bk, 'qr');
+                                          return;
+                                        }
+                                        handleDirectCheckInOut(bk, 'Checked In');
+                                      }}
+                                      disabled={usesFaceId && !isManager}
+                                      className="bg-primary hover:brightness-110 disabled:bg-neutral-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 border-none cursor-pointer flex items-center gap-1"
+                                    >
+                                      <span className="material-symbols-outlined text-xs">
+                                        {usesFaceId ? 'face' : usesQrCode ? 'qr_code_scanner' : 'how_to_reg'}
+                                      </span>
+                                      {usesFaceId
+                                        ? isManager
+                                          ? 'FaceID tại sảnh'
+                                          : 'Cần Manager'
+                                        : usesQrCode
+                                        ? 'Quét QR'
+                                        : 'Check-in tại quầy'}
+                                    </button>
+                                  </>
+                                )}
+                                {isCheckedIn && (
+                                  <button
+                                    onClick={() => handleDirectCheckInOut(bk, 'Checked Out')}
+                                    className="bg-primary hover:brightness-110 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2 border-none cursor-pointer"
+                                  >
+                                    Trả phòng (Check-out)
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
                 <BookingsTable
                   showToast={showToast}
@@ -1057,6 +1215,14 @@ export default function StaffDashboard({ setActivePage }) {
                 showToast={showToast}
                 onCheckInCompleted={handleFaceCheckInCompleted}
                 initialBookingId={faceCheckInBookingId}
+              />
+            )}
+
+            {activeTab === 'qr-check-in' && (
+              <QrCheckInStation
+                bookings={bookings}
+                showToast={showToast}
+                onCheckInCompleted={handleFaceCheckInCompleted}
               />
             )}
 

@@ -266,6 +266,7 @@ public class BookingController {
         }
         return authentication.getName();
     }
+    
 
     @GetMapping("/services/all")
     public ResponseEntity<ApiResponse<List<com.example.hotelsmartbookingbackend.entity.Service>>> getAllServices() {

@@ -42,6 +42,7 @@ import com.example.hotelsmartbookingbackend.repository.PaymentRepository;
 import com.example.hotelsmartbookingbackend.repository.BookingserviceRepository;
 import com.example.hotelsmartbookingbackend.repository.ServiceRepository;
 import com.example.hotelsmartbookingbackend.service.BookingService;
+import com.example.hotelsmartbookingbackend.service.EmailService;
 import com.example.hotelsmartbookingbackend.service.WebSocketService;
 
 import com.example.hotelsmartbookingbackend.service.BookingService;
@@ -50,6 +51,7 @@ import com.example.hotelsmartbookingbackend.service.SupabaseStorageService;
 import com.example.hotelsmartbookingbackend.specification.BookingSpecification;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -87,6 +89,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BookingServiceImpl implements BookingService {
 
     private static final ZoneId HOTEL_ZONE = ZoneId.of("Asia/Bangkok");
@@ -124,6 +127,7 @@ public class BookingServiceImpl implements BookingService {
     private final BookingserviceRepository bookingserviceRepository;
     private final WebSocketService webSocketService;
     private final ServiceRepository serviceRepository;
+    private final EmailService emailService;
 
     @Value("${ai.service.face-verify-url:http://localhost:8000/api/v1/face/verify}")
     private String aiFaceVerifyUrl;
@@ -666,6 +670,13 @@ public class BookingServiceImpl implements BookingService {
         validateQrBookingForCheckIn(booking, detail, customer);
 
         Instant now = Instant.now();
+        if (hasActiveQrToken(detail, now)) {
+            String existingToken = detail.getQrcodevalue();
+            Instant existingExpiresAt = detail.getQrcodeexpiredat();
+            sendQrCheckInEmailSafely(customer, booking, detail, existingToken, existingExpiresAt);
+            return buildQrTokenResponse(booking, detail, existingToken, existingExpiresAt);
+        }
+
         Instant expiresAt = calculateQrTokenExpiry(now, detail);
         String token = generateUniqueQrToken();
 
@@ -675,12 +686,23 @@ public class BookingServiceImpl implements BookingService {
         detail.setUpdatedat(now);
         bookingdetailRepository.save(detail);
 
+        sendQrCheckInEmailSafely(customer, booking, detail, token, expiresAt);
+
+        return buildQrTokenResponse(booking, detail, token, expiresAt);
+    }
+
+    private QrTokenResponse buildQrTokenResponse(
+            Booking booking,
+            Bookingdetail detail,
+            String token,
+            Instant expiresAt
+    ) {
         return QrTokenResponse.builder()
                 .bookingId(booking.getId())
                 .bookingReference(booking.getBookingreference())
                 .token(token)
                 .qrPayload(token)
-                .generatedAt(now)
+                .generatedAt(detail.getQrcodegeneratedat())
                 .expiresAt(expiresAt)
                 .build();
     }
@@ -1137,6 +1159,41 @@ public class BookingServiceImpl implements BookingService {
         byte[] randomBytes = new byte[QR_TOKEN_RANDOM_BYTES];
         SECURE_RANDOM.nextBytes(randomBytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+    }
+
+    private boolean hasActiveQrToken(Bookingdetail detail, Instant now) {
+        return detail.getQrcodevalue() != null
+                && !detail.getQrcodevalue().isBlank()
+                && detail.getQrcodeexpiredat() != null
+                && now.isBefore(detail.getQrcodeexpiredat());
+    }
+
+    private void sendQrCheckInEmailSafely(
+            User customer,
+            Booking booking,
+            Bookingdetail detail,
+            String token,
+            Instant expiresAt
+    ) {
+        if (customer == null || customer.getEmail() == null || customer.getEmail().isBlank()) {
+            return;
+        }
+
+        try {
+            Roomtype roomtype = detail.getRoomtypeid();
+            emailService.sendQrCheckInEmail(
+                    customer.getEmail(),
+                    customer.getFullname(),
+                    booking.getBookingreference(),
+                    roomtype != null ? roomtype.getName() : null,
+                    detail.getExpectedcheckin() != null ? toLocalDate(detail.getExpectedcheckin()) : null,
+                    detail.getExpectedcheckout() != null ? toLocalDate(detail.getExpectedcheckout()) : null,
+                    token,
+                    expiresAt
+            );
+        } catch (RuntimeException ex) {
+            log.warn("Failed to send QR check-in email for booking {}", booking.getId(), ex);
+        }
     }
 
     private void clearQrToken(Bookingdetail detail, Instant now) {
