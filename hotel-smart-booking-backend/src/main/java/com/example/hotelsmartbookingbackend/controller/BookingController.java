@@ -202,7 +202,7 @@ public class BookingController {
         String staffEmail = resolveCustomerEmail(authentication);
         bookingService.addServiceToBooking(bookingId, request, staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Thêm dịch vụ vào đơn đặt phòng thành công", "SUCCESS"));
-
+    }
 
     @GetMapping("/{bookingId}/statement/pdf")
     public ResponseEntity<byte[]> getStatementPdf(

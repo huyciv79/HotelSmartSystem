@@ -517,18 +517,15 @@ public class BookingServiceImpl implements BookingService {
                 .roomKeyStatus(detail.getRoomkeystatus())
                 .roomKeyExpiresAt(detail.getRoomkeyexpiredat())
                 .roomAccesses(roomAccesses)
-<<<<<<< HEAD
                 .ekycIdentity(includeRoomPassword && isFaceIdMethod(booking.getCheckinmethod())
                         ? mapEkycIdentitySummary(booking.getUserid())
                         : null)
-=======
                 .paidAmount(booking.getPaidamount())
                 .depositAmount(booking.getDepositamount())
                 .serviceChargeAmount(booking.getServicechargeamount())
                 .taxAmount(booking.getTaxamount())
                 .discountAmount(booking.getDiscountamount())
                 .finalAmount(booking.getFinalamount())
->>>>>>> 72d1cd4 (feat: add payment status badge (100%/30%) to invoice modal and booking detail page)
                 .build();
     }
 
@@ -1370,7 +1367,6 @@ public class BookingServiceImpl implements BookingService {
 
         bookingRepository.save(booking);
     }
-<<<<<<< HEAD
     private boolean isFaceIdMethod(String checkInMethod) {
         return "Face Recognition".equalsIgnoreCase(checkInMethod)
                 || "Face ID".equalsIgnoreCase(checkInMethod)
@@ -1494,13 +1490,11 @@ public class BookingServiceImpl implements BookingService {
                 .specialRequests(booking.getSpecialrequests())
                 .createdAt(booking.getCreatedat())
                 .build();
-=======
 
     private String formatCurrency(BigDecimal amount) {
         if (amount == null) {
             return "0 VND";
         }
         return String.format("%,.0f VND", amount);
->>>>>>> 72d1cd4 (feat: add payment status badge (100%/30%) to invoice modal and booking detail page)
     }
 }

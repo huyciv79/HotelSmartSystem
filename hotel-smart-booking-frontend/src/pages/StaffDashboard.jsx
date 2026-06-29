@@ -18,8 +18,6 @@ import {
   approveRefundRequest,
   rejectRefundRequest
 } from '../services/refundService';
-  getStatementPdf
-} from '../services/bookingService';
 import { getUserProfile } from '../services/userService';
 import Profile from './Profile';
 import { useToast, ToastContainer } from '../components/Toast';
@@ -32,6 +30,7 @@ import RoomTypesManager from '../components/staff/RoomTypesManager';
 import RoomsManager from '../components/staff/RoomsManager';
 import RevenueReports from '../components/staff/RevenueReports';
 import FaceCheckInStation from '../components/staff/FaceCheckInStation';
+import BookingsTable from '../components/staff/BookingsTable';
 
 // Mock Bookings Data for Receptionist/Manager Operation simulation
 const INITIAL_MOCK_BOOKINGS = [
@@ -56,7 +55,7 @@ export default function StaffDashboard({ setActivePage }) {
   const [activeTab, setActiveTab] = useState('overview');
 
   // Simulated Booking states
-  const [bookings, setBookings] = useState(INITIAL_MOCK_BOOKINGS);
+  const [bookings, setBookings] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Live Room Types states for Manager CRUD
@@ -145,6 +144,7 @@ export default function StaffDashboard({ setActivePage }) {
   const [scanType, setScanType] = useState(null); // 'face' | 'qr'
   const [isScanning, setIsScanning] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [faceCheckInBookingId, setFaceCheckInBookingId] = useState('');
 
   const fetchRealRooms = async (page = 0) => {
     try {
@@ -589,12 +589,9 @@ export default function StaffDashboard({ setActivePage }) {
           };
         });
 
-        setBookings(prev => {
-          const filteredMocks = prev.filter(mock =>
-            !realMapped.some(real => real.bookingReference === mock.bookingReference)
-          );
-          return [...realMapped, ...filteredMocks];
-        });
+        setBookings(realMapped);
+      } else {
+        setBookings([]);
       }
     } catch (err) {
       console.error('Lỗi trong fetchRealBookings:', err);
@@ -671,6 +668,7 @@ export default function StaffDashboard({ setActivePage }) {
           ? mergeBookingResult(current, bookingResult, nextStatus)
           : current
       );
+      window.dispatchEvent(new Event('reload-bookings'));
 
       showToast(`Đã cập nhật trạng thái đơn ${scanningBooking.bookingReference} sang ${nextStatus === 'Checked In' ? 'ĐÃ NHẬN PHÒNG' : 'ĐÃ TRẢ PHÒNG (COMPLETED)'} thành công!`, 'success');
     } catch (err) {
@@ -727,6 +725,7 @@ export default function StaffDashboard({ setActivePage }) {
         ? mergeBookingResult(current, bookingResult, 'Checked In')
         : current
     );
+    window.dispatchEvent(new Event('reload-bookings'));
     localStorage.setItem(`booking_status_${bookingId}`, 'Checked In');
     localStorage.setItem(`booking_actualcheckin_${bookingId}`, new Date().toISOString());
   };
@@ -1078,7 +1077,6 @@ export default function StaffDashboard({ setActivePage }) {
                               </p>
                             </div>
 
-<<<<<<< HEAD
                             <div className="flex flex-wrap items-center gap-4 self-stretch md:self-auto justify-between md:justify-end">
                               <div className="text-left md:text-right shrink-0">
                                 <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider block">Check-in bằng:</span>
@@ -1132,28 +1130,6 @@ export default function StaffDashboard({ setActivePage }) {
                                     >
                                       <span className="material-symbols-outlined text-xs">
                                         {usesFaceId ? 'face' : 'qr_code_scanner'}
-=======
-                            {/* Middle information column (depends on sub-tab) */}
-                            <div className="flex-1 space-y-1 xl:max-w-xs shrink-0 text-left xl:text-right">
-                              {operationsSubTab === 'checkin' && (
-                                <>
-                                  <div className="text-[10px] font-bold uppercase text-slate-400 flex items-center xl:justify-end gap-1">
-                                    <span className="material-symbols-outlined text-xs">how_to_reg</span>
-                                    Check-in: {usesFaceId ? 'FaceID eKYC' : bk.checkInMethod || 'Bàn lễ tân'}
-                                  </div>
-                                  <div className="mt-1.5 flex xl:justify-end gap-1.5">
-                                    {bk.paidAmount >= bk.finalAmount ? (
-                                      <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                                        Thanh toán 100%
-                                      </span>
-                                    ) : bk.paidAmount > 0 ? (
-                                      <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                                        Đã cọc 30%
-                                      </span>
-                                    ) : (
-                                      <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                                        Chưa thanh toán
->>>>>>> 72d1cd4 (feat: add payment status badge (100%/30%) to invoice modal and booking detail page)
                                       </span>
                                     )}
                                   </div>
@@ -1330,16 +1306,39 @@ export default function StaffDashboard({ setActivePage }) {
                       });
                     })()}
                   </div>
+
+            {/* QUẢN LÝ ĐẶT PHÒNG (BOOKINGS MANAGEMENT TABLE) */}
+            {activeTab === 'bookings' && (
+              <div className="space-y-6 animate-scale-in text-left">
+                <div className="border-b border-neutral-900 pb-4">
+                  <h3 className="text-white font-black text-base uppercase tracking-wider m-0">QUẢN LÝ ĐƠN ĐẶT PHÒNG</h3>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Quản lý và tra cứu toàn bộ danh sách đơn đặt phòng từ hệ thống</p>
+
                 </div>
+                <BookingsTable
+                  showToast={showToast}
+                  setSelectedBooking={setSelectedBooking}
+                  startScanner={startScanner}
+                  handleDirectCheckInOut={handleDirectCheckInOut}
+                  handleViewInvoice={handleViewInvoice}
+                  handleDownloadPdf={handleDownloadPdf}
+                  isManager={isManager}
+                  setActiveTab={setActiveTab}
+                  onFaceCheckInSelect={(id) => {
+                    setFaceCheckInBookingId(id);
+                    setActiveTab('face-check-in');
+                  }}
+                />
               </div>
             )}
 
             {/* QUẢN LÝ LOẠI PHÒNG (MANAGER ROOM TYPES CRUD) */}
-            {activeTab === 'face-check-in' && isManager && (
+            {activeTab === 'face-check-in' && (
               <FaceCheckInStation
                 bookings={bookings}
                 showToast={showToast}
                 onCheckInCompleted={handleFaceCheckInCompleted}
+                initialBookingId={faceCheckInBookingId}
               />
             )}
 
