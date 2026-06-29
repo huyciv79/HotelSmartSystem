@@ -706,6 +706,43 @@ export default function BookingDetail({ setActivePage }) {
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(finalAmount)}
                       </span>
                     </div>
+                    {/* Payment status badge */}
+                    {booking.paidAmount != null && parseFloat(booking.paidAmount) > 0 && (() => {
+                      const paid = parseFloat(booking.paidAmount || 0);
+                      const total = parseFloat(finalAmount || 1);
+                      const ratio = total > 0 ? paid / total : 0;
+                      const isFullyPaid = ratio >= 0.999;
+                      return (
+                        <div className="flex justify-between items-center pt-1 gap-4">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider text-xs">
+                            {t('bd_payment_status', 'Trạng thái thanh toán:')}
+                          </span>
+                          {isFullyPaid ? (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '4px',
+                              background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                              color: '#fff', fontSize: '9px', fontWeight: 900,
+                              letterSpacing: '0.08em', padding: '3px 10px',
+                              borderRadius: '3px', textTransform: 'uppercase',
+                              boxShadow: '0 0 8px rgba(22,163,74,0.35)'
+                            }}>
+                              ✓ Đã thanh toán 100%
+                            </span>
+                          ) : (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '4px',
+                              background: 'linear-gradient(135deg, #d97706, #b45309)',
+                              color: '#fff', fontSize: '9px', fontWeight: 900,
+                              letterSpacing: '0.08em', padding: '3px 10px',
+                              borderRadius: '3px', textTransform: 'uppercase',
+                              boxShadow: '0 0 8px rgba(217,119,6,0.35)'
+                            }}>
+                              ⚡ Đặt cọc {Math.round(ratio * 100)}%
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Policy instruction box */}

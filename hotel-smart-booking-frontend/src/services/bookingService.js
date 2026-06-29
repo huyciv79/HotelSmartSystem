@@ -106,3 +106,29 @@ export const checkFaceReadiness = async (selfieImage) => {
   );
   return response.data;
 };
+
+export const getStatementPdf = async (bookingId) => {
+  const response = await axiosInstance.get(`/bookings/${bookingId}/statement/pdf`, {
+    responseType: 'blob'
+  });
+  return response.data;
+};
+
+export const processManualPayment = async (paymentData) => {
+  const response = await axiosInstance.post('/payments/manual', paymentData);
+  return response.data;
+};
+
+export const getAllServices = async () => {
+  const response = await axiosInstance.get('/bookings/services/all');
+  return response.data;
+};
+
+export const addServiceToBooking = async (bookingId, serviceId, quantity, note = '') => {
+  const response = await axiosInstance.post(`/bookings/${bookingId}/services`, {
+    serviceId,
+    quantity,
+    note
+  });
+  return response.data;
+};

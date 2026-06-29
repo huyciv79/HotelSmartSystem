@@ -517,9 +517,18 @@ public class BookingServiceImpl implements BookingService {
                 .roomKeyStatus(detail.getRoomkeystatus())
                 .roomKeyExpiresAt(detail.getRoomkeyexpiredat())
                 .roomAccesses(roomAccesses)
+<<<<<<< HEAD
                 .ekycIdentity(includeRoomPassword && isFaceIdMethod(booking.getCheckinmethod())
                         ? mapEkycIdentitySummary(booking.getUserid())
                         : null)
+=======
+                .paidAmount(booking.getPaidamount())
+                .depositAmount(booking.getDepositamount())
+                .serviceChargeAmount(booking.getServicechargeamount())
+                .taxAmount(booking.getTaxamount())
+                .discountAmount(booking.getDiscountamount())
+                .finalAmount(booking.getFinalamount())
+>>>>>>> 72d1cd4 (feat: add payment status badge (100%/30%) to invoice modal and booking detail page)
                 .build();
     }
 
@@ -536,7 +545,9 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
 
-        if (!"Confirmed".equalsIgnoreCase(booking.getStatus())) {
+        if (!"Confirmed".equalsIgnoreCase(booking.getStatus()) 
+                && !"Paid".equalsIgnoreCase(booking.getStatus()) 
+                && !"Partially Paid".equalsIgnoreCase(booking.getStatus())) {
             throw new RuntimeException("Đơn đặt phòng không ở trạng thái có thể nhận phòng");
         }
 
@@ -585,7 +596,9 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Booking chưa được liên kết với tài khoản khách hàng");
         }
 
-        if (!"Confirmed".equalsIgnoreCase(booking.getStatus())) {
+        if (!"Confirmed".equalsIgnoreCase(booking.getStatus()) 
+                && !"Paid".equalsIgnoreCase(booking.getStatus()) 
+                && !"Partially Paid".equalsIgnoreCase(booking.getStatus())) {
             throw new RuntimeException("Đơn đặt phòng không ở trạng thái có thể nhận phòng");
         }
         if (!"Face Recognition".equalsIgnoreCase(booking.getCheckinmethod())
@@ -805,7 +818,13 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Đơn đặt phòng chưa được check-in");
         }
 
-        booking.setStatus("Checked-out");
+        BigDecimal dueAmount = booking.getFinalamount().subtract(booking.getPaidamount());
+        if (dueAmount.compareTo(BigDecimal.ZERO) > 0) {
+            throw new RuntimeException("Đơn đặt phòng chưa được thanh toán đầy đủ. Quý khách cần thanh toán thêm " 
+                    + formatCurrency(dueAmount) + " trước khi trả phòng.");
+        }
+
+        booking.setStatus("Completed");
         booking.setUpdatedat(Instant.now());
         bookingRepository.save(booking);
 
@@ -1305,7 +1324,9 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
 
-        if ("Cancelled".equalsIgnoreCase(booking.getStatus()) || "Checked-out".equalsIgnoreCase(booking.getStatus())) {
+        if ("Cancelled".equalsIgnoreCase(booking.getStatus()) 
+                || "Checked-out".equalsIgnoreCase(booking.getStatus())
+                || "Completed".equalsIgnoreCase(booking.getStatus())) {
             throw new RuntimeException("Không thể thêm dịch vụ cho đơn đặt phòng ở trạng thái này");
         }
 
@@ -1321,23 +1342,35 @@ public class BookingServiceImpl implements BookingService {
 
         Bookingservice usage = new Bookingservice();
         usage.setBookingid(booking);
+        usage.setServiceid(service);
+        usage.setImplementedby(staff);
         usage.setQuantity(request.getQuantity());
         usage.setUnitprice(unitPrice);
         usage.setTotalprice(totalPrice);
         usage.setImplementedat(Instant.now());
-        usage.setNote(request.getNote() != null && !request.getNote().isBlank()
-                ? request.getNote() : service.getName());
+        usage.setNote(service.getName() + (request.getNote() != null && !request.getNote().isBlank()
+                ? " (" + request.getNote() + ")" : ""));
         usage.setStatus("Active");
 
         bookingserviceRepository.save(usage);
 
-        // Update booking service charge and final amounts
+        // Update booking service charge, tax, and final amounts
+        BigDecimal serviceTax = totalPrice.multiply(new BigDecimal("0.10")).setScale(2, RoundingMode.HALF_UP);
         booking.setServicechargeamount(booking.getServicechargeamount().add(totalPrice));
-        booking.setFinalamount(booking.getFinalamount().add(totalPrice));
+        booking.setTaxamount(booking.getTaxamount().add(serviceTax));
+        booking.setFinalamount(booking.getFinalamount().add(totalPrice).add(serviceTax));
+        
+        if (booking.getPaidamount().compareTo(booking.getFinalamount()) < 0) {
+            if ("Paid".equalsIgnoreCase(booking.getStatus())) {
+                booking.setStatus("Partially Paid");
+            }
+        }
+        
         booking.setUpdatedat(Instant.now());
 
         bookingRepository.save(booking);
     }
+<<<<<<< HEAD
     private boolean isFaceIdMethod(String checkInMethod) {
         return "Face Recognition".equalsIgnoreCase(checkInMethod)
                 || "Face ID".equalsIgnoreCase(checkInMethod)
@@ -1461,5 +1494,13 @@ public class BookingServiceImpl implements BookingService {
                 .specialRequests(booking.getSpecialrequests())
                 .createdAt(booking.getCreatedat())
                 .build();
+=======
+
+    private String formatCurrency(BigDecimal amount) {
+        if (amount == null) {
+            return "0 VND";
+        }
+        return String.format("%,.0f VND", amount);
+>>>>>>> 72d1cd4 (feat: add payment status badge (100%/30%) to invoice modal and booking detail page)
     }
 }

@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import com.example.hotelsmartbookingbackend.repository.ServiceRepository;
 
 import java.util.List;
 
@@ -42,6 +43,10 @@ public class BookingController {
 
     private final BookingService bookingService;
     private final PdfService pdfService;
+<<<<<<< HEAD
+=======
+    private final ServiceRepository serviceRepository;
+>>>>>>> 72d1cd4 (feat: add payment status badge (100%/30%) to invoice modal and booking detail page)
 
     @PostMapping
     public ResponseEntity<ApiResponse<BookingResponse>> createBooking(
@@ -174,6 +179,21 @@ public class BookingController {
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin hóa đơn thành công", response));
     }
 
+    @GetMapping("/{bookingId}/statement/pdf")
+    public ResponseEntity<byte[]> getStatementPdf(
+            @PathVariable Integer bookingId,
+            Authentication authentication) {
+        String actorEmail = resolveCustomerEmail(authentication);
+        byte[] pdfBytes = pdfService.generateInvoicePdf(bookingId, actorEmail);
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("filename", "statement-" + bookingId + ".pdf");
+        headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+
+        return new ResponseEntity<>(pdfBytes, headers, org.springframework.http.HttpStatus.OK);
+    }
+
     @PostMapping("/{bookingId}/services")
     public ResponseEntity<ApiResponse<String>> addService(
             @PathVariable Integer bookingId,
@@ -247,5 +267,10 @@ public class BookingController {
             throw new RuntimeException("Bạn cần đăng nhập để thực hiện chức năng này");
         }
         return authentication.getName();
+    }
+
+    @GetMapping("/services/all")
+    public ResponseEntity<ApiResponse<List<com.example.hotelsmartbookingbackend.entity.Service>>> getAllServices() {
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách dịch vụ thành công", serviceRepository.findAll()));
     }
 }

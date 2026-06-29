@@ -38,5 +38,16 @@ public class BookingHistoryResponse {
     private String roomKeyStatus;
     private Instant roomKeyExpiresAt;
     private List<RoomAccessResponse> roomAccesses;
+<<<<<<< HEAD
     private EkycIdentitySummaryResponse ekycIdentity;
+=======
+    
+    // Financial details for lobby operations
+    private BigDecimal paidAmount;
+    private BigDecimal depositAmount;
+    private BigDecimal serviceChargeAmount;
+    private BigDecimal taxAmount;
+    private BigDecimal discountAmount;
+    private BigDecimal finalAmount;
+>>>>>>> 72d1cd4 (feat: add payment status badge (100%/30%) to invoice modal and booking detail page)
 }
