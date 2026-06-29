@@ -17,6 +17,15 @@ public interface BookingdetailRepository extends JpaRepository<Bookingdetail, In
         @Query("""
                         select d
                         from Bookingdetail d
+                        left join fetch d.roomtypeid
+                        left join fetch d.roomid
+                        where d.bookingid.id in :bookingIds
+                        """)
+        List<Bookingdetail> findByBookingid_IdIn(@Param("bookingIds") List<Integer> bookingIds);
+
+        @Query("""
+                        select d
+                        from Bookingdetail d
                         join fetch d.bookingid b
                         join fetch d.roomtypeid r
                         where b.id = :bookingId

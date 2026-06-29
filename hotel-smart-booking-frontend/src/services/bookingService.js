@@ -112,12 +112,6 @@ export const checkFaceReadiness = async (selfieImage) => {
   return response.data;
 };
 
-export const getStatementPdf = async (bookingId) => {
-  const response = await axiosInstance.get(`/bookings/${bookingId}/statement/pdf`, {
-    responseType: 'blob'
-  });
-  return response.data;
-};
 
 export const processManualPayment = async (paymentData) => {
   const response = await axiosInstance.post('/payments/manual', paymentData);
@@ -145,6 +139,13 @@ export const addServiceToBooking = async (bookingId, serviceId, quantity, note =
  */
 export const filterBookings = async (criteria) => {
   const response = await axiosInstance.post('/bookings/receptionist/filter', criteria);
+  return response.data;
+};
+
+export const cancelBooking = async (bookingId, cancellationReason) => {
+  const response = await axiosInstance.delete(`/bookings/receptionist/${bookingId}/cancel`, {
+    data: { cancellationReason }
+  });
   return response.data;
 };
 

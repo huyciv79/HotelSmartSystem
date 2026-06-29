@@ -43,10 +43,7 @@ public class BookingController {
 
     private final BookingService bookingService;
     private final PdfService pdfService;
-<<<<<<< HEAD
-=======
     private final ServiceRepository serviceRepository;
->>>>>>> 72d1cd4 (feat: add payment status badge (100%/30%) to invoice modal and booking detail page)
 
     @PostMapping
     public ResponseEntity<ApiResponse<BookingResponse>> createBooking(
@@ -203,22 +200,6 @@ public class BookingController {
         bookingService.addServiceToBooking(bookingId, request, staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Thêm dịch vụ vào đơn đặt phòng thành công", "SUCCESS"));
     }
-
-    @GetMapping("/{bookingId}/statement/pdf")
-    public ResponseEntity<byte[]> getStatementPdf(
-            @PathVariable Integer bookingId,
-            Authentication authentication) {
-        String actorEmail = resolveCustomerEmail(authentication);
-        byte[] pdfBytes = pdfService.generateInvoicePdf(bookingId, actorEmail);
-
-        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-        headers.setContentType(org.springframework.http.MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("filename", "statement-" + bookingId + ".pdf");
-        headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
-
-        return new ResponseEntity<>(pdfBytes, headers, org.springframework.http.HttpStatus.OK);
-    }
-
 
     @PostMapping("/receptionist/filter")
     @Operation(

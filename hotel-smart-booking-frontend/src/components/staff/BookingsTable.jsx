@@ -4,7 +4,7 @@ import {
   getCoreRowModel,
   flexRender,
 } from '@tanstack/react-table';
-import { filterBookings } from '../../services/bookingService';
+import { filterBookings, cancelBooking } from '../../services/bookingService';
 
 const BookingsTable = ({
   showToast,
@@ -15,12 +15,13 @@ const BookingsTable = ({
   handleDownloadPdf,
   isManager,
   setActiveTab,
-  onFaceCheckInSelect
+  onFaceCheckInSelect,
+  triggerCustomConfirm
 }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pageCount, setPageCount] = useState(0);
-  
+
   // Pagination & Filtering state
   const [pagination, setPagination] = useState({
     pageIndex: 0,
@@ -41,7 +42,7 @@ const BookingsTable = ({
         bookingType: bookingType || null,
         guestName: keyword || null,
       };
-      
+
       // If keyword looks like a booking reference, set bookingReference
       if (keyword) {
         const trimmedKeyword = keyword.trim();
@@ -85,6 +86,23 @@ const BookingsTable = ({
     window.addEventListener('reload-bookings', handleReload);
     return () => window.removeEventListener('reload-bookings', handleReload);
   }, [fetchBookings]);
+
+  const handleCancelClick = useCallback((bk) => {
+    triggerCustomConfirm(
+      "Xác nhận hủy đặt phòng",
+      `Bạn có chắc chắn muốn hủy đơn đặt phòng ${bk.bookingReference}? Hành động này sẽ cập nhật trạng thái và tự động thực hiện hoàn trả tiền (nếu có) ngay lập tức.`,
+      async () => {
+        try {
+          await cancelBooking(bk.id, "Hủy trực tiếp bởi nhân viên");
+          showToast(`Hủy đặt phòng ${bk.bookingReference} thành công!`, "success");
+          fetchBookings();
+        } catch (err) {
+          console.error("Lỗi khi hủy đặt phòng:", err);
+          showToast(err.response?.data?.message || "Không thể hủy đặt phòng", "error");
+        }
+      }
+    );
+  }, [fetchBookings, showToast, triggerCustomConfirm]);
 
   // Define Columns
   const columns = useMemo(
@@ -154,7 +172,7 @@ const BookingsTable = ({
         cell: ({ getValue }) => {
           const status = getValue() || '';
           const norm = status.toLowerCase().replace('-', ' ').trim();
-          
+
           let label = status.toUpperCase();
           let badgeClass = 'bg-neutral-900 text-slate-400 border border-neutral-800';
 
@@ -205,18 +223,16 @@ const BookingsTable = ({
               >
                 Chi tiết
               </button>
-              <button
-                onClick={() => handleViewInvoice(bk.id)}
-                className="bg-amber-950/20 border border-amber-900/50 text-amber-400 text-[8.5px] font-black uppercase tracking-widest px-2.5 py-1.5 cursor-pointer flex items-center gap-1 hover:bg-amber-900/30 transition-colors"
-              >
-                Hóa đơn
-              </button>
-              <button
-                onClick={() => handleDownloadPdf(bk.id, bk.bookingReference)}
-                className="bg-emerald-950/20 border border-emerald-900/50 text-emerald-400 text-[8.5px] font-black uppercase tracking-widest px-2.5 py-1.5 cursor-pointer flex items-center gap-1 hover:bg-emerald-900/30 transition-colors"
-              >
-                Tải PDF
-              </button>
+
+              {!['Cancelled', 'Checked Out', 'Checked-out', 'Completed'].includes(bk.status) && (
+                <button
+                  onClick={() => handleCancelClick(bk)}
+                  className="bg-rose-950/30 border border-rose-900/60 hover:bg-rose-900/20 text-rose-400 text-[8.5px] font-black uppercase tracking-widest px-2.5 py-1.5 cursor-pointer flex items-center gap-1 transition-all"
+                >
+                  Hủy đơn
+                </button>
+              )}
+
               {isConfirmed && (
                 <button
                   onClick={() => onFaceCheckInSelect(bk.id)}
@@ -241,7 +257,7 @@ const BookingsTable = ({
         }
       }
     ],
-    [setSelectedBooking, handleViewInvoice, handleDownloadPdf, handleDirectCheckInOut, startScanner, fetchBookings, isManager, setActiveTab]
+    [setSelectedBooking, handleViewInvoice, handleDownloadPdf, handleDirectCheckInOut, startScanner, fetchBookings, isManager, setActiveTab, handleCancelClick]
   );
 
   const table = useReactTable({

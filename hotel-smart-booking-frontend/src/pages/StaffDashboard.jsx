@@ -11,7 +11,8 @@ import {
   getStatementPdf,
   processManualPayment,
   getAllServices,
-  addServiceToBooking
+  addServiceToBooking,
+  cancelBooking
 } from '../services/bookingService';
 import {
   getPendingRefundRequests,
@@ -92,6 +93,14 @@ export default function StaffDashboard({ setActivePage }) {
   });
   const [isSubmittingRoomEdit, setIsSubmittingRoomEdit] = useState(false);
 
+  // Custom Confirm Dialog state
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  });
+
   // Walk-in booking modal states
   const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
   const [isSubmittingWalkIn, setIsSubmittingWalkIn] = useState(false);
@@ -121,6 +130,11 @@ export default function StaffDashboard({ setActivePage }) {
   const [serviceNote, setServiceNote] = useState('');
   const [isSubmittingService, setIsSubmittingService] = useState(false);
   const [invoiceData, setInvoiceData] = useState(null);
+
+  const [inlineServiceId, setInlineServiceId] = useState('');
+  const [inlineServiceQuantity, setInlineServiceQuantity] = useState(1);
+  const [inlineServiceNote, setInlineServiceNote] = useState('');
+  const [isSubmittingInlineService, setIsSubmittingInlineService] = useState(false);
 
   // Manual counter payment states
   const [manualPaymentMethod, setManualPaymentMethod] = useState('Cash');
@@ -184,6 +198,8 @@ export default function StaffDashboard({ setActivePage }) {
   useEffect(() => {
     if (activeTab === 'refunds') {
       fetchPendingRefunds();
+    } else if (activeTab === 'overview' || activeTab === 'operations') {
+      fetchRealBookings();
     }
   }, [activeTab]);
 
@@ -279,6 +295,20 @@ export default function StaffDashboard({ setActivePage }) {
     setInvoiceData(null);
     setManualPaymentMethod('Cash');
     setManualPaymentNotes('');
+    setInlineServiceId('');
+    setInlineServiceQuantity(1);
+    setInlineServiceNote('');
+    try {
+      const svcRes = await getAllServices();
+      if (svcRes && svcRes.data) {
+        setServicesList(svcRes.data);
+        if (svcRes.data.length > 0) {
+          setInlineServiceId(svcRes.data[0].id.toString());
+        }
+      }
+    } catch (e) {
+      console.error('Lỗi khi tải danh sách dịch vụ:', e);
+    }
     try {
       const response = await getInvoiceDetails(bookingId);
       if (response && response.success) {
@@ -326,6 +356,40 @@ export default function StaffDashboard({ setActivePage }) {
       showToast(err.response?.data?.message || 'Lỗi khi ghi nhận thanh toán tại quầy.', 'error');
     } finally {
       setIsSubmittingManualPayment(false);
+    }
+  };
+
+  const handleInlineServiceSubmit = async (e) => {
+    e.preventDefault();
+    if (!inlineServiceId) {
+      showToast('Vui lòng chọn dịch vụ', 'warning');
+      return;
+    }
+    setIsSubmittingInlineService(true);
+    try {
+      await addServiceToBooking(
+        invoiceData.bookingId,
+        parseInt(inlineServiceId),
+        inlineServiceQuantity,
+        inlineServiceNote
+      );
+      showToast('Đã thêm dịch vụ thành công!', 'success');
+      setInlineServiceNote('');
+      setInlineServiceQuantity(1);
+      
+      // Refresh invoice modal
+      const freshInvoice = await getInvoiceDetails(invoiceData.bookingId);
+      if (freshInvoice && freshInvoice.success) {
+        setInvoiceData(freshInvoice.data);
+        setManualPaymentAmount(freshInvoice.data.dueAmount || '');
+      }
+      
+      fetchRealBookings();
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Không thể thêm dịch vụ phụ thu.', 'error');
+    } finally {
+      setIsSubmittingInlineService(false);
     }
   };
 
@@ -529,10 +593,12 @@ export default function StaffDashboard({ setActivePage }) {
   const fetchRealBookings = async () => {
     try {
       let allBookings = [];
+      let backendSuccess = false;
       try {
         const response = await getAllBookings();
         if (response && response.data) {
           allBookings = response.data;
+          backendSuccess = true;
         }
       } catch (err) {
         console.error('Lỗi khi tải toàn bộ đặt phòng từ backend:', err);
@@ -542,15 +608,17 @@ export default function StaffDashboard({ setActivePage }) {
             allBookings = [...response.data];
           }
         } catch (e2) { }
-        try {
-          const localCreated = JSON.parse(localStorage.getItem('hotel_all_bookings') || '[]');
-          localCreated.forEach(localBk => {
-            if (!allBookings.some(b => b.bookingId === localBk.bookingId)) {
-              allBookings.push(localBk);
-            }
-          });
-        } catch (e3) { }
       }
+
+      // Always merge local storage created bookings
+      try {
+        const localCreated = JSON.parse(localStorage.getItem('hotel_all_bookings') || '[]');
+        localCreated.forEach(localBk => {
+          if (!allBookings.some(b => b.bookingId === localBk.bookingId)) {
+            allBookings.push(localBk);
+          }
+        });
+      } catch (e3) { }
 
       if (allBookings.length > 0) {
         const realMapped = allBookings.map(bk => {
@@ -567,7 +635,17 @@ export default function StaffDashboard({ setActivePage }) {
             checkOutDate: bk.checkOutDate,
             nights: bk.nights,
             totalAmount: bk.totalAmount,
-            status: localStatus === 'Cancelled' ? 'Cancelled' : localStatus === 'Checked-in' || localStatus === 'Checked In' ? 'Checked In' : localStatus === 'Checked-out' || localStatus === 'Checked Out' || localStatus === 'Completed' ? 'Completed' : 'Confirmed',
+            status: (() => {
+              const s = String(localStatus || '').trim();
+              const sl = s.toLowerCase();
+              if (sl === 'cancelled') return 'Cancelled';
+              if (sl === 'checked in' || sl === 'checked-in' || sl === 'staying') return 'Checked In';
+              if (sl === 'checked out' || sl === 'checked-out' || sl === 'completed') return 'Completed';
+              if (sl === 'pending') return 'Pending';
+              if (sl === 'paid') return 'Paid';
+              if (sl === 'partially paid' || sl === 'partiallypaid') return 'Partially Paid';
+              return s || 'Confirmed';
+            })(),
             roomNumber: bk.roomNumber || '',
             roomPassword: bk.roomPassword || '',
             roomKeyStatus: bk.roomKeyStatus || '',
@@ -619,6 +697,21 @@ export default function StaffDashboard({ setActivePage }) {
     }, 1000);
   };
 
+  const handleViewDetail = (bk, fromTab) => {
+    setSelectedBooking({ ...bk, prevTab: fromTab });
+    fetchPendingRefunds();
+    setActiveTab('booking-detail-view');
+  };
+
+  const triggerCustomConfirm = (title, message, onConfirm) => {
+    setConfirmDialog({
+      isOpen: true,
+      title,
+      message,
+      onConfirm
+    });
+  };
+
   // Check-in & Check-out simulations
   const startScanner = (booking, type) => {
     setScanningBooking(booking);
@@ -642,7 +735,7 @@ export default function StaffDashboard({ setActivePage }) {
   });
 
   const completeScannerAction = async () => {
-    const isCheckIn = scanningBooking.status === 'Confirmed';
+    const isCheckIn = scanningBooking.status === 'Confirmed' || scanningBooking.status === 'Paid' || scanningBooking.status === 'Partially Paid';
     const nextStatus = isCheckIn ? 'Checked In' : 'Completed';
 
     try {
@@ -730,22 +823,6 @@ export default function StaffDashboard({ setActivePage }) {
     localStorage.setItem(`booking_actualcheckin_${bookingId}`, new Date().toISOString());
   };
 
-  const handleDownloadPdf = async (bookingId, bookingRef) => {
-    try {
-      const blob = await getStatementPdf(bookingId);
-      const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Statement_${bookingRef}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      showToast('Đã tải xuống Statement PDF thành công!', 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Không thể kết xuất PDF bảng sao kê.', 'error');
-    }
-  };
 
   // Filter bookings for receptionist
   const filteredBookings = bookings.filter(bk =>
@@ -938,374 +1015,14 @@ export default function StaffDashboard({ setActivePage }) {
                 isManager={isManager}
                 setActiveTab={setActiveTab}
                 handleOpenAddRoom={handleOpenAddRoom}
-                setSelectedBooking={setSelectedBooking}
+                setSelectedBooking={(bk) => handleViewDetail(bk, 'overview')}
                 startScanner={startScanner}
                 handleDirectCheckInOut={handleDirectCheckInOut}
                 handleOpenWalkIn={() => setIsWalkInModalOpen(true)}
               />
             )}
 
-            {/* VẬN HÀNH SẢNH / CHECK-IN / CHECK-OUT */}
-            {activeTab === 'operations' && (
-              <div className="space-y-6 animate-scale-in">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 border-b border-neutral-900 pb-4">
-                  <div>
-                    <h3 className="text-white font-black text-base uppercase tracking-wider m-0">VẬN HÀNH SẢNH & PMS OPERATOR</h3>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Quản lý vòng đời lưu trú của khách hàng • Check-in • Khách đang ở • Checkout</p>
-                  </div>
-                </div>
 
-                {/* Simulated Scanning Modal popup */}
-                {isScanning && scanningBooking && (
-                  <div className="bg-[#0f0f12] border-2 border-primary p-6 text-white text-center shadow-2xl relative animate-scale-in">
-                    <div className="flex flex-col items-center justify-center gap-4 py-6">
-                      <span className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></span>
-                      <h4 className="text-sm font-black uppercase tracking-widest text-primary m-0">
-                        {scanType === 'face' ? 'ĐANG QUÉT KHUÔN MẶT eKYC...' : 'ĐANG ĐỌC MÃ QR ĐOÀN...'}
-                      </h4>
-                      <p className="text-xs text-slate-400 font-bold uppercase tracking-wider max-w-sm">
-                        Đang xác thực thông tin đối sánh của khách hàng: {scanningBooking.guestName}
-                      </p>
-                    </div>
-                    <button onClick={completeScannerAction} className="bg-primary text-white font-black text-[10px] uppercase tracking-widest py-3.5 px-8 border-none cursor-pointer mt-4">
-                      Hoàn tất đối sánh và xác thực
-                    </button>
-                  </div>
-                )}
-
-                {/* Sub-Tabs Header */}
-                <div className="flex flex-wrap border-b border-neutral-900 gap-1 bg-neutral-950/40 p-1">
-                  <button
-                    onClick={() => setOperationsSubTab('checkin')}
-                    className={`flex items-center gap-2 px-6 py-3.5 text-[9px] font-black uppercase tracking-widest border-none cursor-pointer transition-all duration-200 ${
-                      operationsSubTab === 'checkin'
-                        ? 'bg-primary text-white shadow-lg'
-                        : 'bg-transparent text-slate-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-sm">login</span>
-                    Check-in hôm nay ({
-                      filteredBookings.filter(bk => ['confirmed', 'paid', 'partially paid'].includes(bk.status.toLowerCase())).length
-                    })
-                  </button>
-                  <button
-                    onClick={() => setOperationsSubTab('staying')}
-                    className={`flex items-center gap-2 px-6 py-3.5 text-[9px] font-black uppercase tracking-widest border-none cursor-pointer transition-all duration-200 ${
-                      operationsSubTab === 'staying'
-                        ? 'bg-primary text-white shadow-lg'
-                        : 'bg-transparent text-slate-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-sm">home_pin</span>
-                    Khách đang lưu trú ({
-                      filteredBookings.filter(bk => ['checked in', 'checked-in', 'staying'].includes(bk.status.toLowerCase())).length
-                    })
-                  </button>
-                  <button
-                    onClick={() => setOperationsSubTab('checkout')}
-                    className={`flex items-center gap-2 px-6 py-3.5 text-[9px] font-black uppercase tracking-widest border-none cursor-pointer transition-all duration-200 ${
-                      operationsSubTab === 'checkout'
-                        ? 'bg-primary text-white shadow-lg'
-                        : 'bg-transparent text-slate-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-sm">logout</span>
-                    Checkout hôm nay ({
-                      filteredBookings.filter(bk => ['checked in', 'checked-in', 'staying', 'checkout pending'].includes(bk.status.toLowerCase())).length
-                    })
-                  </button>
-                </div>
-
-                {/* Sub-Tabs Body */}
-                <div className="bg-[#0f0f12] border border-neutral-900 shadow-md overflow-hidden">
-                  <div className="divide-y divide-neutral-900/60">
-                    {(() => {
-                      const checkInTodayBookings = filteredBookings.filter(bk => 
-                        ['confirmed', 'paid', 'partially paid'].includes(bk.status.toLowerCase())
-                      );
-                      const currentlyStayingBookings = filteredBookings.filter(bk => 
-                        ['checked in', 'checked-in', 'staying'].includes(bk.status.toLowerCase())
-                      );
-                      const todayCheckOutBookings = filteredBookings.filter(bk => 
-                        ['checked in', 'checked-in', 'staying', 'checkout pending'].includes(bk.status.toLowerCase())
-                      );
-
-                      let currentList = [];
-                      if (operationsSubTab === 'checkin') currentList = checkInTodayBookings;
-                      else if (operationsSubTab === 'staying') currentList = currentlyStayingBookings;
-                      else if (operationsSubTab === 'checkout') currentList = todayCheckOutBookings;
-
-                      if (currentList.length === 0) {
-                        return (
-                          <div className="py-16 text-center text-slate-500 font-bold text-xs uppercase tracking-widest">
-                            Không tìm thấy lịch trình đặt phòng nào phù hợp trong danh mục này
-                          </div>
-                        );
-                      }
-
-                      return currentList.map((bk) => {
-                        const isConfirmed = bk.status === 'Confirmed';
-                        const isCheckedIn = bk.status === 'Checked In' || bk.status === 'Checked-in' || bk.status === 'Staying';
-                        const usesFaceId =
-                          bk.checkInMethod === 'Face Recognition' ||
-                          bk.checkInMethod === 'FaceID';
-                        const isGroup = bk.bookingType && bk.bookingType.toLowerCase() === 'group';
-
-                        const balanceDue = (bk.finalAmount || bk.totalAmount || 0) - (bk.paidAmount || 0);
-
-                        return (
-                          <div key={bk.id} className="p-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 hover:bg-white/5 transition-colors">
-                            {/* General Details column */}
-                            <div className="space-y-1.5 flex-1 min-w-[280px]">
-                              <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                                <span className="inline-block px-2 py-0.5 text-[8px] font-black tracking-widest text-slate-400 bg-neutral-900 border border-neutral-800 uppercase">
-                                  {isGroup ? 'ĐOÀN (GROUP)' : 'ĐƠN LẺ'}
-                                </span>
-                                <span className="text-[9px] font-bold text-slate-500 uppercase">ID: {bk.id}</span>
-                              </div>
-                              <h5 className="text-sm font-black text-white uppercase tracking-wider m-0 flex items-center gap-1.5">
-                                <span className="material-symbols-outlined text-xs text-primary">person</span>
-                                {bk.guestName}
-                              </h5>
-                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                                <span className="material-symbols-outlined text-xs text-primary">meeting_room</span>
-                                Phòng: {bk.roomNumber || 'Chưa gán'} • {bk.roomType}
-                              </p>
-                              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                                <span className="material-symbols-outlined text-xs text-primary">date_range</span>
-                                Lưu trú: {bk.checkInDate} đến {bk.checkOutDate} ({bk.nights} đêm)
-                              </p>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-4 self-stretch md:self-auto justify-between md:justify-end">
-                              <div className="text-left md:text-right shrink-0">
-                                <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider block">Check-in bằng:</span>
-                                <span className="text-[10px] text-primary font-black uppercase tracking-wider">{bk.checkInMethod === 'Face Recognition' || bk.checkInMethod === 'FaceID' ? 'FaceID eKYC' : bk.checkInMethod}</span>
-                                <span className="text-xs font-black text-white block mt-1">
-                                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(bk.totalAmount)}
-                                </span>
-                              </div>
-
-                              <span className={`px-2.5 py-1 text-[8px] font-black uppercase tracking-widest ${
-                                isCheckedIn 
-                                  ? 'bg-blue-900/30 text-blue-400 border border-blue-900/50' 
-                                  : isConfirmed 
-                                  ? 'bg-green-900/30 text-green-400 border border-green-900/50' 
-                                  : 'bg-neutral-800 text-neutral-400 border border-neutral-700/50'
-                              }`}>
-                                {bk.status}
-                              </span>
-
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => setSelectedBooking(bk)}
-                                  className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
-                                >
-                                  <span className="material-symbols-outlined text-xs">info</span> Chi tiết
-                                </button>
-                                <button
-                                  onClick={() => handleViewInvoice(bk.id)}
-                                  className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
-                                >
-                                  <span className="material-symbols-outlined text-xs">receipt_long</span> Hóa đơn
-                                </button>
-
-                                  onClick={() => handleDownloadPdf(bk.id, bk.bookingReference)}
-                                  className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
-                                >
-                                  <span className="material-symbols-outlined text-xs">download</span> Tải PDF
-                                </button>
-                                {isConfirmed && (
-                                  <>
-                                    <button
-                                      onClick={() => {
-                                        if (usesFaceId && isManager) {
-                                          setActiveTab('face-check-in');
-                                          return;
-                                        }
-                                        startScanner(bk, 'qr');
-                                      }}
-                                      disabled={usesFaceId && !isManager}
-                                      className="bg-primary hover:brightness-110 disabled:bg-neutral-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 border-none cursor-pointer flex items-center gap-1"
-                                    >
-                                      <span className="material-symbols-outlined text-xs">
-                                        {usesFaceId ? 'face' : 'qr_code_scanner'}
-                                      </span>
-                                    )}
-                                  </div>
-                                </>
-                              )}
-
-                              {operationsSubTab === 'staying' && (
-                                <div className="space-y-1 text-[10px] font-semibold text-slate-400">
-                                  <div className="flex xl:justify-end gap-2">
-                                    <span>Phòng:</span>
-                                    <strong className="text-white">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(bk.totalAmount)}</strong>
-                                  </div>
-                                  <div className="flex xl:justify-end gap-2">
-                                    <span>Dịch vụ:</span>
-                                    <strong className="text-white">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(bk.serviceChargeAmount)}</strong>
-                                  </div>
-                                  <div className="flex xl:justify-end gap-2 pt-1 border-t border-neutral-900">
-                                    <span>Đã trả:</span>
-                                    <strong className="text-emerald-400">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(bk.paidAmount)}</strong>
-                                  </div>
-                                  <div className="flex xl:justify-end gap-2">
-                                    <span>Còn lại:</span>
-                                    <strong className={balanceDue > 0 ? "text-rose-500" : "text-green-500"}>
-                                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(balanceDue)}
-                                    </strong>
-                                  </div>
-                                  <div className="mt-1 flex xl:justify-end">
-                                    <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-widest ${bk.serviceChargeAmount > 0 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-neutral-800 text-slate-500 border border-neutral-700/50'}`}>
-                                      Dịch vụ: {bk.serviceChargeAmount > 0 ? 'Có phát sinh' : '0'}
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-
-                              {operationsSubTab === 'checkout' && (
-                                <div className="space-y-1 text-[10px] font-semibold text-slate-400">
-                                  <div className="flex xl:justify-end gap-2">
-                                    <span>Tiền phòng:</span>
-                                    <strong className="text-white">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(bk.totalAmount)}</strong>
-                                  </div>
-                                  <div className="flex xl:justify-end gap-2">
-                                    <span>Tiền dịch vụ:</span>
-                                    <strong className="text-white">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(bk.serviceChargeAmount)}</strong>
-                                  </div>
-                                  <div className="flex xl:justify-end gap-2">
-                                    <span>Thuế VAT:</span>
-                                    <strong className="text-white">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(bk.taxAmount)}</strong>
-                                  </div>
-                                  <div className="flex xl:justify-end gap-2 pt-1 border-t border-neutral-900">
-                                    <span>Đã trả:</span>
-                                    <strong className="text-emerald-400">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(bk.paidAmount)}</strong>
-                                  </div>
-                                  <div className="flex xl:justify-end gap-2 text-xs font-bold border-t border-neutral-900 pt-1">
-                                    <span>Cần thu:</span>
-                                    <strong className={balanceDue > 0 ? "text-rose-500 font-black" : "text-green-500 font-black"}>
-                                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(balanceDue)}
-                                    </strong>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Actions Buttons column */}
-                            <div className="flex flex-wrap items-center gap-2 self-stretch xl:self-auto justify-start xl:justify-end shrink-0">
-                              {/* Common Buttons */}
-                              <button
-                                onClick={() => setSelectedBooking(bk)}
-                                className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3.5 py-2.5 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
-                              >
-                                <span className="material-symbols-outlined text-xs">info</span> Chi tiết
-                              </button>
-
-                              {/* Tab 1 Actions */}
-                              {operationsSubTab === 'checkin' && (
-                                <>
-                                  <button
-                                    onClick={() => {
-                                      if (usesFaceId && isManager) {
-                                        setActiveTab('face-check-in');
-                                        return;
-                                      }
-                                      startScanner(bk, 'face');
-                                    }}
-                                    disabled={usesFaceId && !isManager}
-                                    className="bg-primary hover:brightness-110 disabled:bg-neutral-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-[9px] font-black uppercase tracking-widest px-3.5 py-2.5 border-none cursor-pointer flex items-center gap-1"
-                                  >
-                                    <span className="material-symbols-outlined text-xs">face</span>
-                                    {usesFaceId ? isManager ? 'FaceID' : 'Cần Manager' : 'FaceID'}
-                                  </button>
-                                  <button
-                                    onClick={() => startScanner(bk, 'qr')}
-                                    className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3.5 py-2.5 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
-                                  >
-                                    <span className="material-symbols-outlined text-xs">qr_code_scanner</span> Quét QR
-                                  </button>
-                                  <button
-                                    onClick={() => handleDirectCheckInOut(bk, 'Checked In')}
-                                    className="bg-neutral-900 border border-neutral-800 text-white hover:bg-neutral-800 text-[9px] font-black uppercase tracking-widest px-3.5 py-2.5 cursor-pointer"
-                                  >
-                                    Check-in nhanh
-                                  </button>
-                                  <button
-                                    onClick={() => handleDirectCheckInOut(bk, 'Checked In')}
-                                    className="bg-primary hover:brightness-110 text-white text-[9px] font-black uppercase tracking-widest px-3.5 py-2.5 border-none cursor-pointer"
-                                  >
-                                    Check-in thủ công
-                                  </button>
-                                </>
-                              )}
-
-                              {/* Tab 2 Actions */}
-                              {operationsSubTab === 'staying' && (
-                                <>
-                                  <button
-                                    onClick={() => handleOpenAddService(bk)}
-                                    className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3.5 py-2.5 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
-                                  >
-                                    <span className="material-symbols-outlined text-xs">add_circle</span> Thêm dịch vụ
-                                  </button>
-                                  <button
-                                    onClick={() => handleViewInvoice(bk.id)}
-                                    className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3.5 py-2.5 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
-                                  >
-                                    <span className="material-symbols-outlined text-xs">receipt_long</span> Hóa đơn tạm
-                                  </button>
-                                  <button
-                                    onClick={() => handleViewInvoice(bk.id)}
-                                    className="bg-primary hover:brightness-110 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2.5 border-none cursor-pointer"
-                                  >
-                                    Checkout
-                                  </button>
-                                </>
-                              )}
-
-                              {/* Tab 3 Actions */}
-                              {operationsSubTab === 'checkout' && (
-                                <>
-                                  <button
-                                    onClick={() => handleViewInvoice(bk.id)}
-                                    className="bg-neutral-900 border border-neutral-850 text-white text-[9px] font-black uppercase tracking-widest px-3.5 py-2.5 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
-                                  >
-                                    <span className="material-symbols-outlined text-xs">payments</span> Thanh toán
-                                  </button>
-                                  <button
-                                    onClick={() => handleDownloadPdf(bk.id, bk.bookingReference)}
-                                    className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3.5 py-2.5 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
-                                  >
-                                    <span className="material-symbols-outlined text-xs">print</span> In hóa đơn
-                                  </button>
-                                  <button
-                                    onClick={() => handleDownloadPdf(bk.id, bk.bookingReference)}
-                                    className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3.5 py-2.5 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
-                                  >
-                                    <span className="material-symbols-outlined text-xs">download</span> Xuất PDF
-                                  </button>
-                                  <button
-                                    onClick={async () => {
-                                      if (balanceDue > 0) {
-                                        showToast(`Đơn đặt phòng chưa được thanh toán đầy đủ. Quý khách cần thanh toán thêm ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(balanceDue)} trước khi trả phòng.`, 'error');
-                                        handleViewInvoice(bk.id);
-                                        return;
-                                      }
-                                      await handleDirectCheckInOut(bk, 'Completed');
-                                    }}
-                                    className="bg-primary hover:brightness-110 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2.5 border-none cursor-pointer"
-                                  >
-                                    Hoàn tất Checkout
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
 
             {/* QUẢN LÝ ĐẶT PHÒNG (BOOKINGS MANAGEMENT TABLE) */}
             {activeTab === 'bookings' && (
@@ -1317,7 +1034,7 @@ export default function StaffDashboard({ setActivePage }) {
                 </div>
                 <BookingsTable
                   showToast={showToast}
-                  setSelectedBooking={setSelectedBooking}
+                  setSelectedBooking={(bk) => handleViewDetail(bk, 'bookings')}
                   startScanner={startScanner}
                   handleDirectCheckInOut={handleDirectCheckInOut}
                   handleViewInvoice={handleViewInvoice}
@@ -1328,6 +1045,7 @@ export default function StaffDashboard({ setActivePage }) {
                     setFaceCheckInBookingId(id);
                     setActiveTab('face-check-in');
                   }}
+                  triggerCustomConfirm={triggerCustomConfirm}
                 />
               </div>
             )}
@@ -1382,87 +1100,6 @@ export default function StaffDashboard({ setActivePage }) {
               <RevenueReports />
             )}
 
-            {/* YÊU CẦU HOÀN TIỀN (REFUNDS MANAGEMENT) */}
-            {activeTab === 'refunds' && (
-              <div className="space-y-6 animate-scale-in text-left">
-                <div>
-                  <h3 className="text-white font-black text-base uppercase tracking-wider m-0">QUẢN LÝ YÊU CẦU HOÀN TIỀN</h3>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Danh sách yêu cầu hoàn tiền đang chờ phê duyệt từ khách hàng</p>
-                </div>
-
-                <div className="bg-[#0f0f12] border border-neutral-900 shadow-md overflow-hidden">
-                  <div className="p-4 border-b border-neutral-900 bg-neutral-950/20 text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                    Yêu cầu chờ xử lý ({pendingRefunds.length})
-                  </div>
-
-                  {refundsLoading ? (
-                    <div className="py-12 text-center text-slate-500 font-bold text-xs uppercase tracking-widest">
-                      Đang tải danh sách...
-                    </div>
-                  ) : pendingRefunds.length === 0 ? (
-                    <div className="py-12 text-center text-slate-500 font-bold text-xs uppercase tracking-widest">
-                      Không có yêu cầu hoàn tiền nào đang chờ xử lý
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse text-left text-xs text-slate-400">
-                        <thead>
-                          <tr className="border-b border-neutral-900 text-[9px] font-black uppercase text-slate-500 tracking-wider">
-                            <th className="p-4">Mã Đơn / Ngày gửi</th>
-                            <th className="p-4">Lý do hoàn tiền</th>
-                            <th className="p-4">Số tiền ban đầu / Ước tính hoàn</th>
-                            <th className="p-4 text-right">Thao tác</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-900/60">
-                          {pendingRefunds.map((req) => (
-                            <tr key={req.requestId} className="hover:bg-white/5 transition-colors">
-                              <td className="p-4">
-                                <span className="text-white font-black uppercase block">{req.bookingReference}</span>
-                                <span className="text-[9px] text-slate-500 block mt-0.5">
-                                  Gửi lúc: {new Date(req.createdAt).toLocaleString('vi-VN')}
-                                </span>
-                              </td>
-                              <td className="p-4 font-medium text-slate-300">
-                                {req.description}
-                              </td>
-                              <td className="p-4">
-                                <div className="text-[10px] text-slate-500">Đã thanh toán: <strong className="text-white">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(req.oldValue))}</strong></div>
-                                <div className="text-[10px] text-primary font-bold">Hoàn dự kiến: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(req.newValue))}</div>
-                              </td>
-                              <td className="p-4 text-right">
-                                <div className="flex gap-2 justify-end">
-                                  <button
-                                    onClick={() => {
-                                      setSelectedRefund(req);
-                                      setRefundOverrideAmount(req.newValue);
-                                      setIsApproveRefundOpen(true);
-                                    }}
-                                    className="bg-green-600 hover:bg-green-700 text-white text-[9.5px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer border-none"
-                                  >
-                                    Phê duyệt
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setSelectedRefund(req);
-                                      setRefundRejectionReason('');
-                                      setIsRejectRefundOpen(true);
-                                    }}
-                                    className="bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer border-none"
-                                  >
-                                    Từ chối
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* HỒ SƠ CÁ NHÂN (PROFILE SETTINGS) */}
             {activeTab === 'settings' && (
@@ -1477,140 +1114,277 @@ export default function StaffDashboard({ setActivePage }) {
                 />
               </div>
             )}
+
+            {/* CHI TIẾT ĐƠN ĐẶT PHÒNG NATIVE VIEW */}
+            {activeTab === 'booking-detail-view' && selectedBooking && (() => {
+              const balanceDue = (selectedBooking.finalAmount || selectedBooking.totalAmount || 0) - (selectedBooking.paidAmount || 0);
+              const isConfirmed = selectedBooking.status === 'Confirmed' || selectedBooking.status === 'Paid' || selectedBooking.status === 'Partially Paid';
+              const isCheckedIn = selectedBooking.status === 'Checked In' || selectedBooking.status === 'Checked-in' || selectedBooking.status === 'Staying';
+              const usesFaceId = selectedBooking.checkInMethod === 'Face Recognition' || selectedBooking.checkInMethod === 'FaceID';
+              const associatedRefund = pendingRefunds.find(req => req.bookingReference === selectedBooking.bookingReference);
+              return (
+                <div className="animate-scale-in text-left space-y-6">
+                  <div className="flex justify-between items-center border-b border-neutral-900 pb-4">
+                    <div>
+                      <button
+                        onClick={() => {
+                          setActiveTab(selectedBooking.prevTab || 'bookings');
+                        }}
+                        className="text-primary hover:underline font-black text-[10px] uppercase tracking-widest border-none bg-transparent cursor-pointer flex items-center gap-1 mb-2"
+                      >
+                        <span className="material-symbols-outlined text-xs">arrow_back</span> Quay lại danh sách
+                      </button>
+                      <h3 className="text-white font-black text-lg uppercase tracking-wider m-0">CHI TIẾT ĐƠN ĐẶT PHÒNG</h3>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">
+                        Mã đặt phòng: {selectedBooking.bookingReference}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Left columns - Detailed info */}
+                    <div className="lg:col-span-2 space-y-6">
+                      
+                      {/* Refund Request Block */}
+                      {associatedRefund && (
+                        <div className="bg-[#1c1114] border border-rose-900/50 p-6 rounded-sm flex flex-col gap-4 animate-scale-in">
+                          <div className="flex items-center gap-2 border-b border-rose-950 pb-3">
+                            <span className="material-symbols-outlined text-rose-500 text-base">payments</span>
+                            <h4 className="text-xs font-black text-rose-400 uppercase tracking-widest m-0">Yêu cầu hoàn tiền chờ xử lý</h4>
+                            <span className="ml-auto px-2 py-0.5 text-[8px] font-black text-rose-500 bg-rose-500/10 border border-rose-500/20 uppercase tracking-widest rounded-sm">Pending</span>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
+                            <div className="space-y-2">
+                              <div>
+                                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Lý do hoàn tiền từ khách:</span>
+                                <span className="text-slate-300 font-medium italic">"{associatedRefund.description}"</span>
+                              </div>
+                              <div className="pt-1">
+                                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Gửi lúc:</span>
+                                <span className="text-slate-400 font-semibold">{new Date(associatedRefund.createdAt).toLocaleString('vi-VN')}</span>
+                              </div>
+                            </div>
+
+                            <div className="bg-neutral-950/40 p-4 border border-neutral-900/60 space-y-2 rounded-sm font-semibold">
+                              <div className="flex justify-between text-[11px]">
+                                <span className="text-slate-400">Số tiền ban đầu:</span>
+                                <span className="text-white font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(associatedRefund.oldValue))}</span>
+                              </div>
+                              <div className="flex justify-between text-[11px] border-t border-neutral-900/40 pt-1.5">
+                                <span className="text-rose-400">Hoàn tiền dự kiến:</span>
+                                <strong className="text-rose-500 font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(associatedRefund.newValue))}</strong>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-3 justify-end border-t border-rose-950/40 pt-3">
+                            <button
+                              onClick={() => {
+                                setSelectedRefund(associatedRefund);
+                                setRefundOverrideAmount(associatedRefund.newValue);
+                                setIsApproveRefundOpen(true);
+                              }}
+                              className="bg-green-600 hover:bg-green-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded-sm transition-all"
+                            >
+                              Phê duyệt hoàn tiền
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedRefund(associatedRefund);
+                                setRefundRejectionReason('');
+                                setIsRejectRefundOpen(true);
+                              }}
+                              className="bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded-sm transition-all"
+                            >
+                              Từ chối yêu cầu
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Unified Info Card */}
+                      <div className="bg-[#0b0b0d] border border-neutral-900/60 p-6 md:p-8 rounded-sm space-y-6">
+                        <div className="flex items-center gap-2 border-b border-neutral-900 pb-3">
+                          <span className="material-symbols-outlined text-primary text-base">info</span>
+                          <h4 className="text-xs font-black text-white uppercase tracking-widest m-0">Thông tin chi tiết lưu trú</h4>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6 text-xs">
+                          {/* Col 1 */}
+                          <div className="space-y-4">
+                            <div className="flex flex-col gap-1.5 bg-[#0e0e11] p-4 border border-neutral-900/50 rounded-sm shadow-sm">
+                              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Khách hàng</span>
+                              <strong className="text-white text-sm uppercase">{selectedBooking.guestName}</strong>
+                              <span className="text-slate-400 text-[10px] mt-0.5">{selectedBooking.email || selectedBooking.guestEmail || 'N/A'} • {selectedBooking.guestPhone || 'N/A'}</span>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5 bg-[#0e0e11] p-4 border border-neutral-900/50 rounded-sm shadow-sm">
+                              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Thời gian lưu trú</span>
+                              <strong className="text-white text-[11px]">{selectedBooking.checkInDate} đến {selectedBooking.checkOutDate}</strong>
+                              <span className="text-primary text-[10px] font-black uppercase tracking-wider mt-0.5">{selectedBooking.nights} đêm lưu trú</span>
+                            </div>
+                          </div>
+
+                          {/* Col 2 */}
+                          <div className="space-y-4">
+                            <div className="flex flex-col gap-1.5 bg-[#0e0e11] p-4 border border-neutral-900/50 rounded-sm shadow-sm">
+                              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Phòng & Hạng phòng</span>
+                              <strong className="text-white text-sm uppercase">{selectedBooking.roomType || 'N/A'}</strong>
+                              <div className="mt-1">
+                                {selectedBooking.roomNumber ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-black text-primary bg-primary/10 border border-primary/20 rounded-sm">
+                                    PHÒNG ASSIGNED: {selectedBooking.roomNumber}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-black text-rose-500 bg-rose-500/10 border border-rose-500/20 rounded-sm uppercase tracking-wider">
+                                    Chưa gán phòng
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5 bg-[#0e0e11] p-4 border border-neutral-900/50 rounded-sm shadow-sm">
+                              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Trạng thái & Check-in</span>
+                              <div>
+                                <span className={`inline-block px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest mr-2 rounded-sm ${
+                                  isCheckedIn 
+                                    ? 'bg-blue-900/20 text-blue-400 border border-blue-900/30' 
+                                    : isConfirmed 
+                                    ? 'bg-green-900/20 text-green-400 border border-green-900/30' 
+                                    : 'bg-neutral-800 text-slate-500 border border-neutral-700/50'
+                                }`}>
+                                  {selectedBooking.status}
+                                </span>
+                                {selectedBooking.checkInMethod === 'FaceID' || selectedBooking.checkInMethod === 'Face Recognition' ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-black text-primary bg-primary/10 border border-primary/20 uppercase tracking-widest rounded-sm">
+                                    FaceID eKYC
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-black text-slate-400 bg-neutral-900 border border-neutral-800 uppercase tracking-widest rounded-sm">
+                                    {selectedBooking.checkInMethod || 'Manual'}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Room Key cards & Special Requests combined */}
+                      {(selectedBooking.roomAccesses?.length > 0 || selectedBooking.specialRequests) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                          {/* Digital Keys Column */}
+                          {selectedBooking.roomAccesses?.length > 0 && (
+                            <div className="bg-[#0b0b0d] border border-neutral-900/60 p-6 rounded-sm flex flex-col gap-4">
+                              <div className="flex items-center gap-2 border-b border-neutral-900 pb-2">
+                                <span className="material-symbols-outlined text-primary text-base">vpn_key</span>
+                                <h4 className="text-xs font-black text-white uppercase tracking-widest m-0">Khóa phòng số</h4>
+                              </div>
+                              <div className="space-y-3">
+                                {selectedBooking.roomAccesses.map((access) => (
+                                  <div key={access.roomId || access.roomNumber} className="border border-neutral-900/50 bg-[#0e0e11] p-4 flex justify-between items-center rounded-sm">
+                                    <div>
+                                      <span className="block text-xs text-white font-black">Phòng {access.roomNumber}</span>
+                                      <span className="block text-[8px] text-slate-500 font-bold uppercase mt-0.5">Tầng {access.floorNumber ?? 'N/A'}</span>
+                                    </div>
+                                    <div className="text-right">
+                                      {access.roomPassword ? (
+                                        <strong className="block font-mono text-xs text-primary tracking-[0.12em] bg-neutral-900/60 border border-primary/20 px-2 py-0.5 rounded-sm">
+                                          {access.roomPassword}
+                                        </strong>
+                                      ) : (
+                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-black text-rose-500 bg-rose-500/10 border border-rose-500/20 uppercase tracking-wider rounded-sm">
+                                          Đã khóa
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Special Requests Column */}
+                          {selectedBooking.specialRequests && (
+                            <div className="bg-[#0b0b0d] border border-neutral-900/60 p-6 rounded-sm flex flex-col gap-4">
+                              <div className="flex items-center gap-2 border-b border-neutral-900 pb-2">
+                                <span className="material-symbols-outlined text-primary text-base">rate_review</span>
+                                <h4 className="text-xs font-black text-white uppercase tracking-widest m-0">Yêu cầu đặc biệt</h4>
+                              </div>
+                              <p className="text-xs text-slate-300 font-semibold bg-[#0e0e11] p-4 border border-neutral-900/50 rounded-sm m-0 italic flex-1 flex items-center justify-center text-center">
+                                "{selectedBooking.specialRequests}"
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+
+
+                    {/* Right column - Invoice summary */}
+                    <div className="bg-[#0f0f12] border border-neutral-900 p-6 md:p-8 flex flex-col justify-between h-fit space-y-6">
+                      <div>
+                        <h4 className="text-xs font-black text-white uppercase tracking-widest border-b border-neutral-900 pb-3 mb-4">Chi tiết hóa đơn</h4>
+                        <div className="space-y-3 text-xs text-slate-400 font-semibold">
+                          <div className="flex justify-between">
+                            <span>Tổng tiền phòng:</span>
+                            <span className="text-white font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.totalAmount || 0)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Phí dịch vụ phụ thu:</span>
+                            <span className="text-white font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.serviceChargeAmount || 0)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Thuế VAT (10%):</span>
+                            <span className="text-white font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.taxAmount || 0)}</span>
+                          </div>
+                          <div className="flex justify-between border-t border-neutral-900 pt-3 text-sm font-bold">
+                            <span className="text-white">TỔNG CỘNG:</span>
+                            <span className="text-primary font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.finalAmount || selectedBooking.totalAmount || 0)}</span>
+                          </div>
+                          <div className="flex justify-between text-emerald-400 border-t border-neutral-900/50 pt-2">
+                            <span>Đã thanh toán:</span>
+                            <span className="font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.paidAmount || 0)}</span>
+                          </div>
+                          <div className="flex justify-between text-rose-500 font-bold">
+                            <span>Còn lại cần thu:</span>
+                            <span className="font-mono">
+                              {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
+                                Math.max(0, (selectedBooking.finalAmount || selectedBooking.totalAmount || 0) - (selectedBooking.paidAmount || 0))
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <span className="block text-[9px] text-slate-500 uppercase font-black">Thao tác nghiệp vụ:</span>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            onClick={() => handleViewInvoice(selectedBooking.id)}
+                            className="w-full py-2.5 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white text-[10px] font-black uppercase tracking-widest cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <span className="material-symbols-outlined text-sm">receipt_long</span> Xem hóa đơn chi tiết
+                          </button>
+                          <button
+                            onClick={() => handleDownloadPdf(selectedBooking.id, selectedBooking.bookingReference)}
+                            className="w-full py-2.5 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white text-[10px] font-black uppercase tracking-widest cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <span className="material-symbols-outlined text-sm">download</span> Xuất file PDF bảng kê
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </main>
         </div>
       </div>
 
-      {/* Booking Detail Dialog */}
-      {selectedBooking && (
-        <div className="fixed inset-0 bg-neutral-950/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f0f12] border border-neutral-900 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-white text-left font-['Montserrat']">
-            <div className="flex justify-between items-center border-b border-neutral-850 pb-3">
-              <div>
-                <span className="text-[9px] font-black tracking-widest text-primary uppercase">CHI TIẾT ĐƠN ĐẶT PHÒNG</span>
-                <h4 className="text-sm font-black uppercase text-white m-0 mt-0.5">{selectedBooking.bookingReference}</h4>
-              </div>
-              <button
-                onClick={() => setSelectedBooking(null)}
-                className="text-slate-400 hover:text-white border-none bg-transparent cursor-pointer flex items-center"
-              >
-                <span className="material-symbols-outlined text-lg">close</span>
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs font-bold text-slate-300">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Khách hàng</span>
-                  <span className="text-white font-black uppercase block mt-0.5">{selectedBooking.guestName}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Số điện thoại</span>
-                  <span className="text-white font-semibold block mt-0.5">{selectedBooking.guestPhone || 'N/A'}</span>
-                </div>
-              </div>
-
-              <div>
-                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Email</span>
-                <span className="text-white font-semibold block mt-0.5">{selectedBooking.email || 'N/A'}</span>
-              </div>
-
-              <div className="border-t border-neutral-900 pt-3 grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Loại phòng</span>
-                  <span className="text-white font-black block mt-0.5">{selectedBooking.roomType}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Số lượng & Khách</span>
-                  <span className="text-white font-black block mt-0.5">
-                    {selectedBooking.quantity} phòng ({selectedBooking.numberOfAdults} NL {selectedBooking.numberOfChildren > 0 ? `• ${selectedBooking.numberOfChildren} TE` : ''})
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Ngày nhận phòng</span>
-                  <span className="text-white font-semibold block mt-0.5">{selectedBooking.checkInDate}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Ngày trả phòng</span>
-                  <span className="text-white font-semibold block mt-0.5">{selectedBooking.checkOutDate} ({selectedBooking.nights} đêm)</span>
-                </div>
-              </div>
-
-              <div className="border-t border-neutral-900 pt-3 grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Hình thức Check-in</span>
-                  <span className="text-primary font-black uppercase block mt-0.5">{selectedBooking.checkInMethod === 'Face Recognition' || selectedBooking.checkInMethod === 'FaceID' ? 'FaceID eKYC' : selectedBooking.checkInMethod}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Trạng thái</span>
-                  <span className={`inline-block mt-0.5 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${
-                    selectedBooking.status === 'Checked In' 
-                      ? 'bg-blue-900/30 text-blue-400 border border-blue-900/50' 
-                      : selectedBooking.status === 'Confirmed' 
-                      ? 'bg-green-900/30 text-green-400 border border-green-900/50' 
-                      : 'bg-neutral-800 text-neutral-400 border border-neutral-700/50'
-                  }`}>
-                    {selectedBooking.status}
-                  </span>
-                </div>
-              </div>
-
-              {selectedBooking.roomAccesses?.length > 0 && (
-                <div className="border-t border-neutral-900 pt-3">
-                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">
-                    Phòng và mật khẩu đã cấp
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                    {selectedBooking.roomAccesses.map((access) => (
-                      <div
-                        key={access.roomId || access.roomNumber}
-                        className="bg-neutral-950 border border-neutral-850 p-3 flex items-center justify-between"
-                      >
-                        <div>
-                          <span className="block text-white font-black">
-                            Phòng {access.roomNumber}
-                          </span>
-                          <span className="block text-[9px] text-slate-600 mt-0.5">
-                            Tầng {access.floorNumber ?? 'N/A'}
-                          </span>
-                        </div>
-                        <span className="font-mono text-primary font-black tracking-[0.18em]">
-                          {access.roomPassword || 'Đã khóa'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Yêu cầu đặc biệt</span>
-                <p className="text-white font-medium italic m-0 mt-0.5 bg-neutral-950 p-2.5 border border-neutral-850 leading-relaxed rounded-sm">
-                  {selectedBooking.specialRequests || 'Không có yêu cầu đặc biệt.'}
-                </p>
-              </div>
-
-              <div className="border-t border-neutral-900 pt-4 flex justify-between items-center">
-                <div>
-                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Tổng chi phí</span>
-                  <span className="text-base font-black text-primary block mt-0.5">
-                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.totalAmount)}
-                  </span>
-                </div>
-                <button
-                  onClick={() => setSelectedBooking(null)}
-                  className="bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white text-[10px] font-black uppercase tracking-widest py-3 px-6 border-none cursor-pointer"
-                >
-                  Đóng
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Room Edit Dialog */}
       {isRoomEditOpen && (
@@ -2076,6 +1850,72 @@ export default function StaffDashboard({ setActivePage }) {
                     </div>
                   </div>
                 )}
+                {/* Inline Add Service Form */}
+                {(() => {
+                  const associatedBooking = bookings.find(b => b.id === invoiceData?.bookingId);
+                  const isNotCompleted = associatedBooking && associatedBooking.status !== 'Completed';
+                  return isNotCompleted && (
+                    <div className="border-t border-neutral-900 pt-4 space-y-3">
+                      <span className="block text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                        Thêm dịch vụ phụ thu (Minibar, Spa, Concierge...)
+                      </span>
+                      <form onSubmit={handleInlineServiceSubmit} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-neutral-950 p-4 border border-neutral-855">
+                        <div className="sm:col-span-2">
+                          <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                            Chọn dịch vụ
+                          </label>
+                          <select
+                            value={inlineServiceId}
+                            onChange={(e) => setInlineServiceId(e.target.value)}
+                            className="w-full bg-[#0f0f12] border border-neutral-800 text-white text-xs px-2.5 py-2.5 focus:border-primary outline-none"
+                            required
+                          >
+                            <option value="" disabled>-- Chọn dịch vụ --</option>
+                            {servicesList.map(svc => (
+                              <option key={svc.id} value={svc.id}>
+                                {svc.name} - {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(svc.price)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                            Số lượng
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={inlineServiceQuantity}
+                            onChange={(e) => setInlineServiceQuantity(parseInt(e.target.value) || 1)}
+                            className="w-full bg-[#0f0f12] border border-neutral-800 text-white text-xs px-2.5 py-2 focus:border-primary outline-none"
+                            required
+                          />
+                        </div>
+                        <div className="flex items-end">
+                          <button
+                            type="submit"
+                            disabled={isSubmittingInlineService}
+                            className="w-full bg-slate-900 hover:bg-neutral-850 text-white border border-neutral-800 text-[10px] font-black uppercase tracking-widest py-2.5 px-3 cursor-pointer flex items-center justify-center gap-1"
+                          >
+                            {isSubmittingInlineService ? 'Đang thêm...' : 'Thêm dịch vụ'}
+                          </button>
+                        </div>
+                        <div className="sm:col-span-4">
+                          <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                            Ghi chú dịch vụ (tùy chọn)
+                          </label>
+                          <input
+                            type="text"
+                            value={inlineServiceNote}
+                            onChange={(e) => setInlineServiceNote(e.target.value)}
+                            placeholder="Ví dụ: Sử dụng 2 lon Pepsi từ Minibar"
+                            className="w-full bg-[#0f0f12] border border-neutral-800 text-white text-xs px-2.5 py-2 focus:border-primary outline-none"
+                          />
+                        </div>
+                      </form>
+                    </div>
+                  );
+                })()}
 
                 {/* Counter Payment Form */}
                 {parseFloat(invoiceData.dueAmount) > 0 && (
@@ -2171,15 +2011,7 @@ export default function StaffDashboard({ setActivePage }) {
                         >
                           <span className="material-symbols-outlined text-xs">download</span> Xuất PDF
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleDownloadPdf(invoiceData.bookingId, invoiceData.bookingReference);
-                          }}
-                          className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-white font-black px-6 py-3 uppercase text-[10px] tracking-widest cursor-pointer flex items-center gap-1.5"
-                        >
-                          <span className="material-symbols-outlined text-xs">print</span> In hóa đơn
-                        </button>
+
                       </>
                     );
                   })()}
@@ -2401,6 +2233,40 @@ export default function StaffDashboard({ setActivePage }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOM CONFIRM DIALOG */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 bg-neutral-950/80 z-[6000] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in text-white text-left font-['Montserrat']">
+          <div className="bg-[#0f0f12] border border-neutral-900 max-w-sm w-full p-6 flex flex-col gap-4 shadow-2xl animate-scale-in">
+            <div className="flex items-center gap-2 text-rose-500">
+              <span className="material-symbols-outlined text-lg">warning</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">{confirmDialog.title || "XÁC NHẬN"}</span>
+            </div>
+            <p className="text-xs text-slate-300 font-semibold leading-relaxed m-0">
+              {confirmDialog.message}
+            </p>
+            <div className="flex justify-end gap-2.5 pt-2 text-[10px] font-black uppercase tracking-widest">
+              <button
+                type="button"
+                onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2.5 border border-neutral-800 text-slate-300 bg-transparent hover:bg-neutral-800 transition-all cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirmDialog.onConfirm) confirmDialog.onConfirm();
+                  setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                }}
+                className="px-4 py-2.5 bg-rose-600 text-white hover:bg-rose-700 transition-all cursor-pointer border-none"
+              >
+                Đồng ý hủy
+              </button>
+            </div>
           </div>
         </div>
       )}

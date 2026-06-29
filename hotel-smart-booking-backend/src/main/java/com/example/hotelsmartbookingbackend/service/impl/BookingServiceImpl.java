@@ -99,8 +99,8 @@ public class BookingServiceImpl implements BookingService {
     private static final String ROOM_STATUS_OCCUPIED = "Occupied";
     private static final int DEFAULT_SINGLE_BOOKING_QUANTITY = 1;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final List<String> INVENTORY_HOLDING_BOOKING_STATUSES =
-            List.of("Pending", "Confirmed", "Checked In");
+    private static final List<String> INVENTORY_HOLDING_BOOKING_STATUSES = List.of("Pending", "Confirmed",
+            "Checked In");
     private static final List<String> INVENTORY_HOLDING_DETAIL_STATUSES = List.of("Active");
     private static final DateTimeFormatter BOOKING_REFERENCE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
             .withZone(HOTEL_ZONE);
@@ -184,8 +184,7 @@ public class BookingServiceImpl implements BookingService {
         if ("FaceID".equalsIgnoreCase(normalizedCheckInMethod)) {
             boolean ekycVerified = ekycProfileRepository.existsByUseridAndStatus(
                     customer,
-                    "Verified"
-            );
+                    "Verified");
             boolean faceRegistered = faceembeddingRepository
                     .findEmbeddingTextByUserId(customer.getId())
                     .filter(embedding -> !embedding.isBlank())
@@ -193,8 +192,7 @@ public class BookingServiceImpl implements BookingService {
 
             if (!ekycVerified || !faceRegistered) {
                 throw new RuntimeException(
-                        "Bạn phải hoàn thành đăng ký eKYC và khuôn mặt trước khi chọn check-in bằng FaceID"
-                );
+                        "Bạn phải hoàn thành đăng ký eKYC và khuôn mặt trước khi chọn check-in bằng FaceID");
             }
         }
 
@@ -479,8 +477,7 @@ public class BookingServiceImpl implements BookingService {
 
     private BookingHistoryResponse mapToHistoryResponse(
             Bookingdetail detail,
-            boolean includeRoomPassword
-    ) {
+            boolean includeRoomPassword) {
         Booking booking = detail.getBookingid();
         Roomtype roomtype = detail.getRoomtypeid();
         Room assignedRoom = detail.getRoomid();
@@ -490,8 +487,7 @@ public class BookingServiceImpl implements BookingService {
         List<RoomAccessResponse> roomAccesses = mapRoomAccesses(
                 booking,
                 detail,
-                includeRoomPassword
-        );
+                includeRoomPassword);
 
         return BookingHistoryResponse.builder()
                 .bookingId(booking.getId())
@@ -535,15 +531,16 @@ public class BookingServiceImpl implements BookingService {
         User staff = userRepository.findByEmail(staffEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
-        if (!"receptionist".equalsIgnoreCase(staff.getRole().name()) && !"manager".equalsIgnoreCase(staff.getRole().name())) {
+        if (!"receptionist".equalsIgnoreCase(staff.getRole().name())
+                && !"manager".equalsIgnoreCase(staff.getRole().name())) {
             throw new RuntimeException("Bạn không có quyền thực hiện chức năng này");
         }
 
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
 
-        if (!"Confirmed".equalsIgnoreCase(booking.getStatus()) 
-                && !"Paid".equalsIgnoreCase(booking.getStatus()) 
+        if (!"Confirmed".equalsIgnoreCase(booking.getStatus())
+                && !"Paid".equalsIgnoreCase(booking.getStatus())
                 && !"Partially Paid".equalsIgnoreCase(booking.getStatus())) {
             throw new RuntimeException("Đơn đặt phòng không ở trạng thái có thể nhận phòng");
         }
@@ -563,8 +560,7 @@ public class BookingServiceImpl implements BookingService {
             MultipartFile challengeImage2,
             MultipartFile challengeImage3,
             String challengeDirection,
-            String actorEmail
-    ) {
+            String actorEmail) {
         validateSelfie(selfieImage);
         validateSelfie(challengeImage);
         validateSelfie(challengeImage2);
@@ -593,8 +589,8 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Booking chưa được liên kết với tài khoản khách hàng");
         }
 
-        if (!"Confirmed".equalsIgnoreCase(booking.getStatus()) 
-                && !"Paid".equalsIgnoreCase(booking.getStatus()) 
+        if (!"Confirmed".equalsIgnoreCase(booking.getStatus())
+                && !"Paid".equalsIgnoreCase(booking.getStatus())
                 && !"Partially Paid".equalsIgnoreCase(booking.getStatus())) {
             throw new RuntimeException("Đơn đặt phòng không ở trạng thái có thể nhận phòng");
         }
@@ -621,13 +617,12 @@ public class BookingServiceImpl implements BookingService {
                 challengeImage,
                 challengeImage2,
                 challengeImage3,
-                normalizedChallengeDirection
-        );
+                normalizedChallengeDirection);
         if (!Boolean.TRUE.equals(verification.getLivenessPassed())) {
             String livenessMessage = verification.getMessage() != null
                     && !verification.getMessage().isBlank()
-                    ? verification.getMessage()
-                    : "Không vượt qua kiểm tra liveness";
+                            ? verification.getMessage()
+                            : "Không vượt qua kiểm tra liveness";
             if (Boolean.FALSE.equals(verification.getActiveLivenessPassed())) {
                 throw new RuntimeException(livenessMessage);
             }
@@ -638,8 +633,8 @@ public class BookingServiceImpl implements BookingService {
                 || !Boolean.TRUE.equals(verification.getMatched())) {
             String mismatchMessage = verification.getMessage() != null
                     && !verification.getMessage().isBlank()
-                    ? verification.getMessage()
-                    : "Check-in bị từ chối: khuôn mặt hiện tại không khớp với khuôn mặt đã đăng ký eKYC.";
+                            ? verification.getMessage()
+                            : "Check-in bị từ chối: khuôn mặt hiện tại không khớp với khuôn mặt đã đăng ký eKYC.";
             throw new RuntimeException(mismatchMessage);
         }
 
@@ -649,8 +644,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public AiFaceReadinessResponse checkFaceReadiness(
             MultipartFile selfieImage,
-            String actorEmail
-    ) {
+            String actorEmail) {
         validateSelfie(selfieImage);
 
         User actor = userRepository.findByEmail(actorEmail)
@@ -664,8 +658,7 @@ public class BookingServiceImpl implements BookingService {
                 bodyBuilder,
                 "selfie_image",
                 selfieImage,
-                "face-readiness.jpg"
-        );
+                "face-readiness.jpg");
 
         try {
             AiFaceReadinessResponse response = webClient.post()
@@ -684,23 +677,20 @@ public class BookingServiceImpl implements BookingService {
         } catch (WebClientResponseException ex) {
             throw new RuntimeException(
                     "Face readiness API lỗi: " + ex.getResponseBodyAsString(),
-                    ex
-            );
+                    ex);
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
             throw new RuntimeException(
                     "Không thể kết nối tới dịch vụ kiểm tra camera FaceID",
-                    ex
-            );
+                    ex);
         }
     }
 
     private BookingResponse completeCheckIn(
             Booking booking,
             Bookingdetail detail,
-            User checkedInBy
-    ) {
+            User checkedInBy) {
         int quantity = detail.getQuantity() == null
                 ? DEFAULT_SINGLE_BOOKING_QUANTITY
                 : detail.getQuantity();
@@ -708,10 +698,9 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Số lượng phòng của booking không hợp lệ");
         }
 
-        List<BookingRoomAccess> existingAccesses =
-                bookingRoomAccessRepository.findByBookingid_IdOrderByRoomid_RoomnumberAsc(
-                        booking.getId()
-                );
+        List<BookingRoomAccess> existingAccesses = bookingRoomAccessRepository
+                .findByBookingid_IdOrderByRoomid_RoomnumberAsc(
+                        booking.getId());
         if (!existingAccesses.isEmpty()) {
             throw new RuntimeException("Booking này đã được cấp quyền truy cập phòng");
         }
@@ -719,8 +708,7 @@ public class BookingServiceImpl implements BookingService {
         List<Room> availableRooms = roomRepository
                 .findByRoomtypeid_IdAndStatusOrderByRoomnumberAsc(
                         detail.getRoomtypeid().getId(),
-                        AVAILABLE_ROOM_STATUS
-                );
+                        AVAILABLE_ROOM_STATUS);
 
         List<Room> selectedRooms = new ArrayList<>();
         if (detail.getRoomid() != null) {
@@ -746,8 +734,7 @@ public class BookingServiceImpl implements BookingService {
         if (selectedRooms.size() < quantity) {
             throw new RuntimeException(
                     "Không đủ phòng sẵn sàng để nhận phòng. Cần "
-                            + quantity + " phòng nhưng chỉ có " + selectedRooms.size()
-            );
+                            + quantity + " phòng nhưng chỉ có " + selectedRooms.size());
         }
 
         Instant now = Instant.now();
@@ -804,20 +791,22 @@ public class BookingServiceImpl implements BookingService {
         User staff = userRepository.findByEmail(staffEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
-        if (!"receptionist".equalsIgnoreCase(staff.getRole().name()) && !"manager".equalsIgnoreCase(staff.getRole().name())) {
+        if (!"receptionist".equalsIgnoreCase(staff.getRole().name())
+                && !"manager".equalsIgnoreCase(staff.getRole().name())) {
             throw new RuntimeException("Bạn không có quyền thực hiện chức năng này");
         }
 
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
 
-        if (!"Checked-in".equalsIgnoreCase(booking.getStatus()) && !"Checked In".equalsIgnoreCase(booking.getStatus())) {
+        if (!"Checked-in".equalsIgnoreCase(booking.getStatus())
+                && !"Checked In".equalsIgnoreCase(booking.getStatus())) {
             throw new RuntimeException("Đơn đặt phòng chưa được check-in");
         }
 
         BigDecimal dueAmount = booking.getFinalamount().subtract(booking.getPaidamount());
         if (dueAmount.compareTo(BigDecimal.ZERO) > 0) {
-            throw new RuntimeException("Đơn đặt phòng chưa được thanh toán đầy đủ. Quý khách cần thanh toán thêm " 
+            throw new RuntimeException("Đơn đặt phòng chưa được thanh toán đầy đủ. Quý khách cần thanh toán thêm "
                     + formatCurrency(dueAmount) + " trước khi trả phòng.");
         }
 
@@ -831,8 +820,8 @@ public class BookingServiceImpl implements BookingService {
         detail.setActualcheckout(now);
         detail.setCheckedoutat(now);
         detail.setCheckedoutby(staff);
-        List<BookingRoomAccess> roomAccesses =
-                bookingRoomAccessRepository.findByBookingid_IdOrderByRoomid_RoomnumberAsc(bookingId);
+        List<BookingRoomAccess> roomAccesses = bookingRoomAccessRepository
+                .findByBookingid_IdOrderByRoomid_RoomnumberAsc(bookingId);
         for (BookingRoomAccess access : roomAccesses) {
             Room room = access.getRoomid();
             room.setStatus("Cleaning");
@@ -877,8 +866,7 @@ public class BookingServiceImpl implements BookingService {
             MultipartFile challengeImage,
             MultipartFile challengeImage2,
             MultipartFile challengeImage3,
-            String challengeDirection
-    ) {
+            String challengeDirection) {
         MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
         bodyBuilder.part("registered_embedding", registeredEmbedding)
                 .contentType(MediaType.TEXT_PLAIN);
@@ -888,20 +876,17 @@ public class BookingServiceImpl implements BookingService {
                 bodyBuilder,
                 "challenge_image",
                 challengeImage,
-                "face-challenge.jpg"
-        );
+                "face-challenge.jpg");
         addFaceImagePart(
                 bodyBuilder,
                 "challenge_image_2",
                 challengeImage2,
-                "face-challenge-2.jpg"
-        );
+                "face-challenge-2.jpg");
         addFaceImagePart(
                 bodyBuilder,
                 "challenge_image_3",
                 challengeImage3,
-                "face-challenge-3.jpg"
-        );
+                "face-challenge-3.jpg");
         bodyBuilder.part("challenge_direction", challengeDirection)
                 .contentType(MediaType.TEXT_PLAIN);
 
@@ -922,15 +907,13 @@ public class BookingServiceImpl implements BookingService {
         } catch (WebClientResponseException ex) {
             throw new RuntimeException(
                     "Face API lỗi: " + ex.getResponseBodyAsString(),
-                    ex
-            );
+                    ex);
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
             throw new RuntimeException(
                     "Không thể kết nối tới dịch vụ xác minh khuôn mặt",
-                    ex
-            );
+                    ex);
         }
     }
 
@@ -938,8 +921,7 @@ public class BookingServiceImpl implements BookingService {
             MultipartBodyBuilder bodyBuilder,
             String partName,
             MultipartFile image,
-            String fallbackFilename
-    ) {
+            String fallbackFilename) {
         Resource resource = image.getResource();
         MediaType contentType = MediaType.APPLICATION_OCTET_STREAM;
         if (image.getContentType() != null && !image.getContentType().isBlank()) {
@@ -1000,14 +982,18 @@ public class BookingServiceImpl implements BookingService {
     private List<RoomAccessResponse> mapRoomAccesses(
             Booking booking,
             Bookingdetail detail,
-            boolean includeRoomPassword
-    ) {
-        List<BookingRoomAccess> accesses =
-                bookingRoomAccessRepository.findByBookingid_IdOrderByRoomid_RoomnumberAsc(
-                        booking.getId()
-                );
+            boolean includeRoomPassword) {
+        List<BookingRoomAccess> accesses = bookingRoomAccessRepository.findByBookingid_IdOrderByRoomid_RoomnumberAsc(
+                booking.getId());
+        return mapRoomAccesses(booking, detail, accesses, includeRoomPassword);
+    }
 
-        if (!accesses.isEmpty()) {
+    private List<RoomAccessResponse> mapRoomAccesses(
+            Booking booking,
+            Bookingdetail detail,
+            List<BookingRoomAccess> accesses,
+            boolean includeRoomPassword) {
+        if (accesses != null && !accesses.isEmpty()) {
             return accesses.stream()
                     .map(access -> {
                         boolean usable = includeRoomPassword
@@ -1025,26 +1011,25 @@ public class BookingServiceImpl implements BookingService {
                     .toList();
         }
 
-        if (detail.getRoomid() == null) {
-            return List.of();
+        if (detail != null && detail.getRoomid() != null) {
+            Room room = detail.getRoomid();
+            boolean usable = includeRoomPassword && isRoomKeyUsable(booking, detail);
+            return List.of(RoomAccessResponse.builder()
+                    .roomId(room.getId())
+                    .roomNumber(room.getRoomnumber())
+                    .floorNumber(room.getFloornumber())
+                    .roomPassword(usable ? detail.getRoomkeyaccess() : null)
+                    .roomKeyStatus(detail.getRoomkeystatus())
+                    .roomKeyExpiresAt(detail.getRoomkeyexpiredat())
+                    .build());
         }
 
-        Room room = detail.getRoomid();
-        boolean usable = includeRoomPassword && isRoomKeyUsable(booking, detail);
-        return List.of(RoomAccessResponse.builder()
-                .roomId(room.getId())
-                .roomNumber(room.getRoomnumber())
-                .floorNumber(room.getFloornumber())
-                .roomPassword(usable ? detail.getRoomkeyaccess() : null)
-                .roomKeyStatus(detail.getRoomkeystatus())
-                .roomKeyExpiresAt(detail.getRoomkeyexpiredat())
-                .build());
+        return List.of();
     }
 
     private boolean isRoomAccessUsable(
             Booking booking,
-            BookingRoomAccess access
-    ) {
+            BookingRoomAccess access) {
         return ("Checked-in".equalsIgnoreCase(booking.getStatus())
                 || "Checked In".equalsIgnoreCase(booking.getStatus()))
                 && ROOM_KEY_STATUS_ACTIVE.equalsIgnoreCase(access.getRoomkeystatus())
@@ -1072,7 +1057,8 @@ public class BookingServiceImpl implements BookingService {
         User staff = userRepository.findByEmail(staffEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
-        if (!"receptionist".equalsIgnoreCase(staff.getRole().name()) && !"manager".equalsIgnoreCase(staff.getRole().name())) {
+        if (!"receptionist".equalsIgnoreCase(staff.getRole().name())
+                && !"manager".equalsIgnoreCase(staff.getRole().name())) {
             throw new RuntimeException("Bạn không có quyền thực hiện chức năng này");
         }
 
@@ -1110,7 +1096,8 @@ public class BookingServiceImpl implements BookingService {
         User staff = userRepository.findByEmail(staffEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
 
-        if (!"receptionist".equalsIgnoreCase(staff.getRole().name()) && !"manager".equalsIgnoreCase(staff.getRole().name())) {
+        if (!"receptionist".equalsIgnoreCase(staff.getRole().name())
+                && !"manager".equalsIgnoreCase(staff.getRole().name())) {
             throw new RuntimeException("Bạn không có quyền thực hiện chức năng này");
         }
 
@@ -1273,9 +1260,11 @@ public class BookingServiceImpl implements BookingService {
                         .build())
                 .toList();
 
-        long nights = ChronoUnit.DAYS.between(toLocalDate(detail.getExpectedcheckin()), toLocalDate(detail.getExpectedcheckout()));
+        long nights = ChronoUnit.DAYS.between(toLocalDate(detail.getExpectedcheckin()),
+                toLocalDate(detail.getExpectedcheckout()));
         BigDecimal roomRate = detail.getPriceatbooking();
-        BigDecimal roomTotal = roomRate.multiply(BigDecimal.valueOf(detail.getQuantity())).multiply(BigDecimal.valueOf(nights));
+        BigDecimal roomTotal = roomRate.multiply(BigDecimal.valueOf(detail.getQuantity()))
+                .multiply(BigDecimal.valueOf(nights));
         BigDecimal taxAmount = booking.getTaxamount();
         BigDecimal discountAmount = booking.getDiscountamount();
         BigDecimal finalAmount = booking.getFinalamount();
@@ -1314,14 +1303,15 @@ public class BookingServiceImpl implements BookingService {
         User staff = userRepository.findByEmail(staffEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
 
-        if (!"receptionist".equalsIgnoreCase(staff.getRole().name()) && !"manager".equalsIgnoreCase(staff.getRole().name())) {
+        if (!"receptionist".equalsIgnoreCase(staff.getRole().name())
+                && !"manager".equalsIgnoreCase(staff.getRole().name())) {
             throw new RuntimeException("Bạn không có quyền thực hiện chức năng này");
         }
 
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
 
-        if ("Cancelled".equalsIgnoreCase(booking.getStatus()) 
+        if ("Cancelled".equalsIgnoreCase(booking.getStatus())
                 || "Checked-out".equalsIgnoreCase(booking.getStatus())
                 || "Completed".equalsIgnoreCase(booking.getStatus())) {
             throw new RuntimeException("Không thể thêm dịch vụ cho đơn đặt phòng ở trạng thái này");
@@ -1346,7 +1336,8 @@ public class BookingServiceImpl implements BookingService {
         usage.setTotalprice(totalPrice);
         usage.setImplementedat(Instant.now());
         usage.setNote(service.getName() + (request.getNote() != null && !request.getNote().isBlank()
-                ? " (" + request.getNote() + ")" : ""));
+                ? " (" + request.getNote() + ")"
+                : ""));
         usage.setStatus("Active");
 
         bookingserviceRepository.save(usage);
@@ -1356,17 +1347,18 @@ public class BookingServiceImpl implements BookingService {
         booking.setServicechargeamount(booking.getServicechargeamount().add(totalPrice));
         booking.setTaxamount(booking.getTaxamount().add(serviceTax));
         booking.setFinalamount(booking.getFinalamount().add(totalPrice).add(serviceTax));
-        
+
         if (booking.getPaidamount().compareTo(booking.getFinalamount()) < 0) {
             if ("Paid".equalsIgnoreCase(booking.getStatus())) {
                 booking.setStatus("Partially Paid");
             }
         }
-        
+
         booking.setUpdatedat(Instant.now());
 
         bookingRepository.save(booking);
     }
+
     private boolean isFaceIdMethod(String checkInMethod) {
         return "Face Recognition".equalsIgnoreCase(checkInMethod)
                 || "Face ID".equalsIgnoreCase(checkInMethod)
@@ -1379,54 +1371,80 @@ public class BookingServiceImpl implements BookingService {
         int page = criteria.getPage() != null ? criteria.getPage() : 0;
         int pageSize = criteria.getPageSize() != null ? criteria.getPageSize() : 10;
         String sortBy = criteria.getSortBy() != null ? criteria.getSortBy() : "createdat";
-        Sort.Direction direction = criteria.getSortDirection() != null && criteria.getSortDirection().equalsIgnoreCase("DESC") 
-            ? Sort.Direction.DESC : Sort.Direction.ASC;
-    
+        Sort.Direction direction = criteria.getSortDirection() != null
+                && criteria.getSortDirection().equalsIgnoreCase("DESC")
+                        ? Sort.Direction.DESC
+                        : Sort.Direction.ASC;
+
         Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy));
-    
+
         Page<Booking> bookings = bookingRepository.findAll(new BookingSpecification(criteria), pageable);
-    
-        List<BookingHistoryResponse> content = bookings.getContent().stream()
-            .map(this::mapToBookingHistoryResponse)
-            .collect(Collectors.toList());
-    
+
+        List<Booking> bookingList = bookings.getContent();
+        List<Integer> bookingIds = bookingList.stream().map(Booking::getId).toList();
+
+        List<Bookingdetail> detailsList = bookingdetailRepository.findByBookingid_IdIn(bookingIds);
+        java.util.Map<Integer, Bookingdetail> detailsMap = new java.util.HashMap<>();
+        for (Bookingdetail detail : detailsList) {
+            if (detail.getBookingid() != null) {
+                detailsMap.put(detail.getBookingid().getId(), detail);
+            }
+        }
+
+        List<BookingRoomAccess> accessesList = bookingRoomAccessRepository.findByBookingid_IdIn(bookingIds);
+        java.util.Map<Integer, List<BookingRoomAccess>> accessesMap = new java.util.HashMap<>();
+        for (BookingRoomAccess access : accessesList) {
+            if (access.getBookingid() != null) {
+                accessesMap.computeIfAbsent(access.getBookingid().getId(), k -> new java.util.ArrayList<>())
+                        .add(access);
+            }
+        }
+
+        List<BookingHistoryResponse> content = new java.util.ArrayList<>();
+        for (Booking booking : bookingList) {
+            content.add(mapToBookingHistoryResponse(
+                    booking,
+                    detailsMap.get(booking.getId()),
+                    accessesMap.get(booking.getId())));
+        }
+
         return PageResponse.<BookingHistoryResponse>builder()
-            .content(content)
-            .page(bookings.getNumber())
-            .size(bookings.getSize())
-            .totalElements(bookings.getTotalElements())
-            .totalPages(bookings.getTotalPages())
-            .first(bookings.isFirst())
-            .last(bookings.isLast())
-            .build();
+                .content(content)
+                .page(bookings.getNumber())
+                .size(bookings.getSize())
+                .totalElements(bookings.getTotalElements())
+                .totalPages(bookings.getTotalPages())
+                .first(bookings.isFirst())
+                .last(bookings.isLast())
+                .build();
     }
 
     @Override
     @Transactional
     public BookingResponse updateBooking(Integer bookingId, UpdateBookingRequest request, String staffEmail) {
         Booking booking = bookingRepository.findById(bookingId)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng với ID: " + bookingId));
-    
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng với ID: " + bookingId));
+
         User staff = userRepository.findByEmail(staffEmail)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
-    
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
+
         if (booking.getStatus().equalsIgnoreCase("Cancelled") || booking.getStatus().equalsIgnoreCase("Checked Out")) {
             throw new RuntimeException("Không thể cập nhật đơn đặt phòng đã hủy hoặc đã trả phòng");
         }
-    
+
         booking.setSpecialrequests(request.getSpecialRequests());
-    
+
         if (request.getDiscountAmount() != null && request.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
-           booking.setDiscountamount(request.getDiscountAmount());
-           BigDecimal newFinalAmount = booking.getTotalamount()
-               .subtract(request.getDiscountAmount())
-               .subtract(booking.getTaxamount());
-           booking.setFinalamount(newFinalAmount);
+            booking.setDiscountamount(request.getDiscountAmount());
+            BigDecimal newFinalAmount = booking.getTotalamount()
+                    .subtract(request.getDiscountAmount())
+                    .subtract(booking.getTaxamount());
+            booking.setFinalamount(newFinalAmount);
         }
-    
+
         booking.setUpdatedat(Instant.now());
         Booking updatedBooking = bookingRepository.save(booking);
-    
+
         return mapToBookingResponse(updatedBooking);
     }
 
@@ -1434,19 +1452,19 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponse cancelBooking(Integer bookingId, CancelBookingRequest request, String staffEmail) {
         Booking booking = bookingRepository.findById(bookingId)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng với ID: " + bookingId));
-    
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng với ID: " + bookingId));
+
         User staff = userRepository.findByEmail(staffEmail)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
-    
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
+
         if (booking.getStatus().equalsIgnoreCase("Cancelled")) {
             throw new RuntimeException("Đơn đặt phòng này đã được hủy trước đó");
         }
-    
+
         if (booking.getStatus().equalsIgnoreCase("Checked Out")) {
             throw new RuntimeException("Không thể hủy đơn đặt phòng đã trả phòng");
         }
-    
+
         booking.setStatus("Cancelled");
         booking.setCancellationreason(request.getCancellationReason());
         booking.setCancelledat(Instant.now());
@@ -1461,22 +1479,65 @@ public class BookingServiceImpl implements BookingService {
         detail.setStatus("Cancelled");
         detail.setUpdatedat(Instant.now());
         bookingdetailRepository.save(detail);
-    
+
         Booking cancelledBooking = bookingRepository.save(booking);
-    
+
         return mapToBookingResponse(cancelledBooking);
     }
 
     private BookingHistoryResponse mapToBookingHistoryResponse(Booking booking) {
-        return BookingHistoryResponse.builder()
+        Bookingdetail detail = bookingdetailRepository.findByBookingid_Id(booking.getId()).orElse(null);
+        return mapToBookingHistoryResponse(booking, detail, null);
+    }
+
+    private BookingHistoryResponse mapToBookingHistoryResponse(Booking booking, Bookingdetail detail) {
+        return mapToBookingHistoryResponse(booking, detail, null);
+    }
+
+    private BookingHistoryResponse mapToBookingHistoryResponse(Booking booking, Bookingdetail detail,
+            List<BookingRoomAccess> accesses) {
+        BookingHistoryResponse.BookingHistoryResponseBuilder builder = BookingHistoryResponse.builder()
                 .bookingId(booking.getId())
                 .bookingNumber(booking.getBookingreference())
                 .bookingDate(booking.getCreatedat())
                 .status(booking.getStatus())
                 .checkInMethod(booking.getCheckinmethod())
                 .totalAmount(booking.getTotalamount())
-                .build();
+                .paidAmount(booking.getPaidamount())
+                .depositAmount(booking.getDepositamount())
+                .discountAmount(booking.getDiscountamount())
+                .taxAmount(booking.getTaxamount())
+                .serviceChargeAmount(booking.getServicechargeamount())
+                .finalAmount(booking.getFinalamount())
+                .guestName(booking.getUserid() != null ? booking.getUserid().getFullname() : "Khách hàng Elysian")
+                .guestEmail(booking.getUserid() != null ? booking.getUserid().getEmail() : "");
+
+        if (detail != null) {
+            Roomtype roomtype = detail.getRoomtypeid();
+            Room assignedRoom = detail.getRoomid();
+            LocalDate checkInDate = toLocalDate(detail.getExpectedcheckin());
+            LocalDate checkOutDate = toLocalDate(detail.getExpectedcheckout());
+
+            builder.roomTypeId(roomtype != null ? roomtype.getId() : null)
+                    .roomType(roomtype != null ? roomtype.getName() : null)
+                    .quantity(detail.getQuantity())
+                    .numberOfAdults(detail.getNumberofadults())
+                    .numberOfChildren(detail.getNumberofchildren())
+                    .checkInDate(checkInDate)
+                    .checkOutDate(checkOutDate)
+                    .nights(ChronoUnit.DAYS.between(checkInDate, checkOutDate))
+                    .actualCheckIn(detail.getActualcheckin())
+                    .actualCheckOut(detail.getActualcheckout())
+                    .roomNumber(assignedRoom != null ? assignedRoom.getRoomnumber() : null)
+                    .roomPassword(isRoomKeyUsable(booking, detail) ? detail.getRoomkeyaccess() : null)
+                    .roomKeyStatus(detail.getRoomkeystatus())
+                    .roomKeyExpiresAt(detail.getRoomkeyexpiredat())
+                    .roomAccesses(mapRoomAccesses(booking, detail, accesses, true));
+        }
+
+        return builder.build();
     }
+
     private BookingResponse mapToBookingResponse(Booking booking) {
         return BookingResponse.builder()
                 .bookingId(booking.getId())
@@ -1490,6 +1551,7 @@ public class BookingServiceImpl implements BookingService {
                 .specialRequests(booking.getSpecialrequests())
                 .createdAt(booking.getCreatedat())
                 .build();
+    }
 
     private String formatCurrency(BigDecimal amount) {
         if (amount == null) {
