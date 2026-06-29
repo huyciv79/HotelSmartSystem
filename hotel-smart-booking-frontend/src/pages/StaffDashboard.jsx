@@ -7,15 +7,14 @@ import {
   checkInBooking, 
   checkOutBooking,
   createWalkInBooking,
-  getInvoiceDetails
+  getInvoiceDetails,
+  getStatementPdf
 } from '../services/bookingService';
 import {
   getPendingRefundRequests,
   approveRefundRequest,
   rejectRefundRequest
 } from '../services/refundService';
-  getStatementPdf
-} from '../services/bookingService';
 import { getUserProfile } from '../services/userService';
 import Profile from './Profile';
 import { useToast, ToastContainer } from '../components/Toast';
@@ -862,6 +861,7 @@ export default function StaffDashboard({ setActivePage }) {
                                   <span className="material-symbols-outlined text-xs">receipt_long</span> Hóa đơn
                                 </button>
 
+                                <button
                                   onClick={() => handleDownloadPdf(bk.id, bk.bookingReference)}
                                   className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
                                 >

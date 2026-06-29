@@ -536,7 +536,9 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
 
-        if (!"Confirmed".equalsIgnoreCase(booking.getStatus())) {
+        if (!"Confirmed".equalsIgnoreCase(booking.getStatus()) &&
+            !"Partially Paid".equalsIgnoreCase(booking.getStatus()) &&
+            !"Paid".equalsIgnoreCase(booking.getStatus())) {
             throw new RuntimeException("Đơn đặt phòng không ở trạng thái có thể nhận phòng");
         }
 
@@ -585,7 +587,9 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Booking chưa được liên kết với tài khoản khách hàng");
         }
 
-        if (!"Confirmed".equalsIgnoreCase(booking.getStatus())) {
+        if (!"Confirmed".equalsIgnoreCase(booking.getStatus()) &&
+            !"Partially Paid".equalsIgnoreCase(booking.getStatus()) &&
+            !"Paid".equalsIgnoreCase(booking.getStatus())) {
             throw new RuntimeException("Đơn đặt phòng không ở trạng thái có thể nhận phòng");
         }
         if (!"Face Recognition".equalsIgnoreCase(booking.getCheckinmethod())

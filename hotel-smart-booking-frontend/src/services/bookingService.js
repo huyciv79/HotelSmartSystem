@@ -84,10 +84,15 @@ export const createWalkInBooking = async (walkInData) => {
 
 export const getInvoiceDetails = async (bookingId) => {
   const response = await axiosInstance.get(`/bookings/${bookingId}/invoice`);
+  return response.data;
+};
+
 export const getStatementPdf = async (bookingId) => {
   const response = await axiosInstance.get(`/bookings/${bookingId}/statement/pdf`, {
     responseType: 'blob'
   });
+  return response.data;
+};
 /**
  * Check whether the camera currently sees exactly one centered, close-enough face.
  * POST /api/bookings/face-readiness
