@@ -196,6 +196,7 @@ public class BookingServiceImpl implements BookingService {
         }
         if (isQrCodeMethod(normalizedCheckInMethod)) {
             validateQrCodeBookingEligibility(customer);
+        }
         if ("FaceID".equalsIgnoreCase(normalizedCheckInMethod)) {
             boolean ekycVerified = ekycProfileRepository.existsByUseridAndStatus(
                     customer,

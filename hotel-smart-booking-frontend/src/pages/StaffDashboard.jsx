@@ -1106,14 +1106,7 @@ export default function StaffDashboard({ setActivePage }) {
                                 Ngày lưu trú: {bk.checkInDate} đến {bk.checkOutDate} ({bk.nights} đêm)
                               </p>
                             </div>
-
-            {/* QUẢN LÝ ĐẶT PHÒNG (BOOKINGS MANAGEMENT TABLE) */}
-            {activeTab === 'bookings' && (
-              <div className="space-y-6 animate-scale-in text-left">
-                <div className="border-b border-neutral-900 pb-4">
-                  <h3 className="text-white font-black text-base uppercase tracking-wider m-0">QUẢN LÝ ĐƠN ĐẶT PHÒNG</h3>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Quản lý và tra cứu toàn bộ danh sách đơn đặt phòng từ hệ thống</p>
-
+                            <div className="flex flex-col items-end gap-2">
                               <span className={`px-2.5 py-1 text-[8px] font-black uppercase tracking-widest ${
                                 isCheckedIn 
                                   ? 'bg-blue-900/30 text-blue-400 border border-blue-900/50' 
@@ -1189,6 +1182,16 @@ export default function StaffDashboard({ setActivePage }) {
                       })
                     )}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* QUẢN LÝ ĐẶT PHÒNG (BOOKINGS MANAGEMENT TABLE) */}
+            {activeTab === 'bookings' && (
+              <div className="space-y-6 animate-scale-in text-left">
+                <div className="border-b border-neutral-900 pb-4">
+                  <h3 className="text-white font-black text-base uppercase tracking-wider m-0">QUẢN LÝ ĐƠN ĐẶT PHÒNG</h3>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Quản lý và tra cứu toàn bộ danh sách đơn đặt phòng từ hệ thống</p>
                 </div>
                 <BookingsTable
                   showToast={showToast}
