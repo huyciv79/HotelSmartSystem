@@ -111,3 +111,15 @@ export const checkFaceReadiness = async (selfieImage) => {
   );
   return response.data;
 };
+
+/**
+ * Filter bookings using server-side pagination and criteria.
+ * POST /api/bookings/receptionist/filter
+ * @param {object} criteria - The filter parameters { status, bookingReference, guestName, guestEmail, page, pageSize, ... }
+ * @returns {Promise<object>} API response containing the paginated booking list
+ */
+export const filterBookings = async (criteria) => {
+  const response = await axiosInstance.post('/bookings/receptionist/filter', criteria);
+  return response.data;
+};
+
