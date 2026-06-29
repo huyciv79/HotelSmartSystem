@@ -42,6 +42,10 @@ public class RefundServiceImpl implements RefundService {
     private final CustomerrequestRepository customerrequestRepository;
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
+    private final com.example.hotelsmartbookingbackend.service.PaypalService paypalService;
+
+    @org.springframework.beans.factory.annotation.Value("${paypal.conversion-rate:25000.0}")
+    private BigDecimal conversionRate;
 
     private static final ZoneId HOTEL_ZONE = ZoneId.of("Asia/Bangkok");
 
@@ -64,7 +68,7 @@ public class RefundServiceImpl implements RefundService {
 
         String status = booking.getStatus();
         if ("Checked-in".equalsIgnoreCase(status) || "Checked In".equalsIgnoreCase(status)
-                || "Checked-out".equalsIgnoreCase(status) || "Cancelled".equalsIgnoreCase(status)) {
+                || "Checked-out".equalsIgnoreCase(status) || "Completed".equalsIgnoreCase(status) || "Cancelled".equalsIgnoreCase(status)) {
             throw new RuntimeException("Không thể yêu cầu hoàn tiền cho đơn đặt phòng ở trạng thái: " + status);
         }
 
@@ -156,6 +160,23 @@ public class RefundServiceImpl implements RefundService {
             BigDecimal availableToRefund = payment.getAmount().subtract(payment.getRefundedamount());
             if (availableToRefund.compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal refundToApply = remainingRefund.min(availableToRefund);
+                
+                // If payment method is PayPal, trigger real sandbox refund
+                if ("PayPal".equalsIgnoreCase(payment.getPaymentmethod()) && payment.getTransactioncode() != null) {
+                    try {
+                        BigDecimal usdAmount = refundToApply;
+                        if (conversionRate != null && conversionRate.compareTo(BigDecimal.ONE) > 0) {
+                            usdAmount = refundToApply.divide(conversionRate, 2, RoundingMode.HALF_UP);
+                        }
+                        log.info("Initiating PayPal Sandbox refund for transaction {}: {} VND ({} USD)", 
+                                payment.getTransactioncode(), refundToApply, usdAmount);
+                        paypalService.refundPaypalCapture(payment.getTransactioncode(), usdAmount, java.util.UUID.randomUUID().toString());
+                    } catch (Exception e) {
+                        log.error("Failed to execute PayPal Refund for capture {}: ", payment.getTransactioncode(), e);
+                        throw new RuntimeException("Lỗi khi thực hiện hoàn tiền qua cổng PayPal: " + e.getMessage());
+                    }
+                }
+                
                 payment.setRefundedamount(payment.getRefundedamount().add(refundToApply));
                 paymentRepository.save(payment);
                 remainingRefund = remainingRefund.subtract(refundToApply);

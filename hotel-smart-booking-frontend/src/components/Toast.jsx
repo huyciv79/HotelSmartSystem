@@ -12,11 +12,17 @@ export function useToast() {
   const [toasts, setToasts] = useState([]);
 
   const showToast = useCallback((message, type = 'error', duration = 4000) => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, duration);
+    setToasts((prev) => {
+      // Prevent duplicate toast messages
+      if (prev.some((t) => t.message === message)) {
+        return prev;
+      }
+      const id = Date.now() + Math.random(); // Ensure unique ID even if triggered simultaneously
+      setTimeout(() => {
+        setToasts((active) => active.filter((t) => t.id !== id));
+      }, duration);
+      return [...prev, { id, message, type }];
+    });
   }, []);
 
   const dismissToast = useCallback((id) => {

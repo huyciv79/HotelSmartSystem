@@ -197,6 +197,7 @@ export default function FaceCheckInStation({
   bookings,
   showToast,
   onCheckInCompleted,
+  initialBookingId = '',
 }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -204,7 +205,14 @@ export default function FaceCheckInStation({
   const readinessRequestRef = useRef(null);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedBookingId, setSelectedBookingId] = useState('');
+  const [selectedBookingId, setSelectedBookingId] = useState(initialBookingId);
+
+  useEffect(() => {
+    if (initialBookingId) {
+      setSelectedBookingId(String(initialBookingId));
+    }
+  }, [initialBookingId]);
+
   const [cameraState, setCameraState] = useState('idle');
   const [cameraError, setCameraError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -226,9 +234,9 @@ export default function FaceCheckInStation({
         (booking) =>
           booking.source === 'backend' &&
           booking.status === 'Confirmed' &&
-          isFaceIdBooking(booking),
+          (isFaceIdBooking(booking) || String(booking.id) === String(initialBookingId)),
       ),
-    [bookings],
+    [bookings, initialBookingId],
   );
 
   const filteredBookings = useMemo(() => {

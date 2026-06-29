@@ -404,32 +404,32 @@ export default function BookingDetail({ setActivePage }) {
             <div className="text-right">
               <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest block mb-1">{t('db_status_label', 'Trạng thái')}</span>
               <span className={`px-4 py-2 text-xs font-black uppercase tracking-widest ${booking.status === 'Cancelled'
-                  ? 'bg-red-100 text-red-700'
-                  : booking.status === 'Checked-in' || booking.status === 'Checked In'
+                ? 'bg-red-100 text-red-700'
+                : booking.status === 'Checked-in' || booking.status === 'Checked In'
                   ? 'bg-blue-100 text-blue-700'
                   : booking.status === 'Checked-out' || booking.status === 'Checked Out'
-                  ? 'bg-slate-200 text-slate-700'
-                  : booking.status === 'Paid'
-                  ? 'bg-green-100 text-green-700'
-                  : booking.status === 'Refund Pending'
-                  ? 'bg-amber-100 text-amber-700'
-                  : booking.status === 'Partially Paid'
-                  ? 'bg-indigo-100 text-indigo-700'
-                  : 'bg-yellow-100 text-yellow-700'
-              }`}>
-                {booking.status === 'Cancelled' 
-                  ? t('status_cancelled', 'Đã Hủy') 
-                  : booking.status === 'Checked-in' || booking.status === 'Checked In' 
-                  ? t('status_checked_in', 'Đã nhận phòng') 
-                  : booking.status === 'Checked-out' || booking.status === 'Checked Out' 
-                  ? t('status_checked_out', 'Đã trả phòng') 
-                  : booking.status === 'Paid' 
-                  ? t('status_paid', 'Đã thanh toán') 
-                  : booking.status === 'Refund Pending'
-                  ? 'Chờ hoàn tiền'
-                  : booking.status === 'Partially Paid'
-                  ? t('status_partially_paid', 'Đã cọc 30%')
-                  : t('status_confirmed', 'Đã xác nhận')}
+                    ? 'bg-slate-200 text-slate-700'
+                    : booking.status === 'Paid'
+                      ? 'bg-green-100 text-green-700'
+                      : booking.status === 'Refund Pending'
+                        ? 'bg-amber-100 text-amber-700'
+                        : booking.status === 'Partially Paid'
+                          ? 'bg-indigo-100 text-indigo-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                }`}>
+                {booking.status === 'Cancelled'
+                  ? t('status_cancelled', 'Đã Hủy')
+                  : booking.status === 'Checked-in' || booking.status === 'Checked In'
+                    ? t('status_checked_in', 'Đã nhận phòng')
+                    : booking.status === 'Checked-out' || booking.status === 'Checked Out'
+                      ? t('status_checked_out', 'Đã trả phòng')
+                      : booking.status === 'Paid'
+                        ? t('status_paid', 'Đã thanh toán')
+                        : booking.status === 'Refund Pending'
+                          ? 'Chờ hoàn tiền'
+                          : booking.status === 'Partially Paid'
+                            ? t('status_partially_paid', 'Đã cọc 30%')
+                            : t('status_confirmed', 'Đã xác nhận')}
               </span>
             </div>
           </div>
@@ -458,10 +458,10 @@ export default function BookingDetail({ setActivePage }) {
                         <div key={step.key} className="relative">
                           {/* Dot marker */}
                           <span className={`absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 bg-white flex items-center justify-center transition-all ${isCurrent
-                              ? 'border-primary bg-primary scale-125'
-                              : isActive
-                                ? 'border-primary bg-primary/20'
-                                : 'border-slate-300'
+                            ? 'border-primary bg-primary scale-125'
+                            : isActive
+                              ? 'border-primary bg-primary/20'
+                              : 'border-slate-300'
                             }`}>
                             {isCurrent && <span className="w-1.5 h-1.5 bg-white rounded-full"></span>}
                           </span>
@@ -758,6 +758,43 @@ export default function BookingDetail({ setActivePage }) {
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(finalAmount)}
                       </span>
                     </div>
+                    {/* Payment status badge */}
+                    {booking.paidAmount != null && parseFloat(booking.paidAmount) > 0 && (() => {
+                      const paid = parseFloat(booking.paidAmount || 0);
+                      const total = parseFloat(finalAmount || 1);
+                      const ratio = total > 0 ? paid / total : 0;
+                      const isFullyPaid = ratio >= 0.999;
+                      return (
+                        <div className="flex justify-between items-center pt-1 gap-4">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider text-xs">
+                            {t('bd_payment_status', 'Trạng thái thanh toán:')}
+                          </span>
+                          {isFullyPaid ? (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '4px',
+                              background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                              color: '#fff', fontSize: '9px', fontWeight: 900,
+                              letterSpacing: '0.08em', padding: '3px 10px',
+                              borderRadius: '3px', textTransform: 'uppercase',
+                              boxShadow: '0 0 8px rgba(22,163,74,0.35)'
+                            }}>
+                              ✓ Đã thanh toán 100%
+                            </span>
+                          ) : (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '4px',
+                              background: 'linear-gradient(135deg, #d97706, #b45309)',
+                              color: '#fff', fontSize: '9px', fontWeight: 900,
+                              letterSpacing: '0.08em', padding: '3px 10px',
+                              borderRadius: '3px', textTransform: 'uppercase',
+                              boxShadow: '0 0 8px rgba(217,119,6,0.35)'
+                            }}>
+                              ⚡ Đặt cọc {Math.round(ratio * 100)}%
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Policy instruction box */}
@@ -816,8 +853,8 @@ export default function BookingDetail({ setActivePage }) {
                       <Star
                         size={24}
                         className={`transition-colors duration-100 ${star <= (feedbackHoveredRating || feedbackRating)
-                            ? "fill-amber-400 text-amber-400"
-                            : "text-slate-300"
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-slate-300"
                           }`}
                       />
                     </button>
