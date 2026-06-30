@@ -160,6 +160,9 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 JsonNode json = new ObjectMapper().readTree(response.getBody());
                 String signedPath = json.path("signedURL").asText("");
+                if (signedPath.isBlank()) {
+                    signedPath = json.path("signedUrl").asText("");
+                }
                 if (!signedPath.isBlank()) {
                     // Supabase trả về signedPath dạng "/object/sign/..." (thiếu "/storage/v1")
                     // Cần thêm "/storage/v1" để tạo URL đúng
@@ -175,6 +178,8 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
                 }
             }
         } catch (Exception e) {
+            System.err.println("Error creating signed URL: " + e.getMessage());
+            e.printStackTrace();
             // Fallback
         }
         // Fallback: trả về public URL nếu tạo signed URL thất bại

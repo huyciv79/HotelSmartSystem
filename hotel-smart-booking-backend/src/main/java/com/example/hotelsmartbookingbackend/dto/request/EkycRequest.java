@@ -10,8 +10,10 @@ import lombok.NoArgsConstructor;
 /**
  * Request DTO cho quá trình xác minh eKYC tự động.
  *
- * <p>Client chỉ cần gửi 3 URL ảnh (đã upload lên Supabase Storage).
- * Hệ thống sẽ tự động đọc Số CCCD từ ảnh mặt trước bằng OCR –
+ * <p>DTO nội bộ giữ URL ba ảnh đã upload lên Supabase Storage.
+ * Python OCR chỉ nhận hai URL CCCD; URL selfie được lưu hồ sơ và gửi riêng
+ * tới API đăng ký khuôn mặt.
+ * YOLOv11 + VietOCR đọc thông tin từ ảnh mặt trước –
  * người dùng <b>không cần nhập số CCCD bằng tay</b>.
  */
 @Data

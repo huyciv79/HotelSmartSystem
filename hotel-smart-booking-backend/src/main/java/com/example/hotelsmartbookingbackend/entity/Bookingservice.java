@@ -29,6 +29,16 @@ public class Bookingservice {
     private Booking bookingid;
 
     @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "serviceid", nullable = false)
+    private Service serviceid;
+
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "implementedby", nullable = false)
+    private User implementedby;
+
+    @NotNull
     @ColumnDefault("1")
     @Column(name = "quantity", nullable = false)
     private Integer quantity;

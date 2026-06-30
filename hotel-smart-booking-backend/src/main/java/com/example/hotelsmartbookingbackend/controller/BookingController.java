@@ -2,14 +2,20 @@ package com.example.hotelsmartbookingbackend.controller;
 
 import com.example.hotelsmartbookingbackend.dto.request.CreateBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CreateGroupBookingRequest;
+import com.example.hotelsmartbookingbackend.dto.request.WalkInBookingRequest;
+import com.example.hotelsmartbookingbackend.dto.request.AddServiceRequest;
 import com.example.hotelsmartbookingbackend.dto.request.BookingFilter;
 import com.example.hotelsmartbookingbackend.dto.request.UpdateBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CancelBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.response.ApiResponse;
+import com.example.hotelsmartbookingbackend.dto.response.AiFaceReadinessResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
+import com.example.hotelsmartbookingbackend.dto.response.InvoiceResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
+import com.example.hotelsmartbookingbackend.dto.response.QrTokenResponse;
 import com.example.hotelsmartbookingbackend.service.BookingService;
+import com.example.hotelsmartbookingbackend.service.PdfService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import com.example.hotelsmartbookingbackend.repository.ServiceRepository;
 
 import java.util.List;
 
@@ -36,6 +43,8 @@ import java.util.List;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final PdfService pdfService;
+    private final ServiceRepository serviceRepository;
 
     @PostMapping
     public ResponseEntity<ApiResponse<BookingResponse>> createBooking(
@@ -87,34 +96,72 @@ public class BookingController {
         return ResponseEntity.ok(ApiResponse.success("Nhận phòng thành công", response));
     }
 
+    @PostMapping("/{bookingId}/qr-token")
+    @Operation(
+            summary = "Tao QR token check-in",
+            description = "Khach hang da Verified eKYC tao token QR ngan han cho booking QR Code chua check-in."
+    )
+    public ResponseEntity<ApiResponse<QrTokenResponse>> generateQrCheckInToken(
+            @PathVariable Integer bookingId,
+            Authentication authentication) {
+        String customerEmail = resolveCustomerEmail(authentication);
+        QrTokenResponse response = bookingService.generateQrCheckInToken(bookingId, customerEmail);
+        return ResponseEntity.ok(ApiResponse.success(
+                "Tao ma QR check-in thanh cong",
+                response
+        ));
+    }
+
     @PostMapping(
             value = "/{bookingId}/face-check-in",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     @Operation(
             summary = "Liveness detection và FaceID check-in",
-            description = "Chỉ Manager được gọi. Camera tự lấy frame khi khách nhìn thẳng, quay trái, quay phải, nhìn lên và nhìn xuống; sau đó hệ thống kiểm tra active liveness, anti-spoofing và hồ sơ eKYC."
+            description = "Chỉ Manager được gọi. Camera lấy frame chính diện và một hướng quay ngẫu nhiên; hệ thống kiểm tra active liveness nhanh, anti-spoofing và face template nhiều góc đã đăng ký."
     )
     public ResponseEntity<ApiResponse<BookingResponse>> faceCheckIn(
             @PathVariable Integer bookingId,
             @RequestPart("selfieImage") MultipartFile selfieImage,
-            @RequestPart("leftImage") MultipartFile leftImage,
-            @RequestPart("rightImage") MultipartFile rightImage,
-            @RequestPart("upImage") MultipartFile upImage,
-            @RequestPart("downImage") MultipartFile downImage,
+            @RequestPart("challengeImage") MultipartFile challengeImage,
+            @RequestPart("challengeImage2") MultipartFile challengeImage2,
+            @RequestPart("challengeImage3") MultipartFile challengeImage3,
+            @RequestPart("challengeDirection") String challengeDirection,
             Authentication authentication) {
         String actorEmail = resolveCustomerEmail(authentication);
         BookingResponse response = bookingService.performFaceCheckIn(
                 bookingId,
                 selfieImage,
-                leftImage,
-                rightImage,
-                upImage,
-                downImage,
+                challengeImage,
+                challengeImage2,
+                challengeImage3,
+                challengeDirection,
                 actorEmail
         );
         return ResponseEntity.ok(ApiResponse.success(
                 "Xác minh khuôn mặt và nhận phòng thành công",
+                response
+        ));
+    }
+
+    @PostMapping(
+            value = "/face-readiness",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @Operation(
+            summary = "Kiểm tra camera trước khi quét FaceID",
+            description = "Chỉ Manager được gọi. Kiểm tra đúng một khuôn mặt, đủ gần và nhìn thẳng."
+    )
+    public ResponseEntity<ApiResponse<AiFaceReadinessResponse>> checkFaceReadiness(
+            @RequestPart("selfieImage") MultipartFile selfieImage,
+            Authentication authentication) {
+        String actorEmail = resolveCustomerEmail(authentication);
+        AiFaceReadinessResponse response = bookingService.checkFaceReadiness(
+                selfieImage,
+                actorEmail
+        );
+        return ResponseEntity.ok(ApiResponse.success(
+                "Kiểm tra camera FaceID thành công",
                 response
         ));
     }
@@ -126,6 +173,49 @@ public class BookingController {
         String staffEmail = resolveCustomerEmail(authentication);
         BookingResponse response = bookingService.performCheckOut(bookingId, staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Trả phòng thành công", response));
+    }
+
+    @PostMapping("/walk-in")
+    public ResponseEntity<ApiResponse<BookingResponse>> createWalkInBooking(
+            @Valid @RequestBody WalkInBookingRequest request,
+            Authentication authentication) {
+        String staffEmail = resolveCustomerEmail(authentication);
+        BookingResponse response = bookingService.createWalkInBooking(request, staffEmail);
+        return ResponseEntity.ok(ApiResponse.success("Đặt phòng trực tiếp (Walk-in) thành công", response));
+    }
+
+    @GetMapping("/{bookingId}/invoice")
+    public ResponseEntity<ApiResponse<InvoiceResponse>> getInvoice(
+            @PathVariable Integer bookingId,
+            Authentication authentication) {
+        String actorEmail = resolveCustomerEmail(authentication);
+        InvoiceResponse response = bookingService.getInvoiceDetails(bookingId, actorEmail);
+        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin hóa đơn thành công", response));
+    }
+
+    @GetMapping("/{bookingId}/statement/pdf")
+    public ResponseEntity<byte[]> getStatementPdf(
+            @PathVariable Integer bookingId,
+            Authentication authentication) {
+        String actorEmail = resolveCustomerEmail(authentication);
+        byte[] pdfBytes = pdfService.generateInvoicePdf(bookingId, actorEmail);
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("filename", "statement-" + bookingId + ".pdf");
+        headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+
+        return new ResponseEntity<>(pdfBytes, headers, org.springframework.http.HttpStatus.OK);
+    }
+
+    @PostMapping("/{bookingId}/services")
+    public ResponseEntity<ApiResponse<String>> addService(
+            @PathVariable Integer bookingId,
+            @Valid @RequestBody AddServiceRequest request,
+            Authentication authentication) {
+        String staffEmail = resolveCustomerEmail(authentication);
+        bookingService.addServiceToBooking(bookingId, request, staffEmail);
+        return ResponseEntity.ok(ApiResponse.success("Thêm dịch vụ vào đơn đặt phòng thành công", "SUCCESS"));
     }
 
     @PostMapping("/receptionist/filter")
@@ -175,5 +265,11 @@ public class BookingController {
             throw new RuntimeException("Bạn cần đăng nhập để thực hiện chức năng này");
         }
         return authentication.getName();
+    }
+    
+
+    @GetMapping("/services/all")
+    public ResponseEntity<ApiResponse<List<com.example.hotelsmartbookingbackend.entity.Service>>> getAllServices() {
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách dịch vụ thành công", serviceRepository.findAll()));
     }
 }

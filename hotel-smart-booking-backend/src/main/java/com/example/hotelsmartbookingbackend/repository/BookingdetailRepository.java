@@ -1,7 +1,9 @@
 package com.example.hotelsmartbookingbackend.repository;
 
 import com.example.hotelsmartbookingbackend.entity.Bookingdetail;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -13,6 +15,28 @@ import java.util.Optional;
 public interface BookingdetailRepository extends JpaRepository<Bookingdetail, Integer> {
 
         Optional<Bookingdetail> findByBookingid_Id(Integer bookingId);
+
+        boolean existsByQrcodevalue(String qrcodevalue);
+
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        @Query("""
+                        select d
+                        from Bookingdetail d
+                        join fetch d.bookingid b
+                        join fetch b.userid u
+                        join fetch d.roomtypeid r
+                        where d.qrcodevalue = :token
+                        """)
+        Optional<Bookingdetail> findByQrcodevalueForUpdate(@Param("token") String token);
+
+        @Query("""
+                        select d
+                        from Bookingdetail d
+                        left join fetch d.roomtypeid
+                        left join fetch d.roomid
+                        where d.bookingid.id in :bookingIds
+                        """)
+        List<Bookingdetail> findByBookingid_IdIn(@Param("bookingIds") List<Integer> bookingIds);
 
         @Query("""
                         select d

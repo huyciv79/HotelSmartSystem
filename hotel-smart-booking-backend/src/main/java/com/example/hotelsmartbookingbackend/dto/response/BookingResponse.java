@@ -42,5 +42,6 @@ public class BookingResponse {
     private Instant roomKeyGeneratedAt;
     private Instant roomKeyExpiresAt;
     private List<RoomAccessResponse> roomAccesses;
+    private EkycIdentitySummaryResponse ekycIdentity;
     private Instant createdAt;
 }

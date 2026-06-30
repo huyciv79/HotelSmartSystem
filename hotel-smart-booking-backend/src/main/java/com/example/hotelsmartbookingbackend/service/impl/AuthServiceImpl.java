@@ -3,7 +3,7 @@ package com.example.hotelsmartbookingbackend.service.impl;
 import com.example.hotelsmartbookingbackend.config.Auth.JwtUtil;
 import com.example.hotelsmartbookingbackend.dto.request.ForgotPasswordRequest;
 import com.example.hotelsmartbookingbackend.dto.request.LoginRequest;
-import com.example.hotelsmartbookingbackend.dto.request.RefreshTokenRequest;
+
 import com.example.hotelsmartbookingbackend.dto.request.RegisterRequest;
 import com.example.hotelsmartbookingbackend.dto.request.VerifyOtpRequest;
 import com.example.hotelsmartbookingbackend.dto.request.VerifyForgotOtpRequest;
@@ -39,7 +39,7 @@ public class AuthServiceImpl implements AuthService {
     private static final String FORGOT_PASSWORD_OTP_PREFIX = "FORGOT_PASSWORD_OTP:";
     private static final String RESET_TOKEN_PREFIX = "reset:token:";
     private static final String USER_REQ_PREFIX = "register:user:";
-    private static final String REFRESH_TOKEN_PREFIX = "auth:refresh:";
+
     private static final long OTP_TTL_MINUTES = 5;
 
     @Override
@@ -109,67 +109,18 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Tài khoản đã bị vô hiệu hóa");
         }
 
-        return generateTokenPair(user);
-    }
-
-    @Override
-    public LoginResponse refreshToken(RefreshTokenRequest request) {
-        String refreshToken = request.getRefreshToken();
-
-        // 1. Validate refresh token (chữ ký + hết hạn)
-        if (!jwtUtil.validateToken(refreshToken)) {
-            throw new RuntimeException("Refresh token không hợp lệ hoặc đã hết hạn");
-        }
-
-        // 2. Kiểm tra loại token phải là REFRESH
-        String tokenType = jwtUtil.extractTokenType(refreshToken);
-        if (!"REFRESH".equals(tokenType)) {
-            throw new RuntimeException("Token không phải là refresh token");
-        }
-
-        // 3. Kiểm tra refresh token có tồn tại trong Redis không (chống token bị thu hồi)
-        String email = jwtUtil.extractEmail(refreshToken);
-        String storedToken = (String) redisTemplate.opsForValue().get(REFRESH_TOKEN_PREFIX + email);
-
-        if (storedToken == null || !storedToken.equals(refreshToken)) {
-            throw new RuntimeException("Refresh token đã bị thu hồi hoặc không hợp lệ");
-        }
-
-        // 4. Tìm user và tạo cặp token mới
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
-
-        // 5. Xóa refresh token cũ khỏi Redis (rotation)
-        redisTemplate.delete(REFRESH_TOKEN_PREFIX + email);
-
-        return generateTokenPair(user);
-    }
-
-    @Override
-    public void logout(String refreshToken) {
-        if (jwtUtil.validateToken(refreshToken)) {
-            String email = jwtUtil.extractEmail(refreshToken);
-            redisTemplate.delete(REFRESH_TOKEN_PREFIX + email);
-        }
+        return generateLoginResponse(user);
     }
 
     /**
-     * Tạo cặp access token + refresh token, lưu refresh token vào Redis.
+     * Tạo LoginResponse chứa access token (không dùng refresh token).
      */
-    private LoginResponse generateTokenPair(User user) {
+    private LoginResponse generateLoginResponse(User user) {
         String accessToken = jwtUtil.generateAccessToken(user);
-        String refreshToken = jwtUtil.generateRefreshToken(user);
-
-        // Lưu refresh token vào Redis với TTL bằng thời gian sống của refresh token
-        redisTemplate.opsForValue().set(
-                REFRESH_TOKEN_PREFIX + user.getEmail(),
-                refreshToken,
-                Duration.ofMillis(jwtUtil.getRefreshTokenExpirationMs())
-        );
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
-                .refreshToken(refreshToken)
+                .refreshToken(null)
                 .email(user.getEmail())
                 .fullName(user.getFullname())
                 .role(user.getRole().name())
@@ -237,8 +188,7 @@ public class AuthServiceImpl implements AuthService {
         user.setUpdatedat(java.time.Instant.now());
         userRepository.save(user);
 
-        // Thu hồi (revoke) toàn bộ refresh token hiện có của người dùng
-        redisTemplate.delete(REFRESH_TOKEN_PREFIX + email);
+
 
         // Xóa reset-token khỏi Redis sau khi đã sử dụng thành công
         redisTemplate.delete(RESET_TOKEN_PREFIX + request.getResetToken());
@@ -267,7 +217,5 @@ public class AuthServiceImpl implements AuthService {
         user.setUpdatedat(Instant.now());
         userRepository.save(user);
 
-        // Thu hồi các phiên đăng nhập hiện có để đảm bảo bảo mật
-        redisTemplate.delete(REFRESH_TOKEN_PREFIX + email);
     }
 }

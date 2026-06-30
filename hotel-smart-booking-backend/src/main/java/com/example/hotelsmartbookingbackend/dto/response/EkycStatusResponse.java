@@ -17,6 +17,10 @@ public class EkycStatusResponse {
     private String idNumber;
     private String dateOfBirth;
     private String address;
+    private String gender;
+    private String hometown;
+    private String provinceCode;
+    private String provinceName;
     private Instant verifiedAt;
     private String rejectionReason;
     private String requestId;

@@ -22,4 +22,28 @@ axiosInstance.interceptors.request.use(
   }
 );
 
+// Response interceptor to handle expired token (401 Unauthorized)
+axiosInstance.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Prevent redirecting if the 401 is from the login attempt itself
+      if (error.config.url && error.config.url.includes('/auth/login')) {
+        return Promise.reject(error);
+      }
+      
+      // Clear local storage authentication info
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      
+      // Redirect to home/login and refresh page state
+      window.location.href = '/';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default axiosInstance;

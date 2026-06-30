@@ -10,13 +10,14 @@ const StaffOverview = ({
   handleOpenAddRoom,
   setSelectedBooking,
   startScanner,
-  handleDirectCheckInOut
+  handleDirectCheckInOut,
+  handleOpenWalkIn
 }) => {
   const [carouselIndex, setCarouselIndex] = useState(0);
 
   // Calcs
-  const confirmedCount = bookings.filter(b => b.status === 'Confirmed').length;
-  const checkedInCount = bookings.filter(b => b.status === 'Checked In').length;
+  const confirmedCount = bookings.filter(b => ['confirmed', 'paid', 'partially paid'].includes(String(b.status || '').toLowerCase())).length;
+  const checkedInCount = bookings.filter(b => ['checked in', 'checked-in', 'staying'].includes(String(b.status || '').toLowerCase())).length;
 
   const nextCarousel = () => {
     if (roomTypes.length > 0) {
@@ -188,6 +189,12 @@ const StaffOverview = ({
                 className="w-full py-3.5 bg-neutral-900 hover:bg-primary text-white text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border border-neutral-850 flex items-center justify-center gap-2"
               >
                 Vận hành sảnh (Check-in)
+              </button>
+              <button
+                onClick={handleOpenWalkIn}
+                className="w-full py-3.5 bg-neutral-900 hover:bg-primary text-white text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border border-neutral-850 flex items-center justify-center gap-2"
+              >
+                Đặt phòng Walk-in
               </button>
               {isManager && (
                 <button

@@ -22,6 +22,13 @@ public final class RoomTypeSpecification {
 
     private static Specification<Roomtype> hasStatus(String status) {
         return (root, query, cb) -> {
+            if ("all".equalsIgnoreCase(status)) {
+                return cb.conjunction();
+            }
+            if (status != null && "all".equalsIgnoreCase(status.trim())) {
+                return cb.conjunction();
+            }
+
             String effectiveStatus = (status == null || status.isBlank()) ? "Active" : status;
             return cb.equal(cb.lower(root.get("status")), effectiveStatus.toLowerCase());
         };

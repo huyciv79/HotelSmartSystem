@@ -225,4 +225,43 @@ public class PaypalServiceImpl implements PaypalService {
             throw new RuntimeException("Failed to capture PayPal order: " + e.getMessage());
         }
     }
+
+    @Override
+    public void refundPaypalCapture(String captureId, BigDecimal usdAmount, String idempotencyKey) {
+        log.info("refundPaypalCapture() - Capture ID: {}, Amount: {} USD, Idempotency Key: {}", captureId, usdAmount, idempotencyKey);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        Map<String, Object> amountMap = new HashMap<>();
+        amountMap.put("currency_code", "USD");
+        amountMap.put("value", usdAmount.setScale(2, RoundingMode.HALF_UP).toString());
+        requestBody.put("amount", amountMap);
+
+        try {
+            log.info("refundPaypalCapture() - Executing HTTP POST /v2/payments/captures/{id}/refund to PayPal...", captureId);
+            Map<String, Object> response = paypalRestClient.post()
+                    .uri("/v2/payments/captures/{id}/refund", captureId)
+                    .header("Authorization", "Bearer " + getAccessToken())
+                    .header("PayPal-Request-Id", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(requestBody)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+
+            log.info("refundPaypalCapture() - Response received from PayPal refund API: {}", response != null ? "Not Null" : "Null");
+            if (response == null) {
+                throw new RuntimeException("Empty response from PayPal Refund API");
+            }
+
+            String status = (String) response.get("status");
+            String refundId = (String) response.get("id");
+            log.info("refundPaypalCapture() - Refund successful. Status: {}, Refund ID: {}", status, refundId);
+
+            if (!"COMPLETED".equalsIgnoreCase(status) && !"PENDING".equalsIgnoreCase(status)) {
+                throw new RuntimeException("PayPal refund status is not COMPLETED/PENDING: " + status);
+            }
+        } catch (Exception e) {
+            log.error("Error executing PayPal refund for capture ID {}: ", captureId, e);
+            throw new RuntimeException("PayPal refund failed: " + e.getMessage());
+        }
+    }
 }
