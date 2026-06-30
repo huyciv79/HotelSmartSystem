@@ -77,4 +77,28 @@ public interface RoomChangeService {
      */
     java.util.List<com.example.hotelsmartbookingbackend.dto.response.CustomerRequestResponse> getPendingRoomChangeRequests(
             String staffEmail);
+
+    /**
+     * Khách hàng gửi yêu cầu gia hạn lưu trú.
+     */
+    com.example.hotelsmartbookingbackend.dto.response.CustomerRequestResponse submitStayExtensionRequest(
+            com.example.hotelsmartbookingbackend.dto.request.CustomerStayExtensionRequest request, String customerEmail);
+
+    /**
+     * Nhân viên phê duyệt yêu cầu gia hạn lưu trú của khách.
+     */
+    com.example.hotelsmartbookingbackend.dto.response.CustomerRequestResponse approveStayExtensionRequest(
+            Integer requestId, String staffEmail);
+
+    /**
+     * Nhân viên từ chối yêu cầu gia hạn lưu trú của khách.
+     */
+    com.example.hotelsmartbookingbackend.dto.response.CustomerRequestResponse rejectStayExtensionRequest(
+            Integer requestId, String rejectionReason, String staffEmail);
+
+    /**
+     * Lấy danh sách các yêu cầu gia hạn lưu trú đang ở trạng thái Pending.
+     */
+    java.util.List<com.example.hotelsmartbookingbackend.dto.response.CustomerRequestResponse> getPendingStayExtensionRequests(
+            String staffEmail);
 }

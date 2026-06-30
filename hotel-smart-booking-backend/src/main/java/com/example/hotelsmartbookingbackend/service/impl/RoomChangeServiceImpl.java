@@ -17,6 +17,7 @@ import com.example.hotelsmartbookingbackend.service.RoomChangeService;
 import com.example.hotelsmartbookingbackend.service.WebSocketService;
 
 import com.example.hotelsmartbookingbackend.dto.request.CustomerRoomChangeRequest;
+import com.example.hotelsmartbookingbackend.dto.request.CustomerStayExtensionRequest;
 import com.example.hotelsmartbookingbackend.dto.response.CustomerRequestResponse;
 import com.example.hotelsmartbookingbackend.entity.Customerrequest;
 import com.example.hotelsmartbookingbackend.repository.CustomerrequestRepository;
@@ -892,6 +893,45 @@ public class RoomChangeServiceImpl implements RoomChangeService {
                 .build();
     }
 
+    private Instant toInstant(LocalDate date) {
+        return date.atStartOfDay(HOTEL_ZONE).toInstant();
+    }
+
+    private void assertAvailability(Roomtype roomtype, LocalDate checkInDate, LocalDate checkOutDate, int quantity) {
+        int totalRooms = Math.toIntExact(roomRepository.countByRoomtypeid_IdAndStatus(
+                roomtype.getId(), ROOM_STATUS_AVAILABLE));
+
+        if (totalRooms <= 0) {
+            throw new RuntimeException("Không có phòng đang hoạt động cho loại phòng này");
+        }
+
+        if (quantity > totalRooms) {
+            throw new RuntimeException("Số lượng phòng đặt vượt quá tổng số phòng của loại phòng này");
+        }
+
+        LocalDate stayDate = checkInDate;
+        while (stayDate.isBefore(checkOutDate)) {
+            Instant periodStart = toInstant(stayDate);
+            Instant periodEnd = toInstant(stayDate.plusDays(1));
+
+            long bookedRooms = bookingdetailRepository.sumBookedQuantity(
+                    roomtype.getId(),
+                    periodStart,
+                    periodEnd,
+                    List.of("Confirmed", "Checked In", "Checked-in", "Staying", "Paid", "Partially Paid"),
+                    List.of("Active", "Checked In", "Checked-in", "Staying"));
+
+            int availableRooms = totalRooms - Math.toIntExact(bookedRooms);
+            if (availableRooms < quantity) {
+                throw new RuntimeException("Không đủ phòng trống vào ngày "
+                        + stayDate.toString()
+                        + ". Số phòng còn trống: " + availableRooms);
+            }
+
+            stayDate = stayDate.plusDays(1);
+        }
+    }
+
     // ═════════════════════════════════════════════════════════════════════════
     //  INNER VALUE OBJECT: FinancialResult
     // ═════════════════════════════════════════════════════════════════════════
@@ -941,5 +981,177 @@ public class RoomChangeServiceImpl implements RoomChangeService {
         BigDecimal getNewFinalAmount() { return newFinalAmount; }
         BigDecimal getPriceDifference() { return priceDifference; }
         boolean isDifferentType() { return differentType; }
+    }
+
+    /**
+     * Khách hàng gửi yêu cầu gia hạn lưu trú.
+     */
+    @Override
+    @Transactional
+    public CustomerRequestResponse submitStayExtensionRequest(CustomerStayExtensionRequest request, String customerEmail) {
+        Booking booking = bookingRepository.findById(request.getBookingId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
+
+        User customer = userRepository.findByEmail(customerEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
+
+        if (!booking.getUserid().getId().equals(customer.getId())) {
+            throw new RuntimeException("Bạn không có quyền gửi yêu cầu cho đơn đặt phòng này");
+        }
+
+        if (!"Checked-in".equalsIgnoreCase(booking.getStatus()) && !"Checked In".equalsIgnoreCase(booking.getStatus())) {
+            throw new RuntimeException("Chỉ đơn đặt phòng đang lưu trú (Checked In) mới được phép yêu cầu gia hạn");
+        }
+
+        Bookingdetail detail = bookingdetailRepository.findById(request.getBookingId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đặt phòng"));
+
+        LocalDate currentCheckOut = detail.getExpectedcheckout().atZone(HOTEL_ZONE).toLocalDate();
+        LocalDate newCheckOut = LocalDate.parse(request.getNewCheckOutDate().trim());
+
+        if (newCheckOut.isBefore(currentCheckOut) || newCheckOut.equals(currentCheckOut)) {
+            throw new RuntimeException("Ngày trả phòng mới phải sau ngày trả phòng hiện tại (" + currentCheckOut + ")");
+        }
+
+        // Tạo request StayExtension
+        Customerrequest customerrequest = new Customerrequest();
+        customerrequest.setBookingid(booking);
+        customerrequest.setRequesttype("StayExtension");
+        customerrequest.setDescription(request.getDescription());
+        customerrequest.setOldvalue(currentCheckOut.toString());
+        customerrequest.setNewvalue(newCheckOut.toString());
+        customerrequest.setStatus("Pending");
+        customerrequest.setCreatedat(Instant.now());
+
+        Customerrequest saved = customerrequestRepository.save(customerrequest);
+        return mapToCustomerRequestResponse(saved);
+    }
+
+    /**
+     * Nhân viên phê duyệt yêu cầu gia hạn lưu trú của khách.
+     */
+    @Override
+    @Transactional
+    public CustomerRequestResponse approveStayExtensionRequest(Integer requestId, String staffEmail) {
+        validateStaffPermission(staffEmail);
+
+        Customerrequest req = customerrequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu gia hạn"));
+
+        if (!req.getRequesttype().equals("StayExtension")) {
+            throw new RuntimeException("Yêu cầu này không phải là yêu cầu gia hạn lưu trú");
+        }
+
+        if (!req.getStatus().equals("Pending")) {
+            throw new RuntimeException("Yêu cầu này đã được xử lý");
+        }
+
+        Booking booking = req.getBookingid();
+        Bookingdetail detail = bookingdetailRepository.findById(booking.getId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đặt phòng"));
+
+        LocalDate checkIn = detail.getExpectedcheckin().atZone(HOTEL_ZONE).toLocalDate();
+        LocalDate newCheckOut = LocalDate.parse(req.getNewvalue());
+
+        // 1. Kiểm tra availability phòng trống của loại phòng này trước
+        assertAvailability(detail.getRoomtypeid(), checkIn, newCheckOut, detail.getQuantity());
+
+        // 2. Đảm bảo gia hạn chính phòng vật lý hiện tại của khách (kiểm tra xem phòng đó có bị đặt trùng trong tương lai không)
+        if (detail.getRoomid() != null) {
+            boolean hasOverlap = bookingdetailRepository.existsOverlappingBookingForRoom(
+                    detail.getRoomid().getId(),
+                    booking.getId(),
+                    detail.getExpectedcheckout(), // kiểm tra từ ngày checkout cũ
+                    toInstant(newCheckOut)        // đến ngày checkout mới mong muốn
+            );
+            if (hasOverlap) {
+                throw new RuntimeException("Không thể gia hạn chính phòng này vì phòng vật lý "
+                        + detail.getRoomid().getRoomnumber()
+                        + " đã có khách hàng khác đặt trước trong thời gian gia hạn. Vui lòng đổi sang phòng khác.");
+            }
+        }
+
+        // Tính toán lại tài chính
+        long newNights = ChronoUnit.DAYS.between(checkIn, newCheckOut);
+        BigDecimal newTotal = detail.getPriceatbooking()
+                .multiply(BigDecimal.valueOf(detail.getQuantity()))
+                .multiply(BigDecimal.valueOf(newNights));
+
+        BigDecimal taxAmount = newTotal.multiply(new BigDecimal("0.10")).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal finalAmount = newTotal.add(taxAmount).subtract(booking.getDiscountamount()).setScale(2, RoundingMode.HALF_UP);
+
+        // Cập nhật booking & detail
+        booking.setTotalamount(newTotal);
+        booking.setTaxamount(taxAmount);
+        booking.setFinalamount(finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount);
+        booking.setUpdatedat(Instant.now());
+
+        detail.setExpectedcheckout(toInstant(newCheckOut));
+        detail.setUpdatedat(Instant.now());
+
+        // 3. Gia hạn thời hạn của mã khóa phòng (bookingroomaccesses)
+        List<BookingRoomAccess> roomAccesses = bookingRoomAccessRepository
+                .findByBookingid_IdOrderByRoomid_RoomnumberAsc(booking.getId());
+        if (roomAccesses != null && !roomAccesses.isEmpty()) {
+            for (BookingRoomAccess access : roomAccesses) {
+                access.setRoomkeyexpiredat(toInstant(newCheckOut));
+                access.setUpdatedat(Instant.now());
+            }
+            bookingRoomAccessRepository.saveAll(roomAccesses);
+        }
+
+        bookingRepository.save(booking);
+        bookingdetailRepository.save(detail);
+
+        // Cập nhật request
+        req.setStatus("Approved");
+        req.setResolvedat(Instant.now());
+        Customerrequest saved = customerrequestRepository.save(req);
+
+        return mapToCustomerRequestResponse(saved);
+    }
+
+    /**
+     * Nhân viên từ chối yêu cầu gia hạn lưu trú của khách.
+     */
+    @Override
+    @Transactional
+    public CustomerRequestResponse rejectStayExtensionRequest(Integer requestId, String rejectionReason, String staffEmail) {
+        validateStaffPermission(staffEmail);
+
+        Customerrequest req = customerrequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu gia hạn"));
+
+        if (!req.getRequesttype().equals("StayExtension")) {
+            throw new RuntimeException("Yêu cầu này không phải là yêu cầu gia hạn");
+        }
+
+        if (!req.getStatus().equals("Pending")) {
+            throw new RuntimeException("Yêu cầu này đã được xử lý");
+        }
+
+        req.setStatus("Rejected");
+        req.setRejectionreason(rejectionReason);
+        req.setResolvedat(Instant.now());
+
+        Customerrequest saved = customerrequestRepository.save(req);
+
+        return mapToCustomerRequestResponse(saved);
+    }
+
+    /**
+     * Lấy danh sách các yêu cầu gia hạn lưu trú đang ở trạng thái Pending.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<CustomerRequestResponse> getPendingStayExtensionRequests(String staffEmail) {
+        validateStaffPermission(staffEmail);
+
+        List<Customerrequest> pendingRequests = customerrequestRepository
+                .findByRequesttypeAndStatusOrderByCreatedatDesc("StayExtension", "Pending");
+
+        return pendingRequests.stream()
+                .map(this::mapToCustomerRequestResponse)
+                .toList();
     }
 }

@@ -73,4 +73,19 @@ public interface BookingdetailRepository extends JpaRepository<Bookingdetail, In
                         order by d.bookingid.createdat desc
                         """)
         List<Bookingdetail> findBookingHistory(@Param("email") String email);
+
+        @Query("""
+                        select count(d) > 0
+                        from Bookingdetail d
+                        where d.roomid.id = :roomId
+                          and d.bookingid.id != :bookingId
+                          and d.bookingid.status not in ('Cancelled', 'Refunded')
+                          and d.expectedcheckin < :periodEnd
+                          and d.expectedcheckout > :periodStart
+                        """)
+        boolean existsOverlappingBookingForRoom(
+                        @Param("roomId") Integer roomId,
+                        @Param("bookingId") Integer bookingId,
+                        @Param("periodStart") Instant periodStart,
+                        @Param("periodEnd") Instant periodEnd);
 }
