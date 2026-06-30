@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { generateQrCheckInToken, getBookingDetail } from '../services/bookingService';
 import { submitRefundRequest } from '../services/refundService';
 import { submitCustomerRoomChangeRequest } from '../services/roomChangeService';
+import { submitStayExtensionRequest } from '../services/stayExtensionService';
 import { getRoomTypes } from '../services/roomService';
 import { useToast, ToastContainer } from '../components/Toast';
 import QrCheckInCard from '../components/booking/QrCheckInCard';
@@ -35,6 +36,13 @@ export default function BookingDetail({ setActivePage }) {
   const [isSubmittingRoomChange, setIsSubmittingRoomChange] = useState(false);
   const [roomChangeError, setRoomChangeError] = useState(null);
   const [isRoomChangePending, setIsRoomChangePending] = useState(false);
+
+  // Stay extension related states
+  const [isStayExtensionPending, setIsStayExtensionPending] = useState(false);
+  const [isStayExtensionModalOpen, setIsStayExtensionModalOpen] = useState(false);
+  const [newCheckOutDate, setNewCheckOutDate] = useState('');
+  const [extensionReason, setExtensionReason] = useState('');
+  const [isSubmittingExtension, setIsSubmittingExtension] = useState(false);
 
   // Feedback related states
   const [feedback, setFeedback] = useState(null);
@@ -116,11 +124,9 @@ export default function BookingDetail({ setActivePage }) {
             await fetchFeedback(bookingData.bookingId);
           }
 
-          // Check if there is a pending room change request in localStorage
-          const pendingRequest = localStorage.getItem(`booking_room_change_pending_${bookingData.bookingId}`);
-          if (pendingRequest === 'true') {
-            setIsRoomChangePending(true);
-          }
+          // Read pending flags directly from booking API response
+          setIsRoomChangePending(bookingData.isRoomChangePending === true);
+          setIsStayExtensionPending(bookingData.isStayExtensionPending === true);
         }
       } catch (err) {
         console.error('Lỗi khi tải chi tiết đặt phòng:', err);
@@ -249,13 +255,38 @@ export default function BookingDetail({ setActivePage }) {
         showToast('Gửi yêu cầu chuyển phòng thành công! Quản lý sẽ sớm phê duyệt.', 'success');
         setIsRoomChangeModalOpen(false);
         setIsRoomChangePending(true);
-        localStorage.setItem(`booking_room_change_pending_${booking.bookingId}`, 'true');
       }
     } catch (err) {
       console.error(err);
       setRoomChangeError(err.response?.data?.message || 'Gửi yêu cầu chuyển phòng thất bại. Vui lòng thử lại.');
     } finally {
       setIsSubmittingRoomChange(false);
+    }
+  };
+
+  const handleStayExtensionSubmit = async (e) => {
+    e.preventDefault();
+    if (!newCheckOutDate) {
+      showToast('Vui lòng chọn ngày trả phòng mới', 'error');
+      return;
+    }
+    setIsSubmittingExtension(true);
+    try {
+      const response = await submitStayExtensionRequest({
+        bookingId: booking.bookingId,
+        newCheckOutDate,
+        description: extensionReason.trim() || 'Khách yêu cầu gia hạn lưu trú'
+      });
+      if (response && response.success) {
+        showToast('Gửi yêu cầu gia hạn lưu trú thành công!', 'success');
+        setIsStayExtensionPending(true);
+        setIsStayExtensionModalOpen(false);
+      }
+    } catch (err) {
+      console.error('Lỗi khi gửi yêu cầu gia hạn:', err);
+      showToast(err.response?.data?.message || 'Không thể gửi yêu cầu gia hạn lưu trú.', 'error');
+    } finally {
+      setIsSubmittingExtension(false);
     }
   };
 
@@ -711,8 +742,8 @@ export default function BookingDetail({ setActivePage }) {
                     </button>
 
                     {isRoomChangePending ? (
-                      <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold px-4 py-2.5 flex items-center gap-2 h-11">
-                        <span className="material-symbols-outlined text-base">hourglass_empty</span>
+                      <div className="bg-[#11161c] border border-blue-900/40 text-blue-400 text-xs font-bold px-4 py-2.5 flex items-center gap-2 h-11">
+                        <span className="material-symbols-outlined text-base animate-pulse">hourglass_empty</span>
                         Yêu cầu đổi phòng đang chờ phê duyệt
                       </div>
                     ) : (
@@ -722,6 +753,30 @@ export default function BookingDetail({ setActivePage }) {
                       >
                         <span className="material-symbols-outlined text-lg">swap_horiz</span>
                         Yêu cầu đổi phòng
+                      </button>
+                    )}
+
+                    {isStayExtensionPending ? (
+                      <div className="bg-[#1c1a14] border border-amber-900/40 text-amber-500 text-xs font-bold px-4 py-2.5 flex items-center gap-2 h-11">
+                        <span className="material-symbols-outlined text-base animate-pulse">hourglass_empty</span>
+                        Yêu cầu gia hạn đang chờ phê duyệt
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          const currentOut = booking.checkOutDate || booking.checkoutdate;
+                          if (currentOut) {
+                            const nextDay = new Date(currentOut);
+                            nextDay.setDate(nextDay.getDate() + 1);
+                            setNewCheckOutDate(nextDay.toISOString().split('T')[0]);
+                          }
+                          setExtensionReason('');
+                          setIsStayExtensionModalOpen(true);
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-1.5 h-11"
+                      >
+                        <span className="material-symbols-outlined text-lg">hourglass_top</span>
+                        Yêu cầu gia hạn
                       </button>
                     )}
                   </>
@@ -1378,6 +1433,85 @@ export default function BookingDetail({ setActivePage }) {
                     )}
                   </button>
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* STAY EXTENSION MODAL */}
+      {isStayExtensionModalOpen && (
+        <div className="fixed inset-0 bg-slate-900 bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in font-['Montserrat']">
+          <div className="bg-white border border-slate-200 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-slate-900 text-left">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <span className="text-[9px] font-black tracking-widest text-primary uppercase">GIA HẠN LƯU TRÚ</span>
+                <h4 className="text-sm font-black uppercase text-slate-900 m-0 mt-0.5">{booking.bookingReference}</h4>
+              </div>
+              <button
+                onClick={() => setIsStayExtensionModalOpen(false)}
+                className="text-slate-400 hover:text-slate-900 border-none bg-transparent cursor-pointer flex items-center"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleStayExtensionSubmit} className="space-y-4">
+              <div className="bg-amber-50 border border-amber-200 p-3 rounded-none flex items-start gap-2.5">
+                <AlertCircle size={16} className="text-amber-700 flex-shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-900 leading-normal font-medium">
+                  <strong>Thông tin hiện tại:</strong> Ngày trả phòng dự kiến là <strong>{booking.checkOutDate || booking.checkoutdate}</strong>. Yêu cầu gia hạn sẽ được quầy lễ tân kiểm tra và phản hồi sớm nhất.
+                </div>
+              </div>
+
+              <div className="space-y-1.5 text-left">
+                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                  Ngày trả phòng mới mong muốn:
+                </label>
+                <input
+                  type="date"
+                  value={newCheckOutDate}
+                  min={booking.checkOutDate || booking.checkoutdate}
+                  onChange={(e) => setNewCheckOutDate(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 p-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5 text-left">
+                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                  Lý do gia hạn (tùy chọn):
+                </label>
+                <textarea
+                  rows="3"
+                  value={extensionReason}
+                  onChange={(e) => setExtensionReason(e.target.value)}
+                  placeholder="Ví dụ: Thay đổi lịch trình bay, muốn ở lại trải nghiệm thêm..."
+                  className="w-full bg-slate-50 border border-slate-200 p-3 font-bold text-xs outline-none text-slate-800 focus:border-primary resize-none"
+                />
+              </div>
+
+              <div className="flex gap-2.5 pt-2 text-[10px] font-black uppercase tracking-widest">
+                <button
+                  type="button"
+                  onClick={() => setIsStayExtensionModalOpen(false)}
+                  className="px-5 py-3 border border-slate-300 text-slate-700 bg-white hover:bg-slate-100 transition-all cursor-pointer flex-1"
+                >
+                  Quay lại
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingExtension}
+                  className="px-5 py-3 bg-primary text-white hover:bg-opacity-95 transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1"
+                >
+                  {isSubmittingExtension ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-t-2 border-white" />
+                      <span>Đang gửi...</span>
+                    </>
+                  ) : (
+                    <span>Gửi yêu cầu</span>
+                  )}
+                </button>
               </div>
             </form>
           </div>
