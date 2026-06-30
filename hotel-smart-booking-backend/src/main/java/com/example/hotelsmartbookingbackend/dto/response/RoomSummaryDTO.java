@@ -18,6 +18,7 @@ public class RoomSummaryDTO {
     private String status;
     private Integer roomtypeid;
     private String roomtypename;
+    private String adminpasscode;
     private Instant createdAt;
     private Instant updatedAt;
 }
