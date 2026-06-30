@@ -185,12 +185,6 @@ const StaffOverview = ({
             <h4 className="text-xs font-black uppercase tracking-widest text-white border-b border-neutral-900 pb-3 mb-4">Lối tắt thao tác</h4>
             <div className="space-y-3">
               <button
-                onClick={() => setActiveTab('operations')}
-                className="w-full py-3.5 bg-neutral-900 hover:bg-primary text-white text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border border-neutral-850 flex items-center justify-center gap-2"
-              >
-                Vận hành sảnh (Check-in)
-              </button>
-              <button
                 onClick={handleOpenWalkIn}
                 className="w-full py-3.5 bg-neutral-900 hover:bg-primary text-white text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border border-neutral-850 flex items-center justify-center gap-2"
               >

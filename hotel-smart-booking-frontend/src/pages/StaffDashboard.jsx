@@ -20,6 +20,12 @@ import {
   rejectRefundRequest
 } from '../services/refundService';
 import { getUserProfile } from '../services/userService';
+import {
+  getPendingRoomChangeRequests,
+  approveRoomChangeRequest,
+  rejectRoomChangeRequest,
+  getAvailableRooms
+} from '../services/roomChangeService';
 import Profile from './Profile';
 import { useToast, ToastContainer } from '../components/Toast';
 
@@ -33,6 +39,7 @@ import RevenueReports from '../components/staff/RevenueReports';
 import FaceCheckInStation from '../components/staff/FaceCheckInStation';
 import QrCheckInStation from '../components/staff/QrCheckInStation';
 import BookingsTable from '../components/staff/BookingsTable';
+import RoomChangeModal from '../components/staff/RoomChangeModal';
 
 // Mock Bookings Data for Receptionist/Manager Operation simulation
 const INITIAL_MOCK_BOOKINGS = [
@@ -154,6 +161,18 @@ export default function StaffDashboard({ setActivePage }) {
   const [refundRejectionReason, setRefundRejectionReason] = useState('');
   const [isSubmittingRefundAction, setIsSubmittingRefundAction] = useState(false);
 
+  // Room Change Request States
+  const [pendingRoomChanges, setPendingRoomChanges] = useState([]);
+  const [roomChangesLoading, setRoomChangesLoading] = useState(false);
+  const [isApproveRoomChangeOpen, setIsApproveRoomChangeOpen] = useState(false);
+  const [isRejectRoomChangeOpen, setIsRejectRoomChangeOpen] = useState(false);
+  const [selectedRoomChange, setSelectedRoomChange] = useState(null);
+  const [roomChangeRejectionReason, setRoomChangeRejectionReason] = useState('');
+  const [isSubmittingRoomChangeAction, setIsSubmittingRoomChangeAction] = useState(false);
+  const [availableStaffRooms, setAvailableStaffRooms] = useState([]);
+  const [selectedStaffRoomId, setSelectedStaffRoomId] = useState('');
+  const [isLoadingStaffRooms, setIsLoadingStaffRooms] = useState(false);
+
   // Simulated Camera / FaceID Scanning Modal
   const [scanningBooking, setScanningBooking] = useState(null);
   const [scanType, setScanType] = useState(null); // 'face' | 'qr'
@@ -161,18 +180,42 @@ export default function StaffDashboard({ setActivePage }) {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [faceCheckInBookingId, setFaceCheckInBookingId] = useState('');
 
+  // ── State cho modal Chuyển Phòng ──────────────────────────────────────────
+  /** Đánh dấu modal đang mở/đóng */
+  const [isRoomChangeModalOpen, setIsRoomChangeModalOpen] = useState(false);
+  /** Booking được chọn để chuyển phòng (object từ BookingsTable) */
+  const [roomChangeBooking, setRoomChangeBooking] = useState(null);
+
+  /**
+   * Mở modal chuyển phòng với thông tin booking từ hàng trong bảng.
+   * Map các field từ shape của BookingsTable sang shape mà RoomChangeModal cần.
+   * @param {object} bk - booking object từ BookingsTable
+   */
+  const handleOpenRoomChangeModal = (bk) => {
+    setRoomChangeBooking({
+      bookingId:        bk.id ?? bk.bookingId,
+      bookingReference: bk.bookingReference ?? bk.bookingNumber,
+      roomId:           bk.roomId,
+      roomNumber:       bk.roomNumber,
+      roomTypeName:     bk.roomType ?? bk.roomTypeName,
+      priceatbooking:   bk.priceatbooking ?? bk.priceAtBooking ?? 0,
+      guestName:        bk.guestName,
+    });
+    setIsRoomChangeModalOpen(true);
+  };
+
   const fetchRealRooms = async (page = 0) => {
     try {
       const criteria = {
         page: page,
-        size: 10,
-        keyword: roomsSearchQuery,
-        status: roomsFilterStatus,
-        roomTypeId: roomsFilterType
+        size: 200,
+        keyword: roomsSearchQuery
       };
       const response = await getRooms(criteria);
       if (response && response.success && response.data) {
-        setRoomsList(response.data.content || []);
+        const list = response.data.content || [];
+        console.log('Tải danh sách phòng từ server:', list);
+        setRoomsList(list);
         setRoomsTotalPages(response.data.totalPages || 1);
         setRoomsCurrentPage(response.data.page !== undefined ? response.data.page : (response.data.number || 0));
       }
@@ -196,10 +239,101 @@ export default function StaffDashboard({ setActivePage }) {
     }
   };
 
+  const fetchPendingRoomChanges = async () => {
+    setRoomChangesLoading(true);
+    try {
+      const response = await getPendingRoomChangeRequests();
+      if (response && response.success) {
+        setPendingRoomChanges(response.data || []);
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải yêu cầu chuyển phòng:', err);
+      showToast('Không thể tải danh sách yêu cầu chuyển phòng', 'error');
+    } finally {
+      setRoomChangesLoading(false);
+    }
+  };
+
+  const fetchAvailableRoomsForStaff = async (roomTypeId) => {
+    setIsLoadingStaffRooms(true);
+    setAvailableStaffRooms([]);
+    setSelectedStaffRoomId('');
+    try {
+      const res = await getAvailableRooms();
+      if (res?.success && res?.data) {
+        const list = res.data.content ?? res.data;
+        const filtered = list.filter(r => {
+          const rTypeId = r.roomtypeid?.id || r.roomtypeid || r.roomTypeId;
+          return Number(rTypeId) === Number(roomTypeId);
+        });
+        setAvailableStaffRooms(filtered);
+        if (filtered.length > 0) {
+          setSelectedStaffRoomId(filtered[0].id);
+        }
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải phòng trống:', err);
+      showToast('Không thể tải danh sách phòng trống', 'error');
+    } finally {
+      setIsLoadingStaffRooms(false);
+    }
+  };
+
+  const handleApproveRoomChangeSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedStaffRoomId) {
+      showToast('Vui lòng chọn phòng trống để gán cho khách.', 'warning');
+      return;
+    }
+    setIsSubmittingRoomChangeAction(true);
+    try {
+      const response = await approveRoomChangeRequest(selectedRoomChange.requestId, selectedStaffRoomId);
+      if (response && response.success) {
+        showToast('Phê duyệt yêu cầu chuyển phòng thành công!', 'success');
+        setIsApproveRoomChangeOpen(false);
+        setSelectedRoomChange(null);
+        setSelectedStaffRoomId('');
+        fetchPendingRoomChanges();
+        fetchRealBookings();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Lỗi khi duyệt chuyển phòng.', 'error');
+    } finally {
+      setIsSubmittingRoomChangeAction(false);
+    }
+  };
+
+  const handleRejectRoomChangeSubmit = async (e) => {
+    e.preventDefault();
+    if (!roomChangeRejectionReason.trim()) {
+      showToast('Vui lòng nhập lý do từ chối', 'warning');
+      return;
+    }
+    setIsSubmittingRoomChangeAction(true);
+    try {
+      const response = await rejectRoomChangeRequest(selectedRoomChange.requestId, roomChangeRejectionReason);
+      if (response && response.success) {
+        showToast('Đã từ chối yêu cầu chuyển phòng.', 'success');
+        setIsRejectRoomChangeOpen(false);
+        setSelectedRoomChange(null);
+        setRoomChangeRejectionReason('');
+        fetchPendingRoomChanges();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Lỗi khi từ chối yêu cầu chuyển phòng.', 'error');
+    } finally {
+      setIsSubmittingRoomChangeAction(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'refunds') {
       fetchPendingRefunds();
-    } else if (activeTab === 'overview' || activeTab === 'operations') {
+    } else if (activeTab === 'room-changes') {
+      fetchPendingRoomChanges();
+    } else if (activeTab === 'overview' || activeTab === 'bookings') {
       fetchRealBookings();
     }
   }, [activeTab]);
@@ -701,6 +835,7 @@ export default function StaffDashboard({ setActivePage }) {
   const handleViewDetail = (bk, fromTab) => {
     setSelectedBooking({ ...bk, prevTab: fromTab });
     fetchPendingRefunds();
+    fetchPendingRoomChanges();
     setActiveTab('booking-detail-view');
   };
 
@@ -811,6 +946,28 @@ export default function StaffDashboard({ setActivePage }) {
       console.error(err);
       showToast(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật trạng thái.', 'error');
     }
+  };
+
+  const handleCancelBooking = (bk) => {
+    triggerCustomConfirm(
+      "Xác nhận hủy đặt phòng",
+      `Bạn có chắc chắn muốn hủy đơn đặt phòng ${bk.bookingReference}? Hành động này sẽ cập nhật trạng thái và tự động thực hiện hoàn trả tiền (nếu có) ngay lập tức.`,
+      async () => {
+        try {
+          await cancelBooking(bk.id, "Hủy trực tiếp bởi nhân viên");
+          showToast(`Hủy đặt phòng ${bk.bookingReference} thành công!`, "success");
+          
+          const nextStatus = 'Cancelled';
+          localStorage.setItem(`booking_status_${bk.id}`, nextStatus);
+          setSelectedBooking(prev => ({ ...prev, status: nextStatus }));
+          
+          fetchRealBookings();
+        } catch (err) {
+          console.error("Lỗi khi hủy đặt phòng:", err);
+          showToast(err.response?.data?.message || "Không thể hủy đặt phòng", "error");
+        }
+      }
+    );
   };
 
   const handleFaceCheckInCompleted = (bookingId, bookingResult) => {
@@ -1028,170 +1185,22 @@ export default function StaffDashboard({ setActivePage }) {
               />
             )}
 
-            {/* VẬN HÀNH SẢNH / CHECK-IN / CHECK-OUT */}
-            {activeTab === 'operations' && (
-              <div className="space-y-6 animate-scale-in">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 border-b border-neutral-900 pb-4">
-                  <div>
-                    <h3 className="text-white font-black text-base uppercase tracking-wider m-0">VẬN HÀNH SẢNH & CHECK-IN</h3>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Tìm kiếm khách hàng làm thủ tục nhận phòng hoặc trả phòng</p>
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('qr-check-in')}
-                    className="h-11 bg-primary px-5 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:brightness-110 border-none cursor-pointer inline-flex items-center justify-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-base">qr_code_scanner</span>
-                    QR check-in
-                  </button>
-                </div>
-
-                {/* Simulated Scanning Modal popup */}
-                {isScanning && scanningBooking && (
-                  <div className="bg-[#0f0f12] border-2 border-primary p-6 text-white text-center shadow-2xl relative animate-scale-in">
-                    <div className="flex flex-col items-center justify-center gap-4 py-6">
-                      <span className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></span>
-                      <h4 className="text-sm font-black uppercase tracking-widest text-primary m-0">
-                        {scanType === 'face' ? 'ĐANG QUÉT KHUÔN MẶT eKYC...' : 'ĐANG ĐỌC MÃ QR ĐOÀN...'}
-                      </h4>
-                      <p className="text-xs text-slate-400 font-bold uppercase tracking-wider max-w-sm">
-                        Đang xác thực thông tin đối sánh của khách hàng: {scanningBooking.guestName}
-                      </p>
-                    </div>
-                    <button onClick={completeScannerAction} className="bg-primary text-white font-black text-[10px] uppercase tracking-widest py-3.5 px-8 border-none cursor-pointer mt-4">
-                      Hoàn tất đối sánh và xác thực
-                    </button>
-                  </div>
-                )}
-
-                {/* Bookings Queue */}
-                <div className="bg-[#0f0f12] border border-neutral-900 shadow-md overflow-hidden">
-                  <div className="p-4 border-b border-neutral-900 bg-neutral-950/20 text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                    Danh sách đặt phòng cần xử lý trong ngày
-                  </div>
-
-                  <div className="divide-y divide-neutral-900/60">
-                    {filteredBookings.length === 0 ? (
-                      <div className="py-12 text-center text-slate-500 font-bold text-xs uppercase tracking-widest">
-                        Không tìm thấy lịch trình đặt phòng nào phù hợp
-                      </div>
-                    ) : (
-                      filteredBookings.map((bk) => {
-                        const normalizedStatus = String(bk.status || '').toLowerCase().replace('-', ' ');
-                        const isConfirmed = ['confirmed', 'paid', 'partially paid'].includes(normalizedStatus);
-                        const isCheckedIn = normalizedStatus === 'checked in';
-                        const normalizedMethod = String(bk.checkInMethod || '').toLowerCase();
-                        const usesFaceId =
-                          normalizedMethod === 'face recognition' ||
-                          normalizedMethod === 'faceid' ||
-                          normalizedMethod === 'face id';
-                        const usesQrCode = normalizedMethod === 'qr code' || normalizedMethod === 'qr';
-
-                        return (
-                          <div key={bk.id} className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:bg-white/5 transition-colors">
-                            <div className="space-y-1">
-                              <span className="inline-block px-2 py-0.5 text-[8px] font-black tracking-widest text-slate-400 bg-neutral-900 border border-neutral-800 uppercase mb-1">
-                                {bk.bookingType && bk.bookingType.toLowerCase() === 'group' ? 'ĐOÀN (GROUP)' : 'ĐƠN LẺ'}
-                              </span>
-                              <h5 className="text-sm font-black text-white uppercase tracking-wider m-0">
-                                {bk.guestName}
-                              </h5>
-                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                Mã: {bk.bookingReference} • {bk.roomType}
-                              </p>
-                              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                                Ngày lưu trú: {bk.checkInDate} đến {bk.checkOutDate} ({bk.nights} đêm)
-                              </p>
-                            </div>
-                            <div className="flex flex-col items-end gap-2">
-                              <span className={`px-2.5 py-1 text-[8px] font-black uppercase tracking-widest ${
-                                isCheckedIn 
-                                  ? 'bg-blue-900/30 text-blue-400 border border-blue-900/50' 
-                                  : isConfirmed 
-                                  ? 'bg-green-900/30 text-green-400 border border-green-900/50' 
-                                  : 'bg-neutral-800 text-neutral-400 border border-neutral-700/50'
-                              }`}>
-                                {bk.status}
-                              </span>
-
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => setSelectedBooking(bk)}
-                                  className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
-                                >
-                                  <span className="material-symbols-outlined text-xs">info</span> Chi tiết
-                                </button>
-                                <button
-                                  onClick={() => handleViewInvoice(bk.id)}
-                                  className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
-                                >
-                                  <span className="material-symbols-outlined text-xs">receipt_long</span> Hóa đơn
-                                </button>
-
-                                <button
-                                  onClick={() => handleDownloadPdf(bk.id, bk.bookingReference)}
-                                  className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
-                                >
-                                  <span className="material-symbols-outlined text-xs">download</span> Tải PDF
-                                </button>
-                                {isConfirmed && (
-                                  <>
-                                    <button
-                                      onClick={() => {
-                                        if (usesFaceId && isManager) {
-                                          setActiveTab('face-check-in');
-                                          return;
-                                        }
-                                        if (usesQrCode) {
-                                          startScanner(bk, 'qr');
-                                          return;
-                                        }
-                                        handleDirectCheckInOut(bk, 'Checked In');
-                                      }}
-                                      disabled={usesFaceId && !isManager}
-                                      className="bg-primary hover:brightness-110 disabled:bg-neutral-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 border-none cursor-pointer flex items-center gap-1"
-                                    >
-                                      <span className="material-symbols-outlined text-xs">
-                                        {usesFaceId ? 'face' : usesQrCode ? 'qr_code_scanner' : 'how_to_reg'}
-                                      </span>
-                                      {usesFaceId
-                                        ? isManager
-                                          ? 'FaceID tại sảnh'
-                                          : 'Cần Manager'
-                                        : usesQrCode
-                                        ? 'Quét QR'
-                                        : 'Check-in tại quầy'}
-                                    </button>
-                                  </>
-                                )}
-                                {isCheckedIn && (
-                                  <button
-                                    onClick={() => handleDirectCheckInOut(bk, 'Checked Out')}
-                                    className="bg-primary hover:brightness-110 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2 border-none cursor-pointer"
-                                  >
-                                    Trả phòng (Check-out)
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* QUẢN LÝ ĐẶT PHÒNG (BOOKINGS MANAGEMENT TABLE) */}
             {activeTab === 'bookings' && (
               <div className="space-y-6 animate-scale-in text-left">
-                <div className="border-b border-neutral-900 pb-4">
-                  <h3 className="text-white font-black text-base uppercase tracking-wider m-0">QUẢN LÝ ĐƠN ĐẶT PHÒNG</h3>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Quản lý và tra cứu toàn bộ danh sách đơn đặt phòng từ hệ thống</p>
+                <div className="border-b border-neutral-900 pb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                  <div>
+                    <h3 className="text-white font-black text-base uppercase tracking-wider m-0">QUẢN LÝ ĐƠN ĐẶT PHÒNG</h3>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Quản lý và tra cứu toàn bộ danh sách đơn đặt phòng từ hệ thống</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsWalkInModalOpen(true)}
+                    className="h-11 bg-primary px-5 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:brightness-110 border-none cursor-pointer inline-flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-base">add_box</span>
+                    Đặt phòng tại quầy
+                  </button>
                 </div>
                 <BookingsTable
                   showToast={showToast}
@@ -1207,6 +1216,7 @@ export default function StaffDashboard({ setActivePage }) {
                     setActiveTab('face-check-in');
                   }}
                   triggerCustomConfirm={triggerCustomConfirm}
+                  onRoomChangeSelect={handleOpenRoomChangeModal}
                 />
               </div>
             )}
@@ -1269,7 +1279,6 @@ export default function StaffDashboard({ setActivePage }) {
               <RevenueReports />
             )}
 
-
             {/* HỒ SƠ CÁ NHÂN (PROFILE SETTINGS) */}
             {activeTab === 'settings' && (
               <div className="animate-scale-in">
@@ -1291,6 +1300,7 @@ export default function StaffDashboard({ setActivePage }) {
               const isCheckedIn = selectedBooking.status === 'Checked In' || selectedBooking.status === 'Checked-in' || selectedBooking.status === 'Staying';
               const usesFaceId = selectedBooking.checkInMethod === 'Face Recognition' || selectedBooking.checkInMethod === 'FaceID';
               const associatedRefund = pendingRefunds.find(req => req.bookingReference === selectedBooking.bookingReference);
+              const associatedRoomChange = pendingRoomChanges.find(req => req.bookingReference === selectedBooking.bookingReference);
               return (
                 <div className="animate-scale-in text-left space-y-6">
                   <div className="flex justify-between items-center border-b border-neutral-900 pb-4">
@@ -1350,9 +1360,9 @@ export default function StaffDashboard({ setActivePage }) {
                           <div className="flex gap-3 justify-end border-t border-rose-950/40 pt-3">
                             <button
                               onClick={() => {
-                                setSelectedRefund(associatedRefund);
-                                setRefundOverrideAmount(associatedRefund.newValue);
-                                setIsApproveRefundOpen(true);
+                                  setSelectedRefund(associatedRefund);
+                                  setRefundOverrideAmount(associatedRefund.newValue);
+                                  setIsApproveRefundOpen(true);
                               }}
                               className="bg-green-600 hover:bg-green-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded-sm transition-all"
                             >
@@ -1360,9 +1370,72 @@ export default function StaffDashboard({ setActivePage }) {
                             </button>
                             <button
                               onClick={() => {
-                                setSelectedRefund(associatedRefund);
-                                setRefundRejectionReason('');
-                                setIsRejectRefundOpen(true);
+                                  setSelectedRefund(associatedRefund);
+                                  setRefundRejectionReason('');
+                                  setIsRejectRefundOpen(true);
+                              }}
+                              className="bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded-sm transition-all"
+                            >
+                              Từ chối yêu cầu
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Room Change Request Block */}
+                      {associatedRoomChange && (
+                        <div className="bg-[#11161c] border border-blue-900/50 p-6 rounded-sm flex flex-col gap-4 animate-scale-in">
+                          <div className="flex items-center gap-2 border-b border-blue-950 pb-3">
+                            <span className="material-symbols-outlined text-primary text-base">swap_horiz</span>
+                            <h4 className="text-xs font-black text-primary uppercase tracking-widest m-0">Yêu cầu đổi phòng chờ xử lý</h4>
+                            <span className="ml-auto px-2 py-0.5 text-[8px] font-black text-primary bg-primary/10 border border-primary/20 uppercase tracking-widest rounded-sm">Pending</span>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
+                            <div className="space-y-2">
+                              <div>
+                                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Lý do từ khách:</span>
+                                <span className="text-slate-300 font-medium italic">"{associatedRoomChange.description}"</span>
+                              </div>
+                              <div className="pt-1">
+                                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Gửi lúc:</span>
+                                <span className="text-slate-400 font-semibold">{new Date(associatedRoomChange.createdAt).toLocaleString('vi-VN')}</span>
+                              </div>
+                            </div>
+
+                            <div className="bg-neutral-950/40 p-4 border border-neutral-900/60 space-y-2 rounded-sm font-semibold">
+                              <div className="flex justify-between text-[11px]">
+                                <span className="text-slate-400">Phòng hiện tại (ID):</span>
+                                <span className="text-white font-mono">{associatedRoomChange.oldValue}</span>
+                              </div>
+                              <div className="flex justify-between text-[11px] border-t border-neutral-900/40 pt-1.5">
+                                <span className="text-primary">Hạng phòng yêu cầu:</span>
+                                <strong className="text-primary uppercase">
+                                  {(() => {
+                                    const targetRoomType = roomTypes.find(rt => rt.id === Number(associatedRoomChange.newValue));
+                                    return targetRoomType ? targetRoomType.name : `Loại phòng ID: ${associatedRoomChange.newValue}`;
+                                  })()}
+                                </strong>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-3 justify-end border-t border-blue-950/40 pt-3">
+                            <button
+                              onClick={() => {
+                                setSelectedRoomChange(associatedRoomChange);
+                                setIsApproveRoomChangeOpen(true);
+                                fetchAvailableRoomsForStaff(associatedRoomChange.newValue);
+                              }}
+                              className="bg-green-600 hover:bg-green-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded-sm transition-all"
+                            >
+                              Phê duyệt đổi phòng
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedRoomChange(associatedRoomChange);
+                                setRoomChangeRejectionReason('');
+                                setIsRejectRoomChangeOpen(true);
                               }}
                               className="bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded-sm transition-all"
                             >
@@ -1537,12 +1610,24 @@ export default function StaffDashboard({ setActivePage }) {
                           >
                             <span className="material-symbols-outlined text-sm">receipt_long</span> Xem hóa đơn chi tiết
                           </button>
+                          
                           <button
                             onClick={() => handleDownloadPdf(selectedBooking.id, selectedBooking.bookingReference)}
                             className="w-full py-2.5 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white text-[10px] font-black uppercase tracking-widest cursor-pointer flex items-center justify-center gap-1.5"
                           >
                             <span className="material-symbols-outlined text-sm">download</span> Xuất file PDF bảng kê
                           </button>
+
+
+
+                          {!['Cancelled', 'Checked Out', 'Checked-out', 'Completed'].includes(selectedBooking.status) && (
+                            <button
+                              onClick={() => handleCancelBooking(selectedBooking)}
+                              className="w-full py-2.5 bg-rose-950/30 border border-rose-900/60 hover:bg-rose-900/20 text-rose-450 text-[10px] font-black uppercase tracking-widest cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                              <span className="material-symbols-outlined text-sm">cancel</span> Hủy đơn đặt phòng
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -2405,6 +2490,154 @@ export default function StaffDashboard({ setActivePage }) {
           </div>
         </div>
       )}
+
+      {/* APPROVE ROOM CHANGE MODAL */}
+      {isApproveRoomChangeOpen && selectedRoomChange && (
+        <div className="fixed inset-0 bg-neutral-950/80 z-50 flex items-center justify-center p-4 font-['Montserrat'] text-left text-white">
+          <div className="bg-[#0f0f12] border border-neutral-900 max-w-md w-full p-6 md:p-8 flex flex-col gap-4 shadow-2xl animate-scale-in">
+            <div className="flex justify-between items-center border-b border-neutral-850 pb-3">
+              <div>
+                <span className="text-[9px] font-black tracking-widest text-primary uppercase">PHÊ DUYỆT ĐỔI PHÒNG</span>
+                <h4 className="text-sm font-black uppercase text-white m-0 mt-0.5">{selectedRoomChange.bookingReference}</h4>
+              </div>
+              <button
+                onClick={() => setIsApproveRoomChangeOpen(false)}
+                className="text-slate-400 hover:text-white border-none bg-transparent cursor-pointer flex items-center"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Hạng phòng khách yêu cầu:</span>
+                <strong className="text-sm font-black text-primary uppercase">
+                  {(() => {
+                    const targetRoomType = roomTypes.find(rt => rt.id === Number(selectedRoomChange.newValue));
+                    return targetRoomType ? targetRoomType.name : `Loại phòng ID: ${selectedRoomChange.newValue}`;
+                  })()}
+                </strong>
+              </div>
+
+              {isLoadingStaffRooms ? (
+                <div className="text-center py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-primary mx-auto mb-2"></div>
+                  Đang tìm kiếm phòng trống...
+                </div>
+              ) : availableStaffRooms.length === 0 ? (
+                <div className="bg-red-950/40 border border-red-900/60 p-4 text-red-400 text-xs font-bold leading-normal">
+                  ⚠️ Không có phòng vật lý nào thuộc hạng phòng này đang trống. Vui lòng thêm phòng mới hoặc từ chối yêu cầu.
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                    Chọn số phòng trống để gán:
+                  </label>
+                  <select
+                    value={selectedStaffRoomId}
+                    onChange={(e) => setSelectedStaffRoomId(e.target.value)}
+                    className="w-full bg-neutral-950 border border-neutral-850 p-3 font-bold text-xs outline-none text-white focus:border-primary rounded-none cursor-pointer"
+                  >
+                    {availableStaffRooms.map((room) => (
+                      <option key={room.id} value={room.id}>
+                        Phòng {room.roomNumber || room.roomnumber} {room.floorNumber && `(Tầng ${room.floorNumber})`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-4 pt-4 border-t border-neutral-900">
+              <button
+                type="button"
+                onClick={handleApproveRoomChangeSubmit}
+                disabled={isSubmittingRoomChangeAction || !selectedStaffRoomId}
+                className={`text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1 ${
+                  isSubmittingRoomChangeAction || !selectedStaffRoomId
+                    ? 'bg-neutral-800 text-slate-500 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {isSubmittingRoomChangeAction ? 'Đang duyệt...' : 'Xác nhận duyệt'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsApproveRoomChangeOpen(false)}
+                className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1"
+              >
+                Hủy bỏ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REJECT ROOM CHANGE MODAL */}
+      {isRejectRoomChangeOpen && selectedRoomChange && (
+        <div className="fixed inset-0 bg-neutral-950/80 z-50 flex items-center justify-center p-4 font-['Montserrat'] text-left text-white">
+          <div className="bg-[#0f0f12] border border-neutral-900 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-white text-left font-['Montserrat']">
+            <div className="flex justify-between items-center border-b border-neutral-850 pb-3">
+              <div>
+                <span className="text-[9px] font-black tracking-widest text-primary uppercase">TỪ CHỐI ĐỔI PHÒNG</span>
+                <h4 className="text-sm font-black uppercase text-white m-0 mt-0.5">{selectedRoomChange.bookingReference}</h4>
+              </div>
+              <button
+                onClick={() => setIsRejectRoomChangeOpen(false)}
+                className="text-slate-400 hover:text-white border-none bg-transparent cursor-pointer flex items-center"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleRejectRoomChangeSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  Lý do từ chối yêu cầu đổi phòng:
+                </label>
+                <textarea
+                  rows="4"
+                  value={roomChangeRejectionReason}
+                  onChange={(e) => setRoomChangeRejectionReason(e.target.value)}
+                  placeholder="Vui lòng cung cấp lý do từ chối..."
+                  className="w-full bg-transparent border border-neutral-855 p-3 font-bold text-xs outline-none text-white focus:border-primary resize-none"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-4 pt-4 border-t border-neutral-900">
+                <button
+                  type="submit"
+                  disabled={isSubmittingRoomChangeAction}
+                  className="bg-[#e11d48] text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest hover:brightness-110 transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1"
+                >
+                  {isSubmittingRoomChangeAction ? 'Đang từ chối...' : 'Xác nhận từ chối'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsRejectRoomChangeOpen(false)}
+                  className="bg-neutral-900 hover:bg-neutral-855 border border-neutral-800 text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1"
+                >
+                  Hủy bỏ
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CHUYỂN PHÒNG */}
+      <RoomChangeModal
+        isOpen={isRoomChangeModalOpen}
+        onClose={() => setIsRoomChangeModalOpen(false)}
+        booking={roomChangeBooking}
+        showToast={showToast}
+        roomTypes={roomTypes}
+        onSuccess={() => {
+          // Reload lại bảng booking sau khi chuyển phòng thành công
+          window.dispatchEvent(new Event('reload-bookings'));
+        }}
+      />
 
       {/* CUSTOM CONFIRM DIALOG */}
       {confirmDialog.isOpen && (

@@ -16,7 +16,9 @@ const BookingsTable = ({
   isManager,
   setActiveTab,
   onFaceCheckInSelect,
-  triggerCustomConfirm
+  triggerCustomConfirm,
+  // Prop mới: callback mở modal chuyển phòng, nhận vào object booking
+  onRoomChangeSelect,
 }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -211,9 +213,13 @@ const BookingsTable = ({
         id: 'actions',
         cell: ({ row }) => {
           const bk = row.original;
-          const isConfirmed = bk.status === 'Confirmed';
-          const isCheckedIn = bk.status === 'Checked In';
-          const usesFaceId = bk.checkInMethod === 'Face Recognition' || bk.checkInMethod === 'FaceID';
+          const normalizedStatus = String(bk.status || '').toLowerCase().replace('-', ' ').trim();
+          const canCheckIn = ['confirmed', 'paid', 'partially paid'].includes(normalizedStatus);
+          const isCheckedIn = normalizedStatus === 'checked in' || normalizedStatus === 'checked-in';
+          
+          const normalizedMethod = String(bk.checkInMethod || bk.checkinmethod || '').toLowerCase();
+          const usesFaceId = normalizedMethod === 'face recognition' || normalizedMethod === 'faceid' || normalizedMethod === 'face id';
+          const usesQrCode = normalizedMethod === 'qr code' || normalizedMethod === 'qr';
 
           return (
             <div className="flex flex-wrap items-center gap-1.5 justify-start">
@@ -224,23 +230,44 @@ const BookingsTable = ({
                 Chi tiết
               </button>
 
-              {!['Cancelled', 'Checked Out', 'Checked-out', 'Completed'].includes(bk.status) && (
+              {/* Nút check-in thủ công tại quầy */}
+              {canCheckIn && (
                 <button
-                  onClick={() => handleCancelClick(bk)}
-                  className="bg-rose-950/30 border border-rose-900/60 hover:bg-rose-900/20 text-rose-400 text-[8.5px] font-black uppercase tracking-widest px-2.5 py-1.5 cursor-pointer flex items-center gap-1 transition-all"
+                  onClick={async () => {
+                    await handleDirectCheckInOut(bk, 'Checked In');
+                    fetchBookings();
+                  }}
+                  className="bg-green-600 hover:bg-green-500 text-white text-[8.5px] font-black uppercase tracking-widest px-2.5 py-1.5 border border-green-500/20 cursor-pointer flex items-center gap-1 transition-all"
                 >
-                  Hủy đơn
+                  <span className="material-symbols-outlined text-[10px]">how_to_reg</span>
+                  Check-in tại quầy
                 </button>
               )}
 
-              {isConfirmed && (
+              {/* Nút FaceID Check-in */}
+              {canCheckIn && usesFaceId && (
                 <button
                   onClick={() => onFaceCheckInSelect(bk.id)}
-                  className="bg-primary hover:brightness-110 text-white text-[8.5px] font-black uppercase tracking-widest px-2.5 py-1.5 border border-primary/20 cursor-pointer flex items-center gap-1 transition-all"
+                  disabled={!isManager}
+                  title={!isManager ? "Yêu cầu tài khoản Quản lý để thực hiện FaceID check-in" : "Check-in bằng nhận diện khuôn mặt"}
+                  className="bg-primary hover:brightness-110 disabled:bg-neutral-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-[8.5px] font-black uppercase tracking-widest px-2.5 py-1.5 border border-primary/20 cursor-pointer flex items-center gap-1 transition-all"
                 >
-                  FaceID Check-in
+                  <span className="material-symbols-outlined text-[10px]">face</span>
+                  {isManager ? 'FaceID Check-in' : 'Cần Manager'}
                 </button>
               )}
+
+              {/* Nút Quét QR check-in */}
+              {canCheckIn && usesQrCode && (
+                <button
+                  onClick={() => startScanner(bk, 'qr')}
+                  className="bg-blue-600 hover:bg-blue-500 text-white text-[8.5px] font-black uppercase tracking-widest px-2.5 py-1.5 border border-blue-500/20 cursor-pointer flex items-center gap-1 transition-all"
+                >
+                  <span className="material-symbols-outlined text-[10px]">qr_code_scanner</span>
+                  Quét QR
+                </button>
+              )}
+
               {isCheckedIn && (
                 <button
                   onClick={async () => {
@@ -257,7 +284,7 @@ const BookingsTable = ({
         }
       }
     ],
-    [setSelectedBooking, handleViewInvoice, handleDownloadPdf, handleDirectCheckInOut, startScanner, fetchBookings, isManager, setActiveTab, handleCancelClick]
+    [setSelectedBooking, handleViewInvoice, handleDownloadPdf, handleDirectCheckInOut, startScanner, fetchBookings, isManager, setActiveTab, handleCancelClick, onRoomChangeSelect]
   );
 
   const table = useReactTable({
