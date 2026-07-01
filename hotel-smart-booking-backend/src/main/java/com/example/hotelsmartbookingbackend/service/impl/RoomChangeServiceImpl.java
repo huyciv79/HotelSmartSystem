@@ -18,6 +18,7 @@ import com.example.hotelsmartbookingbackend.service.WebSocketService;
 
 import com.example.hotelsmartbookingbackend.dto.request.CustomerRoomChangeRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CustomerStayExtensionRequest;
+import com.example.hotelsmartbookingbackend.dto.request.CustomerEarlyCheckOutRequest;
 import com.example.hotelsmartbookingbackend.dto.response.CustomerRequestResponse;
 import com.example.hotelsmartbookingbackend.entity.Customerrequest;
 import com.example.hotelsmartbookingbackend.repository.CustomerrequestRepository;
@@ -1149,6 +1150,167 @@ public class RoomChangeServiceImpl implements RoomChangeService {
 
         List<Customerrequest> pendingRequests = customerrequestRepository
                 .findByRequesttypeAndStatusOrderByCreatedatDesc("StayExtension", "Pending");
+
+        return pendingRequests.stream()
+                .map(this::mapToCustomerRequestResponse)
+                .toList();
+    }
+
+    /**
+     * Khách hàng gửi yêu cầu check-out sớm.
+     */
+    @Override
+    @Transactional
+    public CustomerRequestResponse submitEarlyCheckOutRequest(CustomerEarlyCheckOutRequest request, String customerEmail) {
+        Booking booking = bookingRepository.findById(request.getBookingId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
+
+        User customer = userRepository.findByEmail(customerEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
+
+        if (!booking.getUserid().getId().equals(customer.getId())) {
+            throw new RuntimeException("Bạn không có quyền gửi yêu cầu cho đơn đặt phòng này");
+        }
+
+        if (!"Checked-in".equalsIgnoreCase(booking.getStatus()) && !"Checked In".equalsIgnoreCase(booking.getStatus())) {
+            throw new RuntimeException("Chỉ đơn đặt phòng đang lưu trú (Checked In) mới được phép yêu cầu check-out sớm");
+        }
+
+        Bookingdetail detail = bookingdetailRepository.findById(request.getBookingId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đặt phòng"));
+
+        LocalDate currentCheckOut = detail.getExpectedcheckout().atZone(HOTEL_ZONE).toLocalDate();
+        LocalDate checkIn = detail.getExpectedcheckin().atZone(HOTEL_ZONE).toLocalDate();
+        LocalDate newCheckOut = LocalDate.parse(request.getNewCheckOutDate().trim());
+
+        if (!newCheckOut.isBefore(currentCheckOut)) {
+            throw new RuntimeException("Ngày check-out mới phải sớm hơn ngày check-out hiện tại");
+        }
+
+        if (newCheckOut.isBefore(checkIn)) {
+            throw new RuntimeException("Ngày check-out mới không được trước ngày check-in (" + checkIn + ")");
+        }
+
+        // Tạo yêu cầu
+        Customerrequest customerrequest = new Customerrequest();
+        customerrequest.setBookingid(booking);
+        customerrequest.setRequesttype("EarlyCheckOut");
+        customerrequest.setDescription(request.getDescription());
+        customerrequest.setOldvalue(currentCheckOut.toString());
+        customerrequest.setNewvalue(newCheckOut.toString());
+        customerrequest.setStatus("Pending");
+        customerrequest.setCreatedat(Instant.now());
+
+        Customerrequest saved = customerrequestRepository.save(customerrequest);
+        return mapToCustomerRequestResponse(saved);
+    }
+
+    /**
+     * Nhân viên phê duyệt yêu cầu check-out sớm.
+     */
+    @Override
+    @Transactional
+    public CustomerRequestResponse approveEarlyCheckOutRequest(Integer requestId, String staffEmail) {
+        validateStaffPermission(staffEmail);
+
+        Customerrequest req = customerrequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu check-out sớm"));
+
+        if (!req.getRequesttype().equals("EarlyCheckOut")) {
+            throw new RuntimeException("Yêu cầu này không phải là yêu cầu check-out sớm");
+        }
+
+        if (!req.getStatus().equals("Pending")) {
+            throw new RuntimeException("Yêu cầu này đã được xử lý");
+        }
+
+        Booking booking = req.getBookingid();
+        Bookingdetail detail = bookingdetailRepository.findById(booking.getId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đặt phòng"));
+
+        LocalDate checkIn = detail.getExpectedcheckin().atZone(HOTEL_ZONE).toLocalDate();
+        LocalDate newCheckOut = LocalDate.parse(req.getNewvalue());
+
+        // Tính toán lại tài chính
+        long newNights = ChronoUnit.DAYS.between(checkIn, newCheckOut);
+        if (newNights <= 0) {
+            newNights = 1; // Tối thiểu tính tiền 1 đêm
+        }
+        BigDecimal newTotal = detail.getPriceatbooking()
+                .multiply(BigDecimal.valueOf(detail.getQuantity()))
+                .multiply(BigDecimal.valueOf(newNights));
+
+        BigDecimal taxAmount = newTotal.multiply(new BigDecimal("0.10")).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal finalAmount = newTotal.add(taxAmount).subtract(booking.getDiscountamount()).setScale(2, RoundingMode.HALF_UP);
+
+        // Cập nhật booking & detail
+        booking.setTotalamount(newTotal);
+        booking.setTaxamount(taxAmount);
+        booking.setFinalamount(finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount);
+        booking.setUpdatedat(Instant.now());
+
+        detail.setExpectedcheckout(toInstant(newCheckOut));
+        detail.setUpdatedat(Instant.now());
+
+        // Gia hạn/rút ngắn thời hạn của mã khóa phòng (bookingroomaccesses)
+        List<BookingRoomAccess> roomAccesses = bookingRoomAccessRepository
+                .findByBookingid_IdOrderByRoomid_RoomnumberAsc(booking.getId());
+        if (roomAccesses != null && !roomAccesses.isEmpty()) {
+            for (BookingRoomAccess access : roomAccesses) {
+                access.setRoomkeyexpiredat(toInstant(newCheckOut));
+                access.setUpdatedat(Instant.now());
+            }
+            bookingRoomAccessRepository.saveAll(roomAccesses);
+        }
+
+        bookingRepository.save(booking);
+        bookingdetailRepository.save(detail);
+
+        // Cập nhật request
+        req.setStatus("Approved");
+        req.setResolvedat(Instant.now());
+        Customerrequest saved = customerrequestRepository.save(req);
+
+        return mapToCustomerRequestResponse(saved);
+    }
+
+    /**
+     * Nhân viên từ chối yêu cầu check-out sớm.
+     */
+    @Override
+    @Transactional
+    public CustomerRequestResponse rejectEarlyCheckOutRequest(Integer requestId, String rejectionReason, String staffEmail) {
+        validateStaffPermission(staffEmail);
+
+        Customerrequest req = customerrequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu"));
+
+        if (!req.getRequesttype().equals("EarlyCheckOut")) {
+            throw new RuntimeException("Yêu cầu này không phải là yêu cầu check-out sớm");
+        }
+
+        if (!req.getStatus().equals("Pending")) {
+            throw new RuntimeException("Yêu cầu này đã được xử lý");
+        }
+
+        req.setStatus("Rejected");
+        req.setRejectionreason(rejectionReason);
+        req.setResolvedat(Instant.now());
+
+        Customerrequest saved = customerrequestRepository.save(req);
+        return mapToCustomerRequestResponse(saved);
+    }
+
+    /**
+     * Lấy danh sách các yêu cầu check-out sớm chờ phê duyệt.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<CustomerRequestResponse> getPendingEarlyCheckOutRequests(String staffEmail) {
+        validateStaffPermission(staffEmail);
+
+        List<Customerrequest> pendingRequests = customerrequestRepository
+                .findByRequesttypeAndStatusOrderByCreatedatDesc("EarlyCheckOut", "Pending");
 
         return pendingRequests.stream()
                 .map(this::mapToCustomerRequestResponse)
