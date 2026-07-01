@@ -159,3 +159,8 @@ export const cancelBooking = async (bookingId, cancellationReason) => {
   return response.data;
 };
 
+export const updateBooking = async (bookingId, updateData) => {
+  const response = await axiosInstance.put(`/bookings/receptionist/${bookingId}`, updateData);
+  return response.data;
+};
+
