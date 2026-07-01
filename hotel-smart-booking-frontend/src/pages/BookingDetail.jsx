@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { generateQrCheckInToken, getBookingDetail } from '../services/bookingService';
+import { generateQrCheckInToken, getBookingDetail, customerCancelBooking } from '../services/bookingService';
 import { submitRefundRequest } from '../services/refundService';
 import { submitCustomerRoomChangeRequest } from '../services/roomChangeService';
 import { submitStayExtensionRequest } from '../services/stayExtensionService';
+import { submitEarlyCheckOutRequest } from '../services/earlyCheckOutService';
 import { getRoomTypes } from '../services/roomService';
 import { useToast, ToastContainer } from '../components/Toast';
 import QrCheckInCard from '../components/booking/QrCheckInCard';
@@ -26,24 +27,6 @@ export default function BookingDetail({ setActivePage }) {
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
   const [copiedQr, setCopiedQr] = useState(false);
 
-  // Room change related states
-  const [isRoomChangeModalOpen, setIsRoomChangeModalOpen] = useState(false);
-  const [availableRoomTypes, setAvailableRoomTypes] = useState([]);
-  const [selectedRoomType, setSelectedRoomType] = useState(null);
-  const [roomChangeOption, setRoomChangeOption] = useState('same_type'); // 'same_type' | 'different_type'
-  const [roomChangeReason, setRoomChangeReason] = useState('');
-  const [isLoadingRooms, setIsLoadingRooms] = useState(false);
-  const [isSubmittingRoomChange, setIsSubmittingRoomChange] = useState(false);
-  const [roomChangeError, setRoomChangeError] = useState(null);
-  const [isRoomChangePending, setIsRoomChangePending] = useState(false);
-
-  // Stay extension related states
-  const [isStayExtensionPending, setIsStayExtensionPending] = useState(false);
-  const [isStayExtensionModalOpen, setIsStayExtensionModalOpen] = useState(false);
-  const [newCheckOutDate, setNewCheckOutDate] = useState('');
-  const [extensionReason, setExtensionReason] = useState('');
-  const [isSubmittingExtension, setIsSubmittingExtension] = useState(false);
-
   // Feedback related states
   const [feedback, setFeedback] = useState(null);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -60,6 +43,35 @@ export default function BookingDetail({ setActivePage }) {
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
   const [refundReason, setRefundReason] = useState('');
   const [isSubmittingRefund, setIsSubmittingRefund] = useState(false);
+
+  // Room Change related states
+  const [isRoomChangeModalOpen, setIsRoomChangeModalOpen] = useState(false);
+  const [roomChangeReason, setRoomChangeReason] = useState('');
+  const [roomChangeOption, setRoomChangeOption] = useState('same_type');
+  const [isRoomChangePending, setIsRoomChangePending] = useState(false);
+  const [isSubmittingRoomChange, setIsSubmittingRoomChange] = useState(false);
+  const [availableRoomTypes, setAvailableRoomTypes] = useState([]);
+  const [selectedRoomType, setSelectedRoomType] = useState(null);
+  const [isLoadingRooms, setIsLoadingRooms] = useState(false);
+  const [roomChangeError, setRoomChangeError] = useState(null);
+
+  // Stay Extension related states
+  const [isStayExtensionModalOpen, setIsStayExtensionModalOpen] = useState(false);
+  const [newCheckOutDate, setNewCheckOutDate] = useState('');
+  const [extensionReason, setExtensionReason] = useState('');
+  const [isStayExtensionPending, setIsStayExtensionPending] = useState(false);
+  const [isSubmittingExtension, setIsSubmittingExtension] = useState(false);
+
+  // Early Check-out related states
+  const [isEarlyCheckOutModalOpen, setIsEarlyCheckOutModalOpen] = useState(false);
+  const [newEarlyCheckOutDate, setNewEarlyCheckOutDate] = useState('');
+  const [earlyCheckOutReason, setEarlyCheckOutReason] = useState('');
+  const [isEarlyCheckOutPending, setIsEarlyCheckOutPending] = useState(false);
+  const [isSubmittingEarlyCheckOut, setIsSubmittingEarlyCheckOut] = useState(false);
+
+  // Cancellation confirm states
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+  const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
 
   const handleRefundSubmit = async (e) => {
     e.preventDefault();
@@ -127,6 +139,7 @@ export default function BookingDetail({ setActivePage }) {
           // Read pending flags directly from booking API response
           setIsRoomChangePending(bookingData.isRoomChangePending === true);
           setIsStayExtensionPending(bookingData.isStayExtensionPending === true);
+          setIsEarlyCheckOutPending(bookingData.isEarlyCheckOutPending === true);
         }
       } catch (err) {
         console.error('Lỗi khi tải chi tiết đặt phòng:', err);
@@ -195,52 +208,38 @@ export default function BookingDetail({ setActivePage }) {
     }
   };
 
-  const fetchAvailableRoomTypesForCustomer = async () => {
+  // Room Change fetch & submit
+  const fetchRoomTypesForChange = async () => {
     setIsLoadingRooms(true);
     setRoomChangeError(null);
     try {
       const res = await getRoomTypes('Active');
-      if (res?.success && res?.data) {
-        const list = res.data.content ?? res.data;
+      if (res && res.success) {
+        const list = res.data?.content || res.data || [];
         setAvailableRoomTypes(list);
-      } else {
-        setRoomChangeError('Không thể tải danh sách hạng phòng. Vui lòng thử lại.');
       }
     } catch (err) {
-      console.error(err);
-      setRoomChangeError('Có lỗi xảy ra khi tải danh sách hạng phòng.');
+      console.error('Lỗi khi tải danh sách hạng phòng:', err);
+      setRoomChangeError('Không thể tải danh sách hạng phòng.');
     } finally {
       setIsLoadingRooms(false);
     }
   };
 
-  const handleOpenRoomChangeModal = () => {
-    setSelectedRoomType(null);
-    setRoomChangeOption('same_type');
-    setRoomChangeReason('');
-    setRoomChangeError(null);
-    setIsRoomChangeModalOpen(true);
-    fetchAvailableRoomTypesForCustomer();
-  };
+  useEffect(() => {
+    if (isRoomChangeModalOpen && roomChangeOption === 'different_type') {
+      fetchRoomTypesForChange();
+    }
+  }, [isRoomChangeModalOpen, roomChangeOption]);
 
   const handleCustomerRoomChangeSubmit = async (e) => {
     e.preventDefault();
-    
-    let targetRoomTypeId = null;
-    if (roomChangeOption === 'same_type') {
-      targetRoomTypeId = booking.roomTypeId;
-    } else {
-      if (!selectedRoomType) {
-        showToast('Vui lòng chọn hạng phòng bạn mong muốn chuyển sang', 'warning');
-        return;
-      }
-      targetRoomTypeId = selectedRoomType.id;
-    }
-
-    if (!targetRoomTypeId) {
-      showToast('Không xác định được hạng phòng để chuyển.', 'error');
+    if (roomChangeOption === 'different_type' && !selectedRoomType) {
+      showToast('Vui lòng chọn hạng phòng mong muốn', 'warning');
       return;
     }
+
+    const targetRoomTypeId = roomChangeOption === 'same_type' ? booking.roomTypeId : selectedRoomType.id;
 
     setIsSubmittingRoomChange(true);
     setRoomChangeError(null);
@@ -264,10 +263,11 @@ export default function BookingDetail({ setActivePage }) {
     }
   };
 
+  // Stay Extension submit
   const handleStayExtensionSubmit = async (e) => {
     e.preventDefault();
     if (!newCheckOutDate) {
-      showToast('Vui lòng chọn ngày trả phòng mới', 'error');
+      showToast('Vui lòng chọn ngày trả phòng mới', 'warning');
       return;
     }
     setIsSubmittingExtension(true);
@@ -290,9 +290,52 @@ export default function BookingDetail({ setActivePage }) {
     }
   };
 
+  // Early Check-out submit
+  const handleEarlyCheckOutSubmit = async (e) => {
+    e.preventDefault();
+    if (!newEarlyCheckOutDate) {
+      showToast('Vui lòng chọn ngày trả phòng mới', 'warning');
+      return;
+    }
+    setIsSubmittingEarlyCheckOut(true);
+    try {
+      const response = await submitEarlyCheckOutRequest({
+        bookingId: booking.bookingId,
+        newCheckOutDate: newEarlyCheckOutDate,
+        description: earlyCheckOutReason.trim() || 'Khách yêu cầu check-out sớm'
+      });
+      if (response && response.success) {
+        showToast('Gửi yêu cầu check-out sớm thành công!', 'success');
+        setIsEarlyCheckOutPending(true);
+        setIsEarlyCheckOutModalOpen(false);
+      }
+    } catch (err) {
+      console.error('Lỗi khi gửi yêu cầu check-out sớm:', err);
+      showToast(err.response?.data?.message || 'Không thể gửi yêu cầu check-out sớm.', 'error');
+    } finally {
+      setIsSubmittingEarlyCheckOut(false);
+    }
+  };
+
   const handleCancelBooking = () => {
-    showToast(t('bd_toast_cancel_success', 'Gửi yêu cầu hủy đặt phòng thành công. Nhân viên sẽ liên hệ xác nhận trong vòng ít phút!'), 'success');
-    setBooking(prev => ({ ...prev, status: 'Cancelled' }));
+    setIsCancelConfirmOpen(true);
+  };
+
+  const confirmCancelBooking = async () => {
+    setIsSubmittingCancel(true);
+    try {
+      const response = await customerCancelBooking(booking.bookingId, 'Khách hàng tự hủy trực tuyến');
+      if (response && response.success) {
+        showToast(t('bd_toast_cancel_success', 'Hủy đơn đặt phòng thành công!'), 'success');
+        setBooking(prev => ({ ...prev, status: 'Cancelled' }));
+        setIsCancelConfirmOpen(false);
+      }
+    } catch (err) {
+      console.error('Lỗi khi hủy đặt phòng:', err);
+      showToast(err.response?.data?.message || t('bd_toast_cancel_error', 'Hủy đặt phòng thất bại.'), 'error');
+    } finally {
+      setIsSubmittingCancel(false);
+    }
   };
 
   const handleRequestService = () => {
@@ -482,8 +525,9 @@ export default function BookingDetail({ setActivePage }) {
 
   const finalAmount = booking.finalAmount || booking.totalAmount || 0;
   const todayStr = new Date().toISOString().split('T')[0];
-  const isFutureCheckIn = booking.checkInDate > todayStr;
-  const canRequestRefund = (booking.status === 'Paid' || booking.status === 'Partially Paid') && isFutureCheckIn;
+  const isFutureCheckIn = booking.checkInDate >= todayStr;
+  const hasPaid = (booking.paidAmount > 0) || (booking.depositAmount > 0) || ['paid', 'partially paid', 'partially-paid'].includes(String(booking.status || '').toLowerCase());
+  const canRequestRefund = hasPaid && isFutureCheckIn;
   const isQrCheckInMethod = String(booking.checkInMethod || '').toLowerCase() === 'qr code';
   const canUseQrCheckIn =
     isQrCheckInMethod &&
@@ -741,42 +785,64 @@ export default function BookingDetail({ setActivePage }) {
                       {t('bd_btn_service', 'Yêu cầu Dịch vụ phòng')}
                     </button>
 
+                    {/* Room Move buttons / labels */}
                     {isRoomChangePending ? (
-                      <div className="bg-[#11161c] border border-blue-900/40 text-blue-400 text-xs font-bold px-4 py-2.5 flex items-center gap-2 h-11">
+                      <div className="bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold px-4 py-2.5 flex items-center gap-2 h-11">
                         <span className="material-symbols-outlined text-base animate-pulse">hourglass_empty</span>
                         Yêu cầu đổi phòng đang chờ phê duyệt
                       </div>
                     ) : (
                       <button
-                        onClick={handleOpenRoomChangeModal}
-                        className="bg-primary hover:brightness-110 text-white text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-1.5 h-11"
+                        onClick={() => {
+                          setIsRoomChangeModalOpen(true);
+                          setRoomChangeReason('');
+                          setSelectedRoomType(null);
+                          setRoomChangeOption('same_type');
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-1.5 h-11"
                       >
-                        <span className="material-symbols-outlined text-lg">swap_horiz</span>
+                        <span className="material-symbols-outlined text-lg">autorenew</span>
                         Yêu cầu đổi phòng
                       </button>
                     )}
 
+                    {/* Stay Extension buttons / labels */}
                     {isStayExtensionPending ? (
-                      <div className="bg-[#1c1a14] border border-amber-900/40 text-amber-500 text-xs font-bold px-4 py-2.5 flex items-center gap-2 h-11">
+                      <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold px-4 py-2.5 flex items-center gap-2 h-11">
                         <span className="material-symbols-outlined text-base animate-pulse">hourglass_empty</span>
                         Yêu cầu gia hạn đang chờ phê duyệt
                       </div>
                     ) : (
                       <button
                         onClick={() => {
-                          const currentOut = booking.checkOutDate || booking.checkoutdate;
-                          if (currentOut) {
-                            const nextDay = new Date(currentOut);
-                            nextDay.setDate(nextDay.getDate() + 1);
-                            setNewCheckOutDate(nextDay.toISOString().split('T')[0]);
-                          }
-                          setExtensionReason('');
                           setIsStayExtensionModalOpen(true);
+                          setNewCheckOutDate('');
+                          setExtensionReason('');
                         }}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-1.5 h-11"
                       >
-                        <span className="material-symbols-outlined text-lg">hourglass_top</span>
+                        <span className="material-symbols-outlined text-lg">calendar_add_on</span>
                         Yêu cầu gia hạn
+                      </button>
+                    )}
+
+                    {/* Early Check-out buttons / labels */}
+                    {isEarlyCheckOutPending ? (
+                      <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold px-4 py-2.5 flex items-center gap-2 h-11">
+                        <span className="material-symbols-outlined text-base animate-pulse">hourglass_empty</span>
+                        Yêu cầu check-out sớm đang chờ phê duyệt
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setIsEarlyCheckOutModalOpen(true);
+                          setNewEarlyCheckOutDate('');
+                          setEarlyCheckOutReason('');
+                        }}
+                        className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-1.5 h-11"
+                      >
+                        <span className="material-symbols-outlined text-lg">history</span>
+                        Yêu cầu Checkout sớm
                       </button>
                     )}
                   </>
@@ -1340,36 +1406,16 @@ export default function BookingDetail({ setActivePage }) {
                                     : 'border-slate-200 bg-white hover:border-primary/50'
                                 }`}
                               >
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <div className={`w-4 h-4 border flex items-center justify-center rounded-none flex-shrink-0 ${
-                                      isSelected ? 'border-primary bg-primary' : 'border-slate-300'
-                                    }`}>
-                                      {isSelected && <span className="material-symbols-outlined text-white text-[10px]">check</span>}
-                                    </div>
-                                    <span className="text-xs font-black uppercase text-slate-900 tracking-wider">
-                                      {roomType.name}
-                                    </span>
+                                <div className="space-y-0.5">
+                                  <div className="text-xs font-black uppercase text-slate-900">{roomType.name}</div>
+                                  <div className="text-[10px] text-slate-500 font-bold">
+                                    Đơn giá: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(roomType.baseprice || 0)}/đêm
                                   </div>
-                                  <p className="text-[10px] text-slate-500 font-medium ml-6 mt-0.5">
-                                    Sức chứa: {roomType.adultCapacity} NL · {roomType.childCapacity} TE | Giường: {roomType.bedType}
-                                  </p>
                                 </div>
-
                                 <div className="text-right">
-                                  {priceDiff === 0 ? (
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-green-700 bg-green-50 px-2 py-0.5 border border-green-200">
-                                      Miễn phí
-                                    </span>
-                                  ) : priceDiff > 0 ? (
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-50 px-2 py-0.5 border border-amber-200">
-                                      +{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(priceDiff)}/đêm
-                                    </span>
-                                  ) : (
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 border border-blue-200">
-                                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(priceDiff)}/đêm
-                                    </span>
-                                  )}
+                                  <span className={`text-[10px] font-black uppercase tracking-wider ${priceDiff >= 0 ? 'text-rose-600' : 'text-green-700'}`}>
+                                    {priceDiff === 0 ? 'Bằng giá' : priceDiff > 0 ? `+${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(priceDiff)}/đêm` : `Giảm ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Math.abs(priceDiff))}/đêm`}
+                                  </span>
                                 </div>
                               </button>
                             );
@@ -1380,64 +1426,41 @@ export default function BookingDetail({ setActivePage }) {
                 )}
               </div>
 
-              {/* Hiển thị lỗi gửi yêu cầu */}
               {roomChangeError && (
-                <div className="bg-red-50 border border-red-200 p-3 text-red-700 text-xs font-bold leading-normal">
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-bold leading-relaxed">
                   ⚠️ {roomChangeError}
                 </div>
               )}
 
-              {/* Phần 3: Tóm tắt & Nút gửi yêu cầu */}
-              <div className="bg-slate-50 border border-slate-200 p-4 space-y-3">
-                <div className="flex justify-between text-xs font-bold text-slate-700">
-                  <span className="text-slate-400 uppercase tracking-widest text-[9px]">Tổng chênh lệch phòng:</span>
-                  <span className="text-primary text-sm font-black">
-                    {roomChangeOption === 'same_type'
-                      ? 'Miễn phí'
-                      : selectedRoomType
-                        ? (() => {
-                            const currentRoomPrice = booking.priceatbooking || (booking.totalAmount / (booking.nights || 1) / (booking.quantity || 1));
-                            const diff = (selectedRoomType.baseprice || 0) - currentRoomPrice;
-                            return diff === 0
-                              ? 'Miễn phí'
-                              : `${diff > 0 ? '+' : ''}${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(diff)}/đêm`;
-                          })()
-                        : 'Chưa chọn hạng phòng'}
-                  </span>
-                </div>
-
-                <div className="flex gap-2.5 pt-2 text-[10px] font-black uppercase tracking-widest">
-                  <button
-                    type="button"
-                    onClick={() => setIsRoomChangeModalOpen(false)}
-                    className="px-5 py-3 border border-slate-300 text-slate-700 bg-white hover:bg-slate-100 transition-all cursor-pointer flex-1"
-                  >
-                    Quay lại
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={(roomChangeOption === 'different_type' && !selectedRoomType) || isSubmittingRoomChange}
-                    className={`px-5 py-3 text-white transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1 ${
-                      (roomChangeOption === 'different_type' && !selectedRoomType) || isSubmittingRoomChange
-                        ? 'bg-slate-300 text-slate-450 cursor-not-allowed'
-                        : 'bg-primary hover:bg-opacity-95'
-                    }`}
-                  >
-                    {isSubmittingRoomChange ? (
-                      <>
-                        <div className="animate-spin rounded-full h-3.5 w-3.5 border-t-2 border-white" />
-                        <span>Đang gửi...</span>
-                      </>
-                    ) : (
-                      <span>Xác nhận gửi yêu cầu</span>
-                    )}
-                  </button>
-                </div>
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-100 text-[10px] font-black uppercase tracking-widest">
+                <button
+                  type="button"
+                  onClick={() => setIsRoomChangeModalOpen(false)}
+                  className="px-5 py-2.5 border border-slate-300 text-slate-700 bg-white hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                  Quay lại
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingRoomChange}
+                  className="px-5 py-2.5 bg-primary text-white hover:bg-opacity-95 transition-all cursor-pointer border-none flex items-center gap-1.5"
+                >
+                  {isSubmittingRoomChange ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-t-2 border-white" />
+                      <span>Đang gửi...</span>
+                    </>
+                  ) : (
+                    <span>Xác nhận gửi yêu cầu</span>
+                  )}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
       {/* STAY EXTENSION MODAL */}
       {isStayExtensionModalOpen && (
         <div className="fixed inset-0 bg-slate-900 bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in font-['Montserrat']">
@@ -1455,65 +1478,157 @@ export default function BookingDetail({ setActivePage }) {
               </button>
             </div>
 
-            <form onSubmit={handleStayExtensionSubmit} className="space-y-4">
-              <div className="bg-amber-50 border border-amber-200 p-3 rounded-none flex items-start gap-2.5">
-                <AlertCircle size={16} className="text-amber-700 flex-shrink-0 mt-0.5" />
-                <div className="text-xs text-amber-900 leading-normal font-medium">
-                  <strong>Thông tin hiện tại:</strong> Ngày trả phòng dự kiến là <strong>{booking.checkOutDate || booking.checkoutdate}</strong>. Yêu cầu gia hạn sẽ được quầy lễ tân kiểm tra và phản hồi sớm nhất.
-                </div>
-              </div>
+            <div className="bg-amber-50 border border-amber-200 p-4 text-xs font-semibold leading-relaxed text-amber-800">
+              💡 <strong>Thông tin hiện tại:</strong> Ngày trả phòng dự kiến là <strong>{booking.checkOutDate}</strong>. Yêu cầu gia hạn sẽ được quầy lễ tân kiểm tra và phản hồi sớm nhất.
+            </div>
 
-              <div className="space-y-1.5 text-left">
-                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                  Ngày trả phòng mới mong muốn:
-                </label>
+            <form onSubmit={handleStayExtensionSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Ngày trả phòng mới mong muốn:</label>
                 <input
                   type="date"
                   value={newCheckOutDate}
-                  min={booking.checkOutDate || booking.checkoutdate}
+                  min={booking.checkOutDate}
                   onChange={(e) => setNewCheckOutDate(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 p-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary"
+                  className="w-full p-2.5 border border-slate-300 text-xs font-medium focus:border-primary focus:outline-none rounded-none bg-slate-50"
                   required
                 />
               </div>
 
-              <div className="space-y-1.5 text-left">
-                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                  Lý do gia hạn (tùy chọn):
-                </label>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Lý do gia hạn (tùy chọn):</label>
                 <textarea
                   rows="3"
                   value={extensionReason}
                   onChange={(e) => setExtensionReason(e.target.value)}
                   placeholder="Ví dụ: Thay đổi lịch trình bay, muốn ở lại trải nghiệm thêm..."
-                  className="w-full bg-slate-50 border border-slate-200 p-3 font-bold text-xs outline-none text-slate-800 focus:border-primary resize-none"
+                  className="w-full p-2.5 border border-slate-300 text-xs font-medium focus:border-primary focus:outline-none placeholder-slate-400 leading-relaxed resize-none rounded-none bg-slate-50"
                 />
               </div>
 
-              <div className="flex gap-2.5 pt-2 text-[10px] font-black uppercase tracking-widest">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 text-[10px] font-black uppercase tracking-widest">
                 <button
                   type="button"
                   onClick={() => setIsStayExtensionModalOpen(false)}
-                  className="px-5 py-3 border border-slate-300 text-slate-700 bg-white hover:bg-slate-100 transition-all cursor-pointer flex-1"
+                  className="px-5 py-2.5 border border-slate-300 text-slate-700 bg-white hover:bg-slate-100 transition-all cursor-pointer"
                 >
                   Quay lại
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingExtension}
-                  className="px-5 py-3 bg-primary text-white hover:bg-opacity-95 transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1"
+                  className="px-5 py-2.5 bg-primary text-white hover:bg-opacity-95 transition-all cursor-pointer border-none flex items-center gap-1.5"
                 >
-                  {isSubmittingExtension ? (
-                    <>
-                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-t-2 border-white" />
-                      <span>Đang gửi...</span>
-                    </>
-                  ) : (
-                    <span>Gửi yêu cầu</span>
-                  )}
+                  {isSubmittingExtension ? 'Đang gửi...' : 'Gửi yêu cầu'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* EARLY CHECKOUT MODAL */}
+      {isEarlyCheckOutModalOpen && (
+        <div className="fixed inset-0 bg-slate-900 bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in font-['Montserrat']">
+          <div className="bg-white border border-slate-200 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-slate-900 text-left">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <span className="text-[9px] font-black tracking-widest text-primary uppercase">CHECK-OUT SỚM</span>
+                <h4 className="text-sm font-black uppercase text-slate-900 m-0 mt-0.5">{booking.bookingReference}</h4>
+              </div>
+              <button
+                onClick={() => setIsEarlyCheckOutModalOpen(false)}
+                className="text-slate-400 hover:text-slate-900 border-none bg-transparent cursor-pointer flex items-center"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 p-4 text-xs font-semibold leading-relaxed text-amber-800">
+              💡 <strong>Thông tin hiện tại:</strong> Ngày trả phòng dự kiến ban đầu là <strong>{booking.checkOutDate}</strong>. Yêu cầu rút ngắn ngày trả phòng sẽ được Lễ tân phê duyệt và tính lại hóa đơn tiền phòng.
+            </div>
+
+            <form onSubmit={handleEarlyCheckOutSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Ngày trả phòng mới mong muốn:</label>
+                <input
+                  type="date"
+                  value={newEarlyCheckOutDate}
+                  max={booking.checkOutDate}
+                  min={booking.checkInDate}
+                  onChange={(e) => setNewEarlyCheckOutDate(e.target.value)}
+                  className="w-full p-2.5 border border-slate-300 text-xs font-medium focus:border-primary focus:outline-none rounded-none bg-slate-50"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Lý do check-out sớm (tùy chọn):</label>
+                <textarea
+                  rows="3"
+                  value={earlyCheckOutReason}
+                  onChange={(e) => setEarlyCheckOutReason(e.target.value)}
+                  placeholder="Ví dụ: Thay đổi lịch trình gấp, việc gia đình đột xuất..."
+                  className="w-full p-2.5 border border-slate-300 text-xs font-medium focus:border-primary focus:outline-none placeholder-slate-400 leading-relaxed resize-none rounded-none bg-slate-50"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 text-[10px] font-black uppercase tracking-widest">
+                <button
+                  type="button"
+                  onClick={() => setIsEarlyCheckOutModalOpen(false)}
+                  className="px-5 py-2.5 border border-slate-300 text-slate-700 bg-white hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                  Quay lại
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingEarlyCheckOut}
+                  className="px-5 py-2.5 bg-primary text-white hover:bg-opacity-95 transition-all cursor-pointer border-none flex items-center gap-1.5"
+                >
+                  {isSubmittingEarlyCheckOut ? 'Đang gửi...' : 'Gửi yêu cầu'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOM CANCEL CONFIRMATION DIALOG */}
+      {isCancelConfirmOpen && (
+        <div className="fixed inset-0 bg-slate-900 bg-opacity-70 z-[6000] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in font-['Montserrat']">
+          <div className="bg-white border border-slate-200 max-w-sm w-full p-6 flex flex-col gap-4 shadow-2xl animate-scale-in text-slate-950 text-left">
+            <div className="flex items-center gap-2 text-rose-600">
+              <span className="material-symbols-outlined text-lg">warning</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">{t('bd_confirm_cancel_title', 'XÁC NHẬN HỦY ĐẶT PHÒNG')}</span>
+            </div>
+            <p className="text-xs text-slate-600 font-semibold leading-relaxed m-0">
+              {t('bd_confirm_cancel_message', 'Bạn có chắc chắn muốn hủy đơn đặt phòng này không? Hành động này sẽ thay đổi trạng thái đơn của bạn và không thể hoàn tác.')}
+            </p>
+            <div className="flex justify-end gap-2.5 pt-2 text-[10px] font-black uppercase tracking-widest">
+              <button
+                type="button"
+                onClick={() => setIsCancelConfirmOpen(false)}
+                className="px-4 py-2.5 border border-slate-300 text-slate-700 bg-white hover:bg-slate-100 transition-all cursor-pointer"
+              >
+                {t('bd_btn_back', 'Quay lại')}
+              </button>
+              <button
+                type="button"
+                onClick={confirmCancelBooking}
+                disabled={isSubmittingCancel}
+                className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white transition-all cursor-pointer border-none flex items-center gap-1.5"
+              >
+                {isSubmittingCancel ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3 w-3 border-t-2 border-white" />
+                    <span>{t('bd_btn_cancelling', 'Đang hủy...')}</span>
+                  </>
+                ) : (
+                  <span>{t('bd_btn_confirm_cancel', 'Đồng ý hủy')}</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
