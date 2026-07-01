@@ -65,5 +65,7 @@ public interface BookingService {
     BookingResponse updateBooking(Integer bookingId, UpdateBookingRequest request, String staffEmail);
 
     BookingResponse cancelBooking(Integer bookingId, CancelBookingRequest request, String staffEmail);
+
+    BookingResponse customerCancelBooking(Integer bookingId, CancelBookingRequest request, String customerEmail);
 }
 

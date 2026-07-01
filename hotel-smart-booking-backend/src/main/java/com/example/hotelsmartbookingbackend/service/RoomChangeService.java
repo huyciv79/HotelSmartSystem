@@ -101,4 +101,28 @@ public interface RoomChangeService {
      */
     java.util.List<com.example.hotelsmartbookingbackend.dto.response.CustomerRequestResponse> getPendingStayExtensionRequests(
             String staffEmail);
+
+    /**
+     * Khách hàng gửi yêu cầu check-out sớm.
+     */
+    com.example.hotelsmartbookingbackend.dto.response.CustomerRequestResponse submitEarlyCheckOutRequest(
+            com.example.hotelsmartbookingbackend.dto.request.CustomerEarlyCheckOutRequest request, String customerEmail);
+
+    /**
+     * Nhân viên phê duyệt yêu cầu check-out sớm.
+     */
+    com.example.hotelsmartbookingbackend.dto.response.CustomerRequestResponse approveEarlyCheckOutRequest(
+            Integer requestId, String staffEmail);
+
+    /**
+     * Nhân viên từ chối yêu cầu check-out sớm.
+     */
+    com.example.hotelsmartbookingbackend.dto.response.CustomerRequestResponse rejectEarlyCheckOutRequest(
+            Integer requestId, String rejectionReason, String staffEmail);
+
+    /**
+     * Lấy danh sách yêu cầu check-out sớm đang chờ duyệt.
+     */
+    java.util.List<com.example.hotelsmartbookingbackend.dto.response.CustomerRequestResponse> getPendingEarlyCheckOutRequests(
+            String staffEmail);
 }

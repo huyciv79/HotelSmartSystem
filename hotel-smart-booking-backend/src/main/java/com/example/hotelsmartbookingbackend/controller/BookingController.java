@@ -259,6 +259,21 @@ public class BookingController {
         return ResponseEntity.ok(ApiResponse.success("Hủy đơn đặt phòng thành công", response));
     }
 
+    @DeleteMapping("/{bookingId}/cancel")
+    @Operation(
+            summary = "Khách hàng tự hủy đơn đặt phòng",
+            description = "Cho phép khách hàng tự hủy đặt phòng của mình nếu chưa Check-in"
+    )
+    public ResponseEntity<ApiResponse<BookingResponse>> customerCancelBooking(
+            @PathVariable Integer bookingId,
+            @Valid @RequestBody(required = false) CancelBookingRequest request,
+            Authentication authentication) {
+        String customerEmail = resolveCustomerEmail(authentication);
+        CancelBookingRequest body = request != null ? request : new CancelBookingRequest();
+        BookingResponse response = bookingService.customerCancelBooking(bookingId, body, customerEmail);
+        return ResponseEntity.ok(ApiResponse.success("Hủy đơn đặt phòng thành công", response));
+    }
+
     private String resolveCustomerEmail(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()
                 || "anonymousUser".equals(authentication.getPrincipal())) {
