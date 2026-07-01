@@ -118,6 +118,7 @@ public class RoomServiceImpl implements RoomService {
                 .status(room.getStatus())
                 .roomtypeid(room.getRoomtypeid().getId())
                 .roomtypename(room.getRoomtypeid().getName())
+                .adminpasscode(room.getAdminpasscode())
                 .createdAt(room.getCreatedat())
                 .updatedAt(room.getUpdatedat())
                 .build();

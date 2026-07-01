@@ -28,6 +28,7 @@ import com.example.hotelsmartbookingbackend.entity.Roomtype;
 import com.example.hotelsmartbookingbackend.entity.User;
 import com.example.hotelsmartbookingbackend.entity.Payment;
 import com.example.hotelsmartbookingbackend.entity.Bookingservice;
+import com.example.hotelsmartbookingbackend.entity.Customerrequest;
 import com.example.hotelsmartbookingbackend.enums.Role;
 
 import com.example.hotelsmartbookingbackend.repository.BookingRepository;
@@ -40,6 +41,7 @@ import com.example.hotelsmartbookingbackend.repository.RoomtypeRepository;
 import com.example.hotelsmartbookingbackend.repository.UserRepository;
 import com.example.hotelsmartbookingbackend.repository.PaymentRepository;
 import com.example.hotelsmartbookingbackend.repository.BookingserviceRepository;
+import com.example.hotelsmartbookingbackend.repository.CustomerrequestRepository;
 import com.example.hotelsmartbookingbackend.repository.ServiceRepository;
 import com.example.hotelsmartbookingbackend.service.BookingService;
 import com.example.hotelsmartbookingbackend.service.EmailService;
@@ -128,6 +130,7 @@ public class BookingServiceImpl implements BookingService {
     private final WebSocketService webSocketService;
     private final ServiceRepository serviceRepository;
     private final EmailService emailService;
+    private final CustomerrequestRepository customerrequestRepository;
 
     @Value("${ai.service.face-verify-url:http://localhost:8000/api/v1/face/verify}")
     private String aiFaceVerifyUrl;
@@ -392,6 +395,13 @@ public class BookingServiceImpl implements BookingService {
         boolean roomKeyUsable = isRoomKeyUsable(booking, detail);
         List<RoomAccessResponse> roomAccesses = mapRoomAccesses(booking, detail, true);
 
+        // Lấy thông tin các yêu cầu đổi phòng / gia hạn đang chờ phê duyệt từ database
+        List<Customerrequest> requests = customerrequestRepository.findByBookingid_Id(booking.getId());
+        boolean isRoomChangePending = requests != null && requests.stream()
+                .anyMatch(r -> "RoomChange".equalsIgnoreCase(r.getRequesttype()) && "Pending".equalsIgnoreCase(r.getStatus()));
+        boolean isStayExtensionPending = requests != null && requests.stream()
+                .anyMatch(r -> "StayExtension".equalsIgnoreCase(r.getRequesttype()) && "Pending".equalsIgnoreCase(r.getStatus()));
+
         return BookingResponse.builder()
                 .bookingId(booking.getId())
                 .bookingReference(booking.getBookingreference())
@@ -420,6 +430,8 @@ public class BookingServiceImpl implements BookingService {
                 .roomKeyGeneratedAt(detail.getRoomkeygeneratedat())
                 .roomKeyExpiresAt(detail.getRoomkeyexpiredat())
                 .roomAccesses(roomAccesses)
+                .isRoomChangePending(isRoomChangePending)
+                .isStayExtensionPending(isStayExtensionPending)
                 .ekycIdentity(mapEkycIdentitySummary(booking.getUserid()))
                 .createdAt(booking.getCreatedat())
                 .build();
@@ -1683,24 +1695,113 @@ public class BookingServiceImpl implements BookingService {
         User staff = userRepository.findByEmail(staffEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
 
-        if (booking.getStatus().equalsIgnoreCase("Cancelled") || booking.getStatus().equalsIgnoreCase("Checked Out")) {
-            throw new RuntimeException("Không thể cập nhật đơn đặt phòng đã hủy hoặc đã trả phòng");
+        if (booking.getStatus().equalsIgnoreCase("Cancelled") || booking.getStatus().equalsIgnoreCase("Checked Out") || booking.getStatus().equalsIgnoreCase("Completed")) {
+            throw new RuntimeException("Không thể cập nhật đơn đặt phòng đã hủy hoặc đã hoàn thành");
         }
 
-        booking.setSpecialrequests(request.getSpecialRequests());
+        Bookingdetail detail = bookingdetailRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đặt phòng"));
 
-        if (request.getDiscountAmount() != null && request.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
-            booking.setDiscountamount(request.getDiscountAmount());
-            BigDecimal newFinalAmount = booking.getTotalamount()
-                    .subtract(request.getDiscountAmount())
-                    .subtract(booking.getTaxamount());
-            booking.setFinalamount(newFinalAmount);
+        // 1. Phân tích Ngày cũ / mới
+        LocalDate checkIn = detail.getExpectedcheckin().atZone(HOTEL_ZONE).toLocalDate();
+        LocalDate checkOut = detail.getExpectedcheckout().atZone(HOTEL_ZONE).toLocalDate();
+        boolean datesChanged = false;
+
+        if (request.getCheckInDate() != null && !request.getCheckInDate().trim().isEmpty()) {
+            LocalDate newCheckIn = LocalDate.parse(request.getCheckInDate().trim());
+            if (!newCheckIn.equals(checkIn)) {
+                checkIn = newCheckIn;
+                datesChanged = true;
+                detail.setExpectedcheckin(toInstant(checkIn));
+            }
+        }
+        if (request.getCheckOutDate() != null && !request.getCheckOutDate().trim().isEmpty()) {
+            LocalDate newCheckOut = LocalDate.parse(request.getCheckOutDate().trim());
+            if (!newCheckOut.equals(checkOut)) {
+                checkOut = newCheckOut;
+                datesChanged = true;
+                detail.setExpectedcheckout(toInstant(checkOut));
+            }
+        }
+        if (datesChanged) {
+            if (checkIn.isAfter(checkOut) || checkIn.equals(checkOut)) {
+                throw new RuntimeException("Ngày nhận phòng phải trước ngày trả phòng");
+            }
         }
 
-        booking.setUpdatedat(Instant.now());
+        // 2. Phân tích Loại phòng
+        Roomtype roomtype = detail.getRoomtypeid();
+        boolean roomTypeChanged = false;
+        if (request.getRoomTypeId() != null && !request.getRoomTypeId().equals(roomtype.getId())) {
+            roomtype = roomtypeRepository.findByIdForUpdate(request.getRoomTypeId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy loại phòng mới"));
+            detail.setRoomtypeid(roomtype);
+            detail.setPriceatbooking(roomtype.getBaseprice());
+            roomTypeChanged = true;
+        }
+
+        // 3. Phân tích số lượng phòng / khách
+        int quantity = detail.getQuantity();
+        if (request.getQuantity() != null && request.getQuantity() > 0 && request.getQuantity() != quantity) {
+            quantity = request.getQuantity();
+            detail.setQuantity(quantity);
+        }
+
+        int adults = detail.getNumberofadults();
+        if (request.getNumberOfAdults() != null && request.getNumberOfAdults() > 0 && request.getNumberOfAdults() != adults) {
+            adults = request.getNumberOfAdults();
+            detail.setNumberofadults(adults);
+        }
+
+        int children = detail.getNumberofchildren();
+        if (request.getNumberOfChildren() != null && request.getNumberOfChildren() >= 0 && request.getNumberOfChildren() != children) {
+            children = request.getNumberOfChildren();
+            detail.setNumberofchildren(children);
+        }
+
+        // 4. Validate Capacity và Availability phòng trống
+        if (datesChanged || roomTypeChanged || request.getQuantity() != null || request.getNumberOfAdults() != null || request.getNumberOfChildren() != null) {
+            assertCapacity(roomtype, quantity, adults, children);
+            // Bỏ qua kiểm tra availability nếu không đổi ngày và loại phòng, số lượng phòng giảm hoặc giữ nguyên
+            if (datesChanged || roomTypeChanged || (request.getQuantity() != null && request.getQuantity() > quantity)) {
+                assertAvailability(roomtype, checkIn, checkOut, quantity);
+            }
+        }
+
+        // 5. Cập nhật Yêu cầu đặc biệt & Ghi chú
+        if (request.getSpecialRequests() != null) {
+            booking.setSpecialrequests(request.getSpecialRequests());
+        }
+
+        // 6. Tính toán lại tài chính
+        long nights = ChronoUnit.DAYS.between(checkIn, checkOut);
+        if (nights <= 0) {
+            nights = 1; // Tối thiểu 1 đêm
+        }
+        BigDecimal totalAmount = roomtype.getBaseprice()
+                .multiply(BigDecimal.valueOf(quantity))
+                .multiply(BigDecimal.valueOf(nights));
+
+        booking.setTotalamount(totalAmount);
+        BigDecimal taxAmount = totalAmount.multiply(new BigDecimal("0.10")).setScale(2, java.math.RoundingMode.HALF_UP);
+        booking.setTaxamount(taxAmount);
+
+        BigDecimal discount = booking.getDiscountamount();
+        if (request.getDiscountAmount() != null) {
+            discount = request.getDiscountAmount();
+            booking.setDiscountamount(discount);
+        }
+        BigDecimal finalAmount = totalAmount.add(taxAmount).subtract(discount).setScale(2, java.math.RoundingMode.HALF_UP);
+        booking.setFinalamount(finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount);
+
+        Instant now = Instant.now();
+        booking.setUpdatedat(now);
+        detail.setUpdatedat(now);
+
         Booking updatedBooking = bookingRepository.save(booking);
+        Bookingdetail updatedDetail = bookingdetailRepository.save(detail);
 
-        return mapToBookingResponse(updatedBooking);
+        return mapToResponse(updatedBooking, updatedDetail, roomtype);
     }
 
     @Override
