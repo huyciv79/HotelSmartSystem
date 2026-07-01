@@ -164,3 +164,10 @@ export const updateBooking = async (bookingId, updateData) => {
   return response.data;
 };
 
+export const customerCancelBooking = async (bookingId, cancellationReason = 'Khách hàng tự hủy trực tuyến') => {
+  const response = await axiosInstance.delete(`/bookings/${bookingId}/cancel`, {
+    data: { cancellationReason }
+  });
+  return response.data;
+};
+
