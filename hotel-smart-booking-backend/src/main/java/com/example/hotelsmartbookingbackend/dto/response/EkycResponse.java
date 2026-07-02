@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class EkycResponse {
 
-    /** Kết quả tổng thể: "Verified" hoặc "Rejected" */
+    /** Kết quả tổng thể: "VERIFIED" */
     private String status;
 
     /** Thông điệp mô tả kết quả */

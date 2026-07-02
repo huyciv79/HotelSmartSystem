@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import ViewEkyc from './ViewEkyc';
 import RegisterEkycWizard from '../../components/ekyc/RegisterEkycWizard';
-import { submitEkyc, updateEkyc } from '../../services/ekycService';
+import { submitEkyc } from '../../services/ekycService';
 
 // Internal screens
 const SCREEN = {
@@ -29,11 +29,8 @@ export default function EkycHub({ onBack }) {
   }, []);
 
   const handleSubmit = useCallback(async (front, back, faceFrames) => {
-    if (wizardMode === 'update') {
-      return updateEkyc(front, back, faceFrames);
-    }
     return submitEkyc(front, back, faceFrames);
-  }, [wizardMode]);
+  }, []);
 
   const closeWizard = useCallback(() => {
     setScreen(SCREEN.VIEW);

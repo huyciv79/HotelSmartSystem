@@ -115,6 +115,7 @@ public class UserServiceImpl implements UserService {
                 .email(user.getEmail())
                 .role(user.getRole() != null ? user.getRole().name() : null)
                 .phoneNumber(user.getPhonenumber())
+                .idCardNumber(user.getIdcardnumber())
                 .fullName(user.getFullname())
                 .avatar(user.getAvatar())
                 .address(user.getAddress())

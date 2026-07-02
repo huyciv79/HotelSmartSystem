@@ -84,7 +84,7 @@ const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleL
           </button>
 
           <button
-            onClick={() => setActiveTab('refunds')}
+            onClick={() => setActiveTab('face-check-in')}
             className={`w-full py-3.5 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-sm ${
               activeTab === 'face-check-in'
                 ? 'bg-gradient-to-r from-primary/15 to-transparent border-l-4 border-primary text-primary font-black'
@@ -94,6 +94,8 @@ const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleL
             <span className="material-symbols-outlined text-base">face</span>
             FaceID Check-in
           </button>
+
+
 
           {isManager && (
             <>

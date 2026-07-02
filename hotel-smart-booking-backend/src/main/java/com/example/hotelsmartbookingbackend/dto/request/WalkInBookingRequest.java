@@ -2,6 +2,7 @@ package com.example.hotelsmartbookingbackend.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
@@ -49,6 +50,10 @@ public class WalkInBookingRequest {
 
     @NotBlank(message = "Vui lòng nhập số điện thoại khách hàng")
     private String customerPhonenumber;
+
+    @NotBlank(message = "Vui long nhap so CCCD khach hang")
+    @Pattern(regexp = "^[0-9]{12}$", message = "So CCCD phai gom dung 12 chu so")
+    private String customerIdCardNumber;
 
     private BigDecimal paidAmount;
 

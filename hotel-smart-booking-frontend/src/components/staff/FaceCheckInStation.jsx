@@ -15,12 +15,53 @@ import {
 import {
   checkFaceReadiness,
   faceCheckInBooking,
+  filterBookings,
 } from '../../services/bookingService';
+
+const CHECK_IN_READY_STATUSES = new Set([
+  'confirmed',
+  'paid',
+  'partially paid',
+  'partiallypaid',
+]);
 
 const isFaceIdBooking = (booking) => {
   const method = String(booking.checkInMethod || '').toLowerCase();
   return method === 'faceid' || method === 'face recognition' || method === 'face id';
 };
+
+const isCheckInReadyBooking = (booking) => {
+  const normalizedStatus = String(booking.status || '')
+    .toLowerCase()
+    .replace('-', ' ')
+    .trim();
+  return CHECK_IN_READY_STATUSES.has(normalizedStatus);
+};
+
+const mapBookingForStation = (booking = {}) => ({
+  ...booking,
+  source: booking.source || 'backend',
+  id: booking.id ?? booking.bookingId,
+  bookingReference:
+    booking.bookingReference ||
+    booking.bookingNumber ||
+    (booking.bookingId ? `BK-${booking.bookingId}` : ''),
+  guestName: booking.guestName || 'Khách hàng Elysian',
+  email: booking.email || booking.guestEmail || '',
+  roomType: booking.roomType || booking.roomTypeName || '',
+  quantity: booking.quantity || 1,
+  roomAccesses: booking.roomAccesses || [],
+  ekycIdentity: booking.ekycIdentity || null,
+  checkInMethod: booking.checkInMethod || booking.checkinmethod || 'Manual',
+});
+
+const mergeStationBooking = (current, incoming) => ({
+  ...current,
+  ...incoming,
+  roomAccesses:
+    incoming.roomAccesses?.length ? incoming.roomAccesses : current.roomAccesses,
+  ekycIdentity: incoming.ekycIdentity || current.ekycIdentity,
+});
 
 const getErrorMessage = (error) =>
   error?.response?.data?.message ||
@@ -227,16 +268,77 @@ export default function FaceCheckInStation({
   const [readiness, setReadiness] = useState(INITIAL_READINESS);
   const [result, setResult] = useState(null);
   const [verificationError, setVerificationError] = useState('');
+  const [stationBookings, setStationBookings] = useState([]);
+  const [isLoadingFaceBookings, setIsLoadingFaceBookings] = useState(false);
+  const [faceBookingsError, setFaceBookingsError] = useState('');
+
+  const refreshFaceBookings = useCallback(async () => {
+    setIsLoadingFaceBookings(true);
+    setFaceBookingsError('');
+    try {
+      const response = await filterBookings({
+        page: 0,
+        pageSize: 60,
+        statuses: ['Confirmed', 'Paid', 'Partially Paid'],
+        checkInMethod: 'FaceID',
+        sortBy: 'createdat',
+        sortDirection: 'DESC',
+      });
+
+      const content = response?.data?.content || [];
+      setStationBookings(content.map(mapBookingForStation));
+    } catch (error) {
+      console.error('Cannot load FaceID bookings:', error);
+      setFaceBookingsError(
+        error?.response?.data?.message ||
+          'Không thể tải danh sách booking FaceID.',
+      );
+    } finally {
+      setIsLoadingFaceBookings(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      refreshFaceBookings();
+    }, 0);
+    return () => window.clearTimeout(timerId);
+  }, [refreshFaceBookings]);
+
+  useEffect(() => {
+    const handleReload = () => refreshFaceBookings();
+    window.addEventListener('reload-bookings', handleReload);
+    return () => window.removeEventListener('reload-bookings', handleReload);
+  }, [refreshFaceBookings]);
+
+  const mergedBookings = useMemo(() => {
+    const byId = new Map();
+    const addBooking = (booking) => {
+      const normalized = mapBookingForStation(booking);
+      if (!normalized.id) return;
+      const key = String(normalized.id);
+      byId.set(
+        key,
+        byId.has(key)
+          ? mergeStationBooking(byId.get(key), normalized)
+          : normalized,
+      );
+    };
+
+    bookings.forEach(addBooking);
+    stationBookings.forEach(addBooking);
+    return Array.from(byId.values());
+  }, [bookings, stationBookings]);
 
   const eligibleBookings = useMemo(
     () =>
-      bookings.filter(
+      mergedBookings.filter(
         (booking) =>
           booking.source === 'backend' &&
-          booking.status === 'Confirmed' &&
+          isCheckInReadyBooking(booking) &&
           (isFaceIdBooking(booking) || String(booking.id) === String(initialBookingId)),
       ),
-    [bookings, initialBookingId],
+    [mergedBookings, initialBookingId],
   );
 
   const filteredBookings = useMemo(() => {
@@ -251,10 +353,10 @@ export default function FaceCheckInStation({
 
   const selectedBooking = useMemo(
     () =>
-      bookings.find(
+      mergedBookings.find(
         (booking) => String(booking.id) === String(selectedBookingId),
       ) || null,
-    [bookings, selectedBookingId],
+    [mergedBookings, selectedBookingId],
   );
 
   const stopCamera = useCallback(() => {
@@ -471,6 +573,11 @@ export default function FaceCheckInStation({
       }
 
       setResult(bookingResult);
+      setStationBookings((current) =>
+        current.filter(
+          (booking) => String(booking.id) !== String(selectedBooking.id),
+        ),
+      );
       setVerificationError('');
       onCheckInCompleted?.(selectedBooking.id, bookingResult);
       showToast(
@@ -671,12 +778,24 @@ export default function FaceCheckInStation({
                   Booking chờ FaceID
                 </h4>
                 <p className="text-[9px] text-slate-500 uppercase tracking-wider mt-1">
-                  {eligibleBookings.length} booking đủ điều kiện
+                  {isLoadingFaceBookings
+                    ? 'Đang tải danh sách...'
+                    : `${eligibleBookings.length} booking đủ điều kiện`}
                 </p>
               </div>
-              <span className="bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 text-[9px] font-black">
+              <button
+                type="button"
+                onClick={refreshFaceBookings}
+                disabled={isLoadingFaceBookings}
+                className="bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 text-[9px] font-black disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isLoadingFaceBookings ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <RefreshCcw size={12} />
+                )}
                 LIVE
-              </span>
+              </button>
             </div>
 
             <div className="relative mt-4">
@@ -694,7 +813,21 @@ export default function FaceCheckInStation({
           </div>
 
           <div className="max-h-[515px] overflow-y-auto divide-y divide-neutral-900">
-            {filteredBookings.length === 0 ? (
+            {faceBookingsError ? (
+              <div className="p-10 text-center">
+                <UserRound size={32} className="mx-auto text-red-800" />
+                <p className="text-[10px] text-red-300 uppercase tracking-widest font-bold mt-4 leading-relaxed">
+                  {faceBookingsError}
+                </p>
+              </div>
+            ) : isLoadingFaceBookings && filteredBookings.length === 0 ? (
+              <div className="p-10 text-center">
+                <Loader2 size={32} className="mx-auto text-primary animate-spin" />
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-4 leading-relaxed">
+                  Đang tải booking FaceID...
+                </p>
+              </div>
+            ) : filteredBookings.length === 0 ? (
               <div className="p-10 text-center">
                 <UserRound size={32} className="mx-auto text-slate-700" />
                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-4 leading-relaxed">

@@ -15,6 +15,8 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 
 @RequiredArgsConstructor
 public class BookingSpecification implements Specification<Booking> {
@@ -30,8 +32,28 @@ public class BookingSpecification implements Specification<Booking> {
 
         List<Predicate> predicates = new ArrayList<>();
 
-        if (criteria.getStatus() != null && !criteria.getStatus().isEmpty()) {
+        List<String> statuses = criteria.getStatuses() == null
+                ? List.of()
+                : criteria.getStatuses().stream()
+                        .filter(Objects::nonNull)
+                        .map(String::trim)
+                        .filter(status -> !status.isEmpty())
+                        .toList();
+        if (!statuses.isEmpty()) {
+            predicates.add(root.get("status").in(statuses));
+        } else if (criteria.getStatus() != null && !criteria.getStatus().isEmpty()) {
             predicates.add(cb.equal(root.get("status"), criteria.getStatus()));
+        }
+
+        if (criteria.getCheckInMethod() != null && !criteria.getCheckInMethod().isBlank()) {
+            String checkInMethod = criteria.getCheckInMethod().trim().toLowerCase(Locale.ROOT);
+            if (checkInMethod.equals("faceid") || checkInMethod.equals("face id")
+                    || checkInMethod.equals("face recognition")) {
+                predicates.add(cb.lower(root.get("checkinmethod"))
+                        .in(List.of("faceid", "face id", "face recognition")));
+            } else {
+                predicates.add(cb.equal(cb.lower(root.get("checkinmethod")), checkInMethod));
+            }
         }
 
         if (criteria.getBookingReference() != null && !criteria.getBookingReference().isEmpty()) {

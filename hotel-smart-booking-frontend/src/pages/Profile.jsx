@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, User, Mail, Phone, MapPin, Award, Check, X } from 'lucide-react';
+import { Camera, User, Mail, Phone, MapPin, Award, Check, X, IdCard } from 'lucide-react';
 import { updateUserProfile, uploadAvatar } from '../services/userService';
 import ChangePassword from './ChangePassword';
 import { useLanguage } from '../context/LanguageContext';
@@ -295,6 +295,18 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
                   </label>
                   <div className="border-b border-slate-200/50 py-2 font-bold text-sm tracking-wide text-slate-500 flex items-center justify-between min-h-[38px]">
                     <span>{profile.phoneNumber || t('profile_update_missing', 'Chưa cập nhật')}</span>
+                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest border border-slate-200 px-1.5 py-0.5 select-none">{t('profile_label_fixed', 'CỐ ĐỊNH')}</span>
+                  </div>
+                </div>
+
+                {/* ID Card Number (Read Only) */}
+                <div className="space-y-2 text-left">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 select-none opacity-80">
+                    <IdCard size={13} className="text-slate-400" />
+                    {t('profile_label_idcard', 'So CCCD')}
+                  </label>
+                  <div className="border-b border-slate-200/50 py-2 font-bold text-sm tracking-wide text-slate-500 flex items-center justify-between min-h-[38px]">
+                    <span>{profile.idCardNumber || t('profile_update_missing', 'Chưa cập nhật')}</span>
                     <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest border border-slate-200 px-1.5 py-0.5 select-none">{t('profile_label_fixed', 'CỐ ĐỊNH')}</span>
                   </div>
                 </div>

@@ -28,6 +28,7 @@ import com.example.hotelsmartbookingbackend.entity.Roomtype;
 import com.example.hotelsmartbookingbackend.entity.User;
 import com.example.hotelsmartbookingbackend.entity.Payment;
 import com.example.hotelsmartbookingbackend.entity.Bookingservice;
+import com.example.hotelsmartbookingbackend.entity.Customerrequest;
 import com.example.hotelsmartbookingbackend.enums.Role;
 
 import com.example.hotelsmartbookingbackend.repository.BookingRepository;
@@ -40,6 +41,7 @@ import com.example.hotelsmartbookingbackend.repository.RoomtypeRepository;
 import com.example.hotelsmartbookingbackend.repository.UserRepository;
 import com.example.hotelsmartbookingbackend.repository.PaymentRepository;
 import com.example.hotelsmartbookingbackend.repository.BookingserviceRepository;
+import com.example.hotelsmartbookingbackend.repository.CustomerrequestRepository;
 import com.example.hotelsmartbookingbackend.repository.ServiceRepository;
 import com.example.hotelsmartbookingbackend.service.BookingService;
 import com.example.hotelsmartbookingbackend.service.EmailService;
@@ -128,6 +130,7 @@ public class BookingServiceImpl implements BookingService {
     private final WebSocketService webSocketService;
     private final ServiceRepository serviceRepository;
     private final EmailService emailService;
+    private final CustomerrequestRepository customerrequestRepository;
 
     @Value("${ai.service.face-verify-url:http://localhost:8000/api/v1/face/verify}")
     private String aiFaceVerifyUrl;
@@ -198,9 +201,7 @@ public class BookingServiceImpl implements BookingService {
             validateQrCodeBookingEligibility(customer);
         }
         if ("FaceID".equalsIgnoreCase(normalizedCheckInMethod)) {
-            boolean ekycVerified = ekycProfileRepository.existsByUseridAndStatus(
-                    customer,
-                    "Verified");
+            boolean ekycVerified = ekycProfileRepository.existsVerifiedByUserid(customer);
             boolean faceRegistered = faceembeddingRepository
                     .findEmbeddingTextByUserId(customer.getId())
                     .filter(embedding -> !embedding.isBlank())
@@ -392,6 +393,15 @@ public class BookingServiceImpl implements BookingService {
         boolean roomKeyUsable = isRoomKeyUsable(booking, detail);
         List<RoomAccessResponse> roomAccesses = mapRoomAccesses(booking, detail, true);
 
+        // Lấy thông tin các yêu cầu đổi phòng / gia hạn / checkout sớm đang chờ phê duyệt từ database
+        List<Customerrequest> requests = customerrequestRepository.findByBookingid_Id(booking.getId());
+        boolean isRoomChangePending = requests != null && requests.stream()
+                .anyMatch(r -> "RoomChange".equalsIgnoreCase(r.getRequesttype()) && "Pending".equalsIgnoreCase(r.getStatus()));
+        boolean isStayExtensionPending = requests != null && requests.stream()
+                .anyMatch(r -> "StayExtension".equalsIgnoreCase(r.getRequesttype()) && "Pending".equalsIgnoreCase(r.getStatus()));
+        boolean isEarlyCheckOutPending = requests != null && requests.stream()
+                .anyMatch(r -> "EarlyCheckOut".equalsIgnoreCase(r.getRequesttype()) && "Pending".equalsIgnoreCase(r.getStatus()));
+
         return BookingResponse.builder()
                 .bookingId(booking.getId())
                 .bookingReference(booking.getBookingreference())
@@ -420,6 +430,9 @@ public class BookingServiceImpl implements BookingService {
                 .roomKeyGeneratedAt(detail.getRoomkeygeneratedat())
                 .roomKeyExpiresAt(detail.getRoomkeyexpiredat())
                 .roomAccesses(roomAccesses)
+                .isRoomChangePending(isRoomChangePending)
+                .isStayExtensionPending(isStayExtensionPending)
+                .isEarlyCheckOutPending(isEarlyCheckOutPending)
                 .ekycIdentity(mapEkycIdentitySummary(booking.getUserid()))
                 .createdAt(booking.getCreatedat())
                 .build();
@@ -616,7 +629,7 @@ public class BookingServiceImpl implements BookingService {
         }
         validateCheckInDateWindow(detail);
 
-        if (!ekycProfileRepository.existsByUseridAndStatus(customer, "Verified")) {
+        if (!ekycProfileRepository.existsVerifiedByUserid(customer)) {
             throw new RuntimeException(
                     "Bạn chưa hoàn thành đăng ký eKYC nên chưa thể check-in bằng FaceID");
         }
@@ -905,19 +918,63 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Đơn đặt phòng chưa được check-in");
         }
 
+        Bookingdetail detail = bookingdetailRepository.findByBookingid_Id(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đặt phòng"));
+
+        Instant now = Instant.now();
+        Instant expectedCheckOut = detail.getExpectedcheckout();
+
+        // Kiểm tra xem đã tính phụ thu check-out trễ chưa (để tránh tính trùng)
+        boolean alreadyChargedPenalty = booking.getSpecialrequests() != null && booking.getSpecialrequests().contains("[Late Check-out Penalty]");
+
+        if (!alreadyChargedPenalty && now.isAfter(expectedCheckOut)) {
+            long lateMinutes = java.time.temporal.ChronoUnit.MINUTES.between(expectedCheckOut, now);
+            if (lateMinutes > 15) { // Quá 15 phút mới phạt để tạo trải nghiệm khách hàng thoải mái
+                double penaltyRate = 0.0;
+                String penaltyName = "";
+                if (lateMinutes <= 180) { // <= 3 giờ
+                    penaltyRate = 0.3;
+                    penaltyName = "30% (Trễ dưới 3 giờ)";
+                } else if (lateMinutes <= 360) { // <= 6 giờ
+                    penaltyRate = 0.5;
+                    penaltyName = "50% (Trễ từ 3-6 giờ)";
+                } else {
+                    penaltyRate = 1.0;
+                    penaltyName = "100% (Trễ trên 6 giờ)";
+                }
+
+                BigDecimal oneNightCost = detail.getPriceatbooking().multiply(BigDecimal.valueOf(detail.getQuantity()));
+                BigDecimal penaltyAmount = oneNightCost.multiply(BigDecimal.valueOf(penaltyRate)).setScale(2, RoundingMode.HALF_UP);
+
+                if (penaltyAmount.compareTo(BigDecimal.ZERO) > 0) {
+                    // Cộng phụ thu vào Booking
+                    BigDecimal newTotal = booking.getTotalamount().add(penaltyAmount);
+                    BigDecimal taxAmount = newTotal.multiply(new BigDecimal("0.10")).setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal finalAmount = newTotal.add(taxAmount).subtract(booking.getDiscountamount()).setScale(2, RoundingMode.HALF_UP);
+
+                    booking.setTotalamount(newTotal);
+                    booking.setTaxamount(taxAmount);
+                    booking.setFinalamount(finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount);
+
+                    String currentRequests = booking.getSpecialrequests() != null ? booking.getSpecialrequests() : "";
+                    booking.setSpecialrequests(currentRequests + " [Late Check-out Penalty: Phụ thu check-out trễ " + penaltyName + " + " + formatCurrency(penaltyAmount) + "]");
+                    booking.setUpdatedat(Instant.now());
+
+                    bookingRepository.save(booking);
+                }
+            }
+        }
+
         BigDecimal dueAmount = booking.getFinalamount().subtract(booking.getPaidamount());
         if (dueAmount.compareTo(BigDecimal.ZERO) > 0) {
-            throw new RuntimeException("Đơn đặt phòng chưa được thanh toán đầy đủ. Quý khách cần thanh toán thêm "
+            throw new RuntimeException("Đơn đặt phòng chưa được thanh toán đầy đủ (bao gồm phụ thu check-out trễ nếu có). Quý khách cần thanh toán thêm "
                     + formatCurrency(dueAmount) + " trước khi trả phòng.");
         }
 
         booking.setStatus("Completed");
         booking.setUpdatedat(Instant.now());
         bookingRepository.save(booking);
-
-        Bookingdetail detail = bookingdetailRepository.findByBookingid_Id(bookingId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đặt phòng"));
-        Instant now = Instant.now();
+        now = Instant.now();
         detail.setActualcheckout(now);
         detail.setCheckedoutat(now);
         detail.setCheckedoutby(staff);
@@ -1062,10 +1119,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void validateFaceIdBookingEligibility(User customer) {
-        boolean ekycVerified = ekycProfileRepository.existsByUseridAndStatus(
-                customer,
-                "Verified"
-        );
+        boolean ekycVerified = ekycProfileRepository.existsVerifiedByUserid(customer);
         boolean faceRegistered = faceembeddingRepository
                 .findEmbeddingTextByUserId(customer.getId())
                 .filter(embedding -> !embedding.isBlank())
@@ -1079,7 +1133,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void validateQrCodeBookingEligibility(User customer) {
-        if (!ekycProfileRepository.existsByUseridAndStatus(customer, "Verified")) {
+        if (!ekycProfileRepository.existsVerifiedByUserid(customer)) {
             throw new RuntimeException(
                     "Ban phai hoan thanh dang ky eKYC truoc khi chon check-in bang QR Code"
             );
@@ -1355,15 +1409,28 @@ public class BookingServiceImpl implements BookingService {
 
         User customer = userRepository.findByEmail(request.getCustomerEmail()).orElse(null);
         if (customer == null) {
+            if (userRepository.existsByIdcardnumber(request.getCustomerIdCardNumber())) {
+                throw new RuntimeException("So CCCD nay da ton tai trong he thong");
+            }
             customer = new User();
             customer.setEmail(request.getCustomerEmail());
             customer.setFullname(request.getCustomerFullname());
             customer.setPhonenumber(request.getCustomerPhonenumber());
+            customer.setIdcardnumber(request.getCustomerIdCardNumber());
             customer.setRole(Role.customer);
             customer.setPasswordhash("");
             customer.setStatus("Active");
             customer.setCreatedat(Instant.now());
             customer = userRepository.save(customer);
+        } else if (customer.getIdcardnumber() == null || customer.getIdcardnumber().isBlank()) {
+            if (userRepository.existsByIdcardnumber(request.getCustomerIdCardNumber())) {
+                throw new RuntimeException("So CCCD nay da ton tai trong he thong");
+            }
+            customer.setIdcardnumber(request.getCustomerIdCardNumber());
+            customer.setUpdatedat(Instant.now());
+            customer = userRepository.save(customer);
+        } else if (!customer.getIdcardnumber().equals(request.getCustomerIdCardNumber())) {
+            throw new RuntimeException("Email khach hang da gan voi so CCCD khac");
         }
 
         Roomtype roomtype = roomtypeRepository.findById(request.getRoomTypeId())
@@ -1683,24 +1750,113 @@ public class BookingServiceImpl implements BookingService {
         User staff = userRepository.findByEmail(staffEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
 
-        if (booking.getStatus().equalsIgnoreCase("Cancelled") || booking.getStatus().equalsIgnoreCase("Checked Out")) {
-            throw new RuntimeException("Không thể cập nhật đơn đặt phòng đã hủy hoặc đã trả phòng");
+        if (booking.getStatus().equalsIgnoreCase("Cancelled") || booking.getStatus().equalsIgnoreCase("Checked Out") || booking.getStatus().equalsIgnoreCase("Completed")) {
+            throw new RuntimeException("Không thể cập nhật đơn đặt phòng đã hủy hoặc đã hoàn thành");
         }
 
-        booking.setSpecialrequests(request.getSpecialRequests());
+        Bookingdetail detail = bookingdetailRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đặt phòng"));
 
-        if (request.getDiscountAmount() != null && request.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
-            booking.setDiscountamount(request.getDiscountAmount());
-            BigDecimal newFinalAmount = booking.getTotalamount()
-                    .subtract(request.getDiscountAmount())
-                    .subtract(booking.getTaxamount());
-            booking.setFinalamount(newFinalAmount);
+        // 1. Phân tích Ngày cũ / mới
+        LocalDate checkIn = detail.getExpectedcheckin().atZone(HOTEL_ZONE).toLocalDate();
+        LocalDate checkOut = detail.getExpectedcheckout().atZone(HOTEL_ZONE).toLocalDate();
+        boolean datesChanged = false;
+
+        if (request.getCheckInDate() != null && !request.getCheckInDate().trim().isEmpty()) {
+            LocalDate newCheckIn = LocalDate.parse(request.getCheckInDate().trim());
+            if (!newCheckIn.equals(checkIn)) {
+                checkIn = newCheckIn;
+                datesChanged = true;
+                detail.setExpectedcheckin(toInstant(checkIn));
+            }
+        }
+        if (request.getCheckOutDate() != null && !request.getCheckOutDate().trim().isEmpty()) {
+            LocalDate newCheckOut = LocalDate.parse(request.getCheckOutDate().trim());
+            if (!newCheckOut.equals(checkOut)) {
+                checkOut = newCheckOut;
+                datesChanged = true;
+                detail.setExpectedcheckout(toInstant(checkOut));
+            }
+        }
+        if (datesChanged) {
+            if (checkIn.isAfter(checkOut) || checkIn.equals(checkOut)) {
+                throw new RuntimeException("Ngày nhận phòng phải trước ngày trả phòng");
+            }
         }
 
-        booking.setUpdatedat(Instant.now());
+        // 2. Phân tích Loại phòng
+        Roomtype roomtype = detail.getRoomtypeid();
+        boolean roomTypeChanged = false;
+        if (request.getRoomTypeId() != null && !request.getRoomTypeId().equals(roomtype.getId())) {
+            roomtype = roomtypeRepository.findByIdForUpdate(request.getRoomTypeId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy loại phòng mới"));
+            detail.setRoomtypeid(roomtype);
+            detail.setPriceatbooking(roomtype.getBaseprice());
+            roomTypeChanged = true;
+        }
+
+        // 3. Phân tích số lượng phòng / khách
+        int quantity = detail.getQuantity();
+        if (request.getQuantity() != null && request.getQuantity() > 0 && request.getQuantity() != quantity) {
+            quantity = request.getQuantity();
+            detail.setQuantity(quantity);
+        }
+
+        int adults = detail.getNumberofadults();
+        if (request.getNumberOfAdults() != null && request.getNumberOfAdults() > 0 && request.getNumberOfAdults() != adults) {
+            adults = request.getNumberOfAdults();
+            detail.setNumberofadults(adults);
+        }
+
+        int children = detail.getNumberofchildren();
+        if (request.getNumberOfChildren() != null && request.getNumberOfChildren() >= 0 && request.getNumberOfChildren() != children) {
+            children = request.getNumberOfChildren();
+            detail.setNumberofchildren(children);
+        }
+
+        // 4. Validate Capacity và Availability phòng trống
+        if (datesChanged || roomTypeChanged || request.getQuantity() != null || request.getNumberOfAdults() != null || request.getNumberOfChildren() != null) {
+            assertCapacity(roomtype, quantity, adults, children);
+            // Bỏ qua kiểm tra availability nếu không đổi ngày và loại phòng, số lượng phòng giảm hoặc giữ nguyên
+            if (datesChanged || roomTypeChanged || (request.getQuantity() != null && request.getQuantity() > quantity)) {
+                assertAvailability(roomtype, checkIn, checkOut, quantity);
+            }
+        }
+
+        // 5. Cập nhật Yêu cầu đặc biệt & Ghi chú
+        if (request.getSpecialRequests() != null) {
+            booking.setSpecialrequests(request.getSpecialRequests());
+        }
+
+        // 6. Tính toán lại tài chính
+        long nights = ChronoUnit.DAYS.between(checkIn, checkOut);
+        if (nights <= 0) {
+            nights = 1; // Tối thiểu 1 đêm
+        }
+        BigDecimal totalAmount = roomtype.getBaseprice()
+                .multiply(BigDecimal.valueOf(quantity))
+                .multiply(BigDecimal.valueOf(nights));
+
+        booking.setTotalamount(totalAmount);
+        BigDecimal taxAmount = totalAmount.multiply(new BigDecimal("0.10")).setScale(2, java.math.RoundingMode.HALF_UP);
+        booking.setTaxamount(taxAmount);
+
+        BigDecimal discount = booking.getDiscountamount();
+        if (request.getDiscountAmount() != null) {
+            discount = request.getDiscountAmount();
+            booking.setDiscountamount(discount);
+        }
+        BigDecimal finalAmount = totalAmount.add(taxAmount).subtract(discount).setScale(2, java.math.RoundingMode.HALF_UP);
+        booking.setFinalamount(finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount);
+
+        Instant now = Instant.now();
+        booking.setUpdatedat(now);
+        detail.setUpdatedat(now);
+
         Booking updatedBooking = bookingRepository.save(booking);
+        Bookingdetail updatedDetail = bookingdetailRepository.save(detail);
 
-        return mapToBookingResponse(updatedBooking);
+        return mapToResponse(updatedBooking, updatedDetail, roomtype);
     }
 
     @Override
@@ -1738,6 +1894,43 @@ public class BookingServiceImpl implements BookingService {
         Booking cancelledBooking = bookingRepository.save(booking);
 
         return mapToBookingResponse(cancelledBooking);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse customerCancelBooking(Integer bookingId, CancelBookingRequest request, String customerEmail) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng với ID: " + bookingId));
+
+        User customer = userRepository.findByEmail(customerEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
+
+        if (!booking.getUserid().getId().equals(customer.getId())) {
+            throw new RuntimeException("Bạn không có quyền hủy đơn đặt phòng này");
+        }
+
+        String status = booking.getStatus();
+        if ("Checked-in".equalsIgnoreCase(status) || "Checked In".equalsIgnoreCase(status)
+                || "Checked-out".equalsIgnoreCase(status) || "Completed".equalsIgnoreCase(status) || "Cancelled".equalsIgnoreCase(status)) {
+            throw new RuntimeException("Không thể hủy đơn đặt phòng ở trạng thái: " + status);
+        }
+
+        booking.setStatus("Cancelled");
+        booking.setCancellationreason(request != null && request.getCancellationReason() != null ? request.getCancellationReason() : "Khách hàng tự hủy trực tuyến");
+        booking.setCancelledat(Instant.now());
+        booking.setCancelledby(customer);
+        booking.setUpdatedat(Instant.now());
+
+        Bookingdetail detail = bookingdetailRepository.findByBookingid_Id(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đơn đặt phòng"));
+
+        detail.setStatus("Cancelled");
+        detail.setUpdatedat(Instant.now());
+        bookingdetailRepository.save(detail);
+
+        Booking saved = bookingRepository.save(booking);
+
+        return mapToBookingResponse(saved);
     }
 
     private BookingHistoryResponse mapToBookingHistoryResponse(Booking booking) {

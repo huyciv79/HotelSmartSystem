@@ -107,7 +107,7 @@ public class BookingController {
         String customerEmail = resolveCustomerEmail(authentication);
         QrTokenResponse response = bookingService.generateQrCheckInToken(bookingId, customerEmail);
         return ResponseEntity.ok(ApiResponse.success(
-                "Tao ma QR check-in thanh cong",
+                "Tao ma QR check-in thành công",
                 response
         ));
     }
@@ -256,6 +256,21 @@ public class BookingController {
             Authentication authentication) {
         String staffEmail = resolveCustomerEmail(authentication);
         BookingResponse response = bookingService.cancelBooking(bookingId, request, staffEmail);
+        return ResponseEntity.ok(ApiResponse.success("Hủy đơn đặt phòng thành công", response));
+    }
+
+    @DeleteMapping("/{bookingId}/cancel")
+    @Operation(
+            summary = "Khách hàng tự hủy đơn đặt phòng",
+            description = "Cho phép khách hàng tự hủy đặt phòng của mình nếu chưa Check-in"
+    )
+    public ResponseEntity<ApiResponse<BookingResponse>> customerCancelBooking(
+            @PathVariable Integer bookingId,
+            @Valid @RequestBody(required = false) CancelBookingRequest request,
+            Authentication authentication) {
+        String customerEmail = resolveCustomerEmail(authentication);
+        CancelBookingRequest body = request != null ? request : new CancelBookingRequest();
+        BookingResponse response = bookingService.customerCancelBooking(bookingId, body, customerEmail);
         return ResponseEntity.ok(ApiResponse.success("Hủy đơn đặt phòng thành công", response));
     }
 

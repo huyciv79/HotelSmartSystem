@@ -43,5 +43,8 @@ public class BookingResponse {
     private Instant roomKeyExpiresAt;
     private List<RoomAccessResponse> roomAccesses;
     private EkycIdentitySummaryResponse ekycIdentity;
+    private Boolean isRoomChangePending;
+    private Boolean isStayExtensionPending;
+    private Boolean isEarlyCheckOutPending;
     private Instant createdAt;
 }

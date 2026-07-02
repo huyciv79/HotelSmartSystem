@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ShieldCheck, ShieldAlert, ShieldX, Clock, CreditCard, Smartphone, Loader2 } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Clock, CreditCard, Smartphone, Loader2 } from "lucide-react";
 import { getEkycProfile } from "../../services/ekycService";
 import { useLanguage } from "../../context/LanguageContext";
 
@@ -38,6 +38,37 @@ const IdentityCard = ({ onNavigate }) => {
 
   // Render content based on status
   const getContent = () => {
+    const progressButton = (
+      <button
+        onClick={onNavigate}
+        className="mt-2 w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold uppercase text-[9px] tracking-widest transition-all cursor-pointer rounded-none"
+      >
+        {t("ekyc_btn_view_progress", "Xem Tiến Trình")}
+      </button>
+    );
+
+    if (status === "SUBMITTED") {
+      return {
+        title: t("ekyc_status_submitted_title", "ĐÃ NỘP HỒ SƠ"),
+        desc: t("ekyc_status_submitted_desc", "Hồ sơ eKYC đã được gửi và đang chờ hệ thống bắt đầu xử lý."),
+        icon: <Clock className="text-amber-500 size-6" />,
+        border: "border-l-amber-500",
+        footer: t("ekyc_status_submitted_footer", "ĐÃ GỬI HỒ SƠ XÁC MINH"),
+        button: progressButton,
+      };
+    }
+
+    if (status === "AI_CHECKING") {
+      return {
+        title: t("ekyc_status_ai_checking_title", "AI ĐANG TRÍCH XUẤT DỮ LIỆU"),
+        desc: t("ekyc_status_ai_checking_desc", "AI đang đọc CCCD và đối chiếu với số CCCD đã đăng ký."),
+        icon: <Clock className="text-amber-500 size-6 animate-pulse" />,
+        border: "border-l-amber-500",
+        footer: t("ekyc_status_ai_checking_footer", "ĐANG ĐỐI CHIẾU CCCD"),
+        button: progressButton,
+      };
+    }
+
     switch (status) {
       case "VERIFIED":
         return {
@@ -50,13 +81,13 @@ const IdentityCard = ({ onNavigate }) => {
             : t("ekyc_status_verified_success", "ĐÃ XÁC MINH THÀNH CÔNG"),
           button: null,
         };
-      case "PENDING":
+      case "SUBMITTED":
         return {
-          title: t("ekyc_status_pending_title", "HỒ SƠ CHỜ DUYỆT"),
-          desc: t("ekyc_status_pending_desc", "Hồ sơ xác minh eKYC đang được xử lý. Vui lòng chờ trong giây lát."),
+          title: t("ekyc_status_submitted_title", "ĐÃ NỘP HỒ SƠ"),
+          desc: t("ekyc_status_submitted_desc", "Hồ sơ eKYC đã được gửi và đang chờ hệ thống bắt đầu xử lý."),
           icon: <Clock className="text-amber-500 size-6" />,
           border: "border-l-amber-500",
-          footer: t("ekyc_status_pending_footer", "ĐANG CHỜ HỆ THỐNG XÁC THỰC"),
+          footer: t("ekyc_status_submitted_footer", "ĐÃ GỬI HỒ SƠ XÁC MINH"),
           button: (
             <button
               onClick={onNavigate}
@@ -66,19 +97,19 @@ const IdentityCard = ({ onNavigate }) => {
             </button>
           ),
         };
-      case "REJECTED":
+      case "AI_CHECKING":
         return {
-          title: t("ekyc_status_rejected_title", "XÁC MINH THẤT BẠI"),
-          desc: t("ekyc_status_rejected_desc", "Hồ sơ eKYC bị từ chối do hình ảnh mờ hoặc thông tin không trùng khớp."),
-          icon: <ShieldX className="text-red-500 size-6" />,
-          border: "border-l-red-500",
-          footer: ekyc?.rejectionReason?.toUpperCase() || t("ekyc_status_rejected_footer", "HỒ SƠ BỊ TỪ CHỐI"),
+          title: t("ekyc_status_ai_checking_title", "AI ĐANG TRÍCH XUẤT DỮ LIỆU"),
+          desc: t("ekyc_status_ai_checking_desc", "AI đang đọc CCCD và đối chiếu với số CCCD đã đăng ký."),
+          icon: <Clock className="text-amber-500 size-6 animate-pulse" />,
+          border: "border-l-amber-500",
+          footer: t("ekyc_status_ai_checking_footer", "ĐANG ĐỐI CHIẾU CCCD"),
           button: (
             <button
               onClick={onNavigate}
-              className="mt-2 w-full py-2 bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 font-bold uppercase text-[9px] tracking-widest transition-all cursor-pointer rounded-none"
+              className="mt-2 w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold uppercase text-[9px] tracking-widest transition-all cursor-pointer rounded-none"
             >
-              {t("ekyc_btn_update_now", "Cập nhật eKYC ngay")}
+              {t("ekyc_btn_view_progress", "Xem Tiến Trình")}
             </button>
           ),
         };

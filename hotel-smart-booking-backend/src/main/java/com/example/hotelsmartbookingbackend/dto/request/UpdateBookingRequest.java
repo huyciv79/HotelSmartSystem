@@ -1,6 +1,5 @@
 package com.example.hotelsmartbookingbackend.dto.request;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,10 +12,21 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class UpdateBookingRequest {
-    @NotNull(message = "Special requests cannot be null")
     private String specialRequests;
     
     private BigDecimal discountAmount;
     
-    private String notes;
+
+
+    private String checkInDate;
+
+    private String checkOutDate;
+
+    private Integer roomTypeId;
+
+    private Integer quantity;
+
+    private Integer numberOfAdults;
+
+    private Integer numberOfChildren;
 }
