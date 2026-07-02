@@ -22,6 +22,24 @@ public interface EkycProfileRepository extends JpaRepository<EkycProfile, Intege
      */
     boolean existsByUseridAndStatus(User user, String status);
 
+    @Query("""
+            SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END
+            FROM EkycProfile e
+            WHERE e.userid = :user
+              AND UPPER(e.status) = 'VERIFIED'
+            """)
+    boolean existsVerifiedByUserid(@Param("user") User user);
+
+    @Modifying
+    @Query("""
+            UPDATE EkycProfile e
+            SET e.status = 'AI_CHECKING',
+                e.updatedat = :updatedAt
+            WHERE e.id = :ekycId
+            """)
+    void markAsAiChecking(@Param("ekycId") Integer ekycId,
+                          @Param("updatedAt") Instant updatedAt);
+
     /**
      * Cập nhật trạng thái eKYC thành Verified.
      * Dùng @Modifying + @Query để thực hiện bulk update không cần load entity.
@@ -29,7 +47,7 @@ public interface EkycProfileRepository extends JpaRepository<EkycProfile, Intege
     @Modifying
     @Query("""
             UPDATE EkycProfile e
-            SET e.status = 'Verified',
+            SET e.status = 'VERIFIED',
                 e.verifiedat = :verifiedAt,
                 e.updatedat = :updatedAt,
                 e.verificationmethod = :method
@@ -39,21 +57,6 @@ public interface EkycProfileRepository extends JpaRepository<EkycProfile, Intege
                         @Param("verifiedAt") Instant verifiedAt,
                         @Param("updatedAt") Instant updatedAt,
                         @Param("method") String method);
-
-    /**
-     * Cập nhật trạng thái eKYC thành Rejected kèm lý do.
-     */
-    @Modifying
-    @Query("""
-            UPDATE EkycProfile e
-            SET e.status = 'Rejected',
-                e.rejectionreason = :reason,
-                e.updatedat = :updatedAt
-            WHERE e.id = :ekycId
-            """)
-    void markAsRejected(@Param("ekycId") Integer ekycId,
-                        @Param("reason") String reason,
-                        @Param("updatedAt") Instant updatedAt);
 
     /**
      * Cập nhật số CCCD bóc tách tự động từ OCR vào bản ghi EkycProfile.
@@ -76,6 +79,14 @@ public interface EkycProfileRepository extends JpaRepository<EkycProfile, Intege
      * @return {@code true} nếu đã có bản ghi Verified với hash này
      */
     boolean existsByIdcardnumberhashAndStatus(String hash, String status);
+
+    @Query("""
+            SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END
+            FROM EkycProfile e
+            WHERE e.idcardnumberhash = :hash
+              AND UPPER(e.status) = 'VERIFIED'
+            """)
+    boolean existsVerifiedByIdcardnumberhash(@Param("hash") String hash);
 
     /**
      * Cập nhật cả AES ciphertext lẫn HMAC hash cùng một lúc.
@@ -108,4 +119,14 @@ public interface EkycProfileRepository extends JpaRepository<EkycProfile, Intege
      * Kiểm tra số CCCD (qua HMAC-SHA256 fingerprint) đã được đăng ký bởi user khác chưa.
      */
     boolean existsByIdcardnumberhashAndStatusAndUseridNot(String hash, String status, User user);
+
+    @Query("""
+            SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END
+            FROM EkycProfile e
+            WHERE e.idcardnumberhash = :hash
+              AND UPPER(e.status) = 'VERIFIED'
+              AND e.userid <> :user
+            """)
+    boolean existsVerifiedByIdcardnumberhashAndUseridNot(@Param("hash") String hash,
+                                                        @Param("user") User user);
 }

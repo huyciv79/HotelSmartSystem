@@ -2,6 +2,7 @@ package com.example.hotelsmartbookingbackend.entity;
 import com.example.hotelsmartbookingbackend.enums.Role;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -33,6 +34,11 @@ public class User {
     @NotNull
     @Column(name = "phonenumber", nullable = false, length = 20)
     private String phonenumber;
+
+    @Size(min = 12, max = 12)
+    @Pattern(regexp = "^[0-9]{12}$")
+    @Column(name = "idcardnumber", length = 12, unique = true)
+    private String idcardnumber;
 
     @Size(max = 255)
     @NotNull

@@ -11,7 +11,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EkycStatusResponse {
-    private String status; // "VERIFIED", "PENDING", "REJECTED", "NOT_FOUND"
+    private String status; // "SUBMITTED", "AI_CHECKING", "VERIFIED", "NOT_FOUND"
     private String message;
     private String fullName;
     private String idNumber;

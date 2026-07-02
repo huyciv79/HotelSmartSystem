@@ -2,6 +2,7 @@ package com.example.hotelsmartbookingbackend.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -18,6 +19,10 @@ public class RegisterRequest {
 
     @NotBlank(message = "Full name is required")
     private String fullName;
+
+    @NotBlank(message = "ID card number is required")
+    @Pattern(regexp = "^[0-9]{12}$", message = "ID card number must contain exactly 12 digits")
+    private String idCardNumber;
 
     private String phone;
 }

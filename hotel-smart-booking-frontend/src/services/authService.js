@@ -4,7 +4,7 @@ import axiosInstance from './axiosInstance';
  * Register a new user account.
  *
  * POST /auth/register
- * @param {{ fullName: string, email: string, phone: string, password: string }} data
+ * @param {{ fullName: string, email: string, phone: string, idCardNumber: string, password: string }} data
  * @returns {Promise<object>} API response data
  * @throws {import('axios').AxiosError}
  *   - 409: email already exists
@@ -14,6 +14,7 @@ export const registerUser = async (data) => {
     fullName: data.fullName,
     email: data.email,
     phone: data.phone,
+    idCardNumber: data.idCardNumber,
     password: data.password,
   });
   return response.data;

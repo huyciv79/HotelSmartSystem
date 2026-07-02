@@ -201,9 +201,7 @@ public class BookingServiceImpl implements BookingService {
             validateQrCodeBookingEligibility(customer);
         }
         if ("FaceID".equalsIgnoreCase(normalizedCheckInMethod)) {
-            boolean ekycVerified = ekycProfileRepository.existsByUseridAndStatus(
-                    customer,
-                    "Verified");
+            boolean ekycVerified = ekycProfileRepository.existsVerifiedByUserid(customer);
             boolean faceRegistered = faceembeddingRepository
                     .findEmbeddingTextByUserId(customer.getId())
                     .filter(embedding -> !embedding.isBlank())
@@ -631,7 +629,7 @@ public class BookingServiceImpl implements BookingService {
         }
         validateCheckInDateWindow(detail);
 
-        if (!ekycProfileRepository.existsByUseridAndStatus(customer, "Verified")) {
+        if (!ekycProfileRepository.existsVerifiedByUserid(customer)) {
             throw new RuntimeException(
                     "Bạn chưa hoàn thành đăng ký eKYC nên chưa thể check-in bằng FaceID");
         }
@@ -1121,10 +1119,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void validateFaceIdBookingEligibility(User customer) {
-        boolean ekycVerified = ekycProfileRepository.existsByUseridAndStatus(
-                customer,
-                "Verified"
-        );
+        boolean ekycVerified = ekycProfileRepository.existsVerifiedByUserid(customer);
         boolean faceRegistered = faceembeddingRepository
                 .findEmbeddingTextByUserId(customer.getId())
                 .filter(embedding -> !embedding.isBlank())
@@ -1138,7 +1133,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void validateQrCodeBookingEligibility(User customer) {
-        if (!ekycProfileRepository.existsByUseridAndStatus(customer, "Verified")) {
+        if (!ekycProfileRepository.existsVerifiedByUserid(customer)) {
             throw new RuntimeException(
                     "Ban phai hoan thanh dang ky eKYC truoc khi chon check-in bang QR Code"
             );
@@ -1414,15 +1409,28 @@ public class BookingServiceImpl implements BookingService {
 
         User customer = userRepository.findByEmail(request.getCustomerEmail()).orElse(null);
         if (customer == null) {
+            if (userRepository.existsByIdcardnumber(request.getCustomerIdCardNumber())) {
+                throw new RuntimeException("So CCCD nay da ton tai trong he thong");
+            }
             customer = new User();
             customer.setEmail(request.getCustomerEmail());
             customer.setFullname(request.getCustomerFullname());
             customer.setPhonenumber(request.getCustomerPhonenumber());
+            customer.setIdcardnumber(request.getCustomerIdCardNumber());
             customer.setRole(Role.customer);
             customer.setPasswordhash("");
             customer.setStatus("Active");
             customer.setCreatedat(Instant.now());
             customer = userRepository.save(customer);
+        } else if (customer.getIdcardnumber() == null || customer.getIdcardnumber().isBlank()) {
+            if (userRepository.existsByIdcardnumber(request.getCustomerIdCardNumber())) {
+                throw new RuntimeException("So CCCD nay da ton tai trong he thong");
+            }
+            customer.setIdcardnumber(request.getCustomerIdCardNumber());
+            customer.setUpdatedat(Instant.now());
+            customer = userRepository.save(customer);
+        } else if (!customer.getIdcardnumber().equals(request.getCustomerIdCardNumber())) {
+            throw new RuntimeException("Email khach hang da gan voi so CCCD khac");
         }
 
         Roomtype roomtype = roomtypeRepository.findById(request.getRoomTypeId())

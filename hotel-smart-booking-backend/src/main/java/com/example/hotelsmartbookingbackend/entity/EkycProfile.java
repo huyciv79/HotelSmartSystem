@@ -86,7 +86,7 @@ public class EkycProfile {
 
     @Size(max = 50)
     @NotNull
-    @ColumnDefault("'Pending'")
+    @ColumnDefault("'SUBMITTED'")
     @Column(name = "status", nullable = false, length = 50)
     private String status;
 

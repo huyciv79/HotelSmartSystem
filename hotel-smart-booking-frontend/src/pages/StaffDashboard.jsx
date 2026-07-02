@@ -130,6 +130,7 @@ export default function StaffDashboard({ setActivePage }) {
     customerFullname: '',
     customerEmail: '',
     customerPhonenumber: '',
+    customerIdCardNumber: '',
     paidAmount: '',
     paymentMethod: 'Cash'
   });
@@ -345,8 +346,12 @@ export default function StaffDashboard({ setActivePage }) {
 
   const handleWalkInSubmit = async (e) => {
     e.preventDefault();
-    if (!walkInFormData.roomTypeId || !walkInFormData.checkInDate || !walkInFormData.checkOutDate || !walkInFormData.customerFullname || !walkInFormData.customerEmail || !walkInFormData.customerPhonenumber) {
+    if (!walkInFormData.roomTypeId || !walkInFormData.checkInDate || !walkInFormData.checkOutDate || !walkInFormData.customerFullname || !walkInFormData.customerEmail || !walkInFormData.customerPhonenumber || !walkInFormData.customerIdCardNumber) {
       showToast('Vui lòng điền đầy đủ các thông tin bắt buộc', 'warning');
+      return;
+    }
+    if (!/^[0-9]{12}$/.test(walkInFormData.customerIdCardNumber)) {
+      showToast('So CCCD phai gom dung 12 chu so', 'warning');
       return;
     }
     setIsSubmittingWalkIn(true);
@@ -2202,7 +2207,7 @@ export default function StaffDashboard({ setActivePage }) {
 
               <div className="border-t border-neutral-900/60 pt-4">
                 <span className="text-[10px] font-black tracking-widest text-primary uppercase block mb-3">Thông tin khách hàng</span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Họ và tên *</label>
                     <input
@@ -2234,6 +2239,20 @@ export default function StaffDashboard({ setActivePage }) {
                       value={walkInFormData.customerPhonenumber}
                       onChange={(e) => setWalkInFormData(prev => ({ ...prev, customerPhonenumber: e.target.value }))}
                       placeholder="0901234567"
+                      className="w-full bg-transparent border-b border-neutral-855 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">So CCCD *</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={12}
+                      value={walkInFormData.customerIdCardNumber}
+                      onChange={(e) => setWalkInFormData(prev => ({ ...prev, customerIdCardNumber: e.target.value }))}
+                      placeholder="012345678901"
                       className="w-full bg-transparent border-b border-neutral-855 py-2 font-bold text-xs outline-none text-white focus:border-primary"
                       required
                     />

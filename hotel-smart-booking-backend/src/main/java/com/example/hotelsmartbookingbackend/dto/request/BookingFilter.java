@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -13,9 +14,11 @@ import java.time.LocalDate;
 @Builder
 public class BookingFilter {
     private String status;
+    private List<String> statuses;
     private String bookingReference;
     private String guestName;
     private String guestEmail;
+    private String checkInMethod;
     private LocalDate checkInDateFrom;
     private LocalDate checkInDateTo;
     private LocalDate checkOutDateFrom;

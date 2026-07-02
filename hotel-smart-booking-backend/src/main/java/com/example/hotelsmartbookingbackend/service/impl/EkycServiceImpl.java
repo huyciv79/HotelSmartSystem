@@ -22,12 +22,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -60,10 +57,6 @@ public class EkycServiceImpl implements EkycService {
     private final AesEncryptionService aesEncryptionService;
     private final SupabaseStorageService supabaseStorageService;
 
-    @Autowired
-    @Lazy
-    private EkycServiceImpl self;
-
     // ── Config ────────────────────────────────────────────────────────────────
     @Value("${ai.service.ekyc-url:http://localhost:8000/api/v1/ai/verify-ekyc}")
     private String aiEkycUrl;
@@ -78,6 +71,9 @@ public class EkycServiceImpl implements EkycService {
     private static final String EKYC_CACHE_PREFIX = "user:ekyc:";
     private static final Duration EKYC_CACHE_TTL = Duration.ofDays(7);
     private static final String VERIFICATION_METHOD = "Auto";
+    private static final String STATUS_SUBMITTED = "SUBMITTED";
+    private static final String STATUS_AI_CHECKING = "AI_CHECKING";
+    private static final String STATUS_VERIFIED = "VERIFIED";
     private static final Pattern FASTAPI_DETAIL_PATTERN = Pattern.compile(
             "\"detail\"\\s*:\\s*\"((?:\\\\.|[^\"])*)\""
     );
@@ -125,7 +121,7 @@ public class EkycServiceImpl implements EkycService {
 
         if (profileOpt.isPresent()) {
             EkycProfile existingProfile = profileOpt.get();
-            if ("Verified".equalsIgnoreCase(existingProfile.getStatus())) {
+            if (isVerifiedStatus(existingProfile.getStatus())) {
                 throw new RuntimeException("Tài khoản của bạn đã được xác minh eKYC trước đó.");
             } else {
                 isUpdateFlow = true;
@@ -135,28 +131,30 @@ public class EkycServiceImpl implements EkycService {
             profile = null;
         }
 
-        // ── 3. Tạo/Cập nhật bản ghi EkycProfile tạm với trạng thái Pending ──
+        // ── 3. Tạo/Cập nhật bản ghi EkycProfile với trạng thái SUBMITTED rồi AI_CHECKING ──
         if (isUpdateFlow) {
             profile.setFrontimage(request.getFrontImageUrl());
             profile.setBackimage(request.getBackImageUrl());
             profile.setFaceimage(request.getFaceImageUrl());
-            profile.setStatus("Pending");
+            profile.setStatus(STATUS_SUBMITTED);
             profile.setRejectionreason(null);
             profile.setVerificationmethod(VERIFICATION_METHOD);
             profile.setUpdatedat(now);
             ekycProfileRepository.save(profile);
         } else {
-            profile = createPendingProfile(user, request);
+            profile = createSubmittedProfile(user, request);
             ekycProfileRepository.save(profile);
         }
+        Instant aiStartedAt = Instant.now();
+        ekycProfileRepository.markAsAiChecking(profile.getId(), aiStartedAt);
+        profile.setStatus(STATUS_AI_CHECKING);
+        profile.setUpdatedat(aiStartedAt);
 
         // ── 4. OCR CCCD ───────────────────────────────────────────────────────
         AiEkycResponse ocrResponse;
         try {
             ocrResponse = callAiService(request);
         } catch (Exception ex) {
-            String rejectionReason = "CCCD OCR failed: " + ex.getMessage();
-            self.markAsRejectedNewTx(profile.getId(), rejectionReason, Instant.now());
             throw new RuntimeException(
                     "Không thể đọc thông tin CCCD. Hãy chụp đúng mặt trước, mặt sau, "
                             + "đặt thẻ trong khung và bảo đảm ảnh rõ nét.",
@@ -164,7 +162,7 @@ public class EkycServiceImpl implements EkycService {
             );
         }
 
-        String idCardNumber = blankToNull(ocrResponse.getIdCardNumber());
+        String idCardNumber = normalizeIdCardNumber(ocrResponse.getIdCardNumber());
         String fullName     = blankToNull(ocrResponse.getFullName());
         String dateOfBirth  = blankToNull(ocrResponse.getDateOfBirth());
         String gender       = blankToNull(ocrResponse.getGender());
@@ -180,7 +178,6 @@ public class EkycServiceImpl implements EkycService {
                     || ocrResponse.getValidationErrors().isEmpty()
                     ? "CCCD OCR cross-field validation failed"
                     : String.join("; ", ocrResponse.getValidationErrors());
-            self.markAsRejectedNewTx(profile.getId(), validationDetail, Instant.now());
             throw new RuntimeException("Thông tin CCCD không nhất quán: " + validationDetail);
         }
 
@@ -196,12 +193,17 @@ public class EkycServiceImpl implements EkycService {
         );
 
         if (idCardNumber == null) {
-            String rejectionReason = "CCCD OCR did not return an identification number";
-            self.markAsRejectedNewTx(profile.getId(), rejectionReason, Instant.now());
             throw new RuntimeException(
                     "Không nhận diện được số CCCD trên ảnh mặt trước. "
                             + "Vui lòng chụp lại mặt trước CCCD rõ nét và đầy đủ bốn góc."
             );
+        }
+        String registeredIdCardNumber = normalizeIdCardNumber(user.getIdcardnumber());
+        if (registeredIdCardNumber == null) {
+            throw new RuntimeException("Tai khoan chua co so CCCD da dang ky.");
+        }
+        if (!registeredIdCardNumber.equals(idCardNumber)) {
+            throw new RuntimeException("So CCCD tren anh khong khop voi so CCCD da dang ky tai khoan.");
         }
 
         // ── 5. Liveness + Face enrollment ─────────────────────────────────────
@@ -224,8 +226,6 @@ public class EkycServiceImpl implements EkycService {
             }
         } catch (Exception ex) {
             String aiDetail = ex.getMessage();
-            String rejectionReason = "Face enrollment failed: " + aiDetail;
-            self.markAsRejectedNewTx(profile.getId(), rejectionReason, Instant.now());
             boolean isAiDetail = aiDetail != null
                     && !aiDetail.startsWith("Face API")
                     && !aiDetail.startsWith("Không thể kết nối");
@@ -306,28 +306,20 @@ public class EkycServiceImpl implements EkycService {
 
         EkycProfile profile = profileOpt.get();
 
-        String statusStr = "NOT_FOUND";
-        String statusMsg = "";
-
-        if ("Verified".equalsIgnoreCase(profile.getStatus())) {
-            statusStr = "VERIFIED";
-            statusMsg = "Your identity has been successfully verified.";
-        } else if ("Pending".equalsIgnoreCase(profile.getStatus())) {
-            statusStr = "PENDING";
-            statusMsg = "Your identity verification request is currently being processed. Please wait.";
-        } else if ("Rejected".equalsIgnoreCase(profile.getStatus())) {
-            statusStr = "REJECTED";
-            statusMsg = profile.getRejectionreason() != null
-                    ? profile.getRejectionreason()
-                    : "Your identity verification request was rejected.";
-        }
+        String statusStr = normalizeEkycStatus(profile.getStatus());
+        String statusMsg = switch (statusStr) {
+            case STATUS_VERIFIED -> "Xac minh thanh cong.";
+            case STATUS_AI_CHECKING -> "AI dang trich xuat du lieu.";
+            case STATUS_SUBMITTED -> "Da nop ho so.";
+            default -> "Ban chua dang ky ho so xac minh danh tinh.";
+        };
 
         // Giải mã số CCCD (lưu dạng AES-256-GCM)
         String decryptedIdNumber = null;
         if (profile.getIdcardnumber() != null) {
             try {
                 decryptedIdNumber = aesEncryptionService.decrypt(profile.getIdcardnumber());
-                if ("VERIFIED".equals(statusStr)) {
+                if (STATUS_VERIFIED.equals(statusStr)) {
                     decryptedIdNumber = maskIdNumber(decryptedIdNumber);
                 }
             } catch (Exception ex) {
@@ -444,14 +436,14 @@ public class EkycServiceImpl implements EkycService {
     // PRIVATE HELPERS
     // ─────────────────────────────────────────────────────────────────────────
 
-    private EkycProfile createPendingProfile(User user, EkycRequest request) {
+    private EkycProfile createSubmittedProfile(User user, EkycRequest request) {
         Instant now = Instant.now();
         EkycProfile profile = new EkycProfile();
         profile.setUserid(user);
         profile.setFrontimage(request.getFrontImageUrl());
         profile.setBackimage(request.getBackImageUrl());
         profile.setFaceimage(request.getFaceImageUrl());
-        profile.setStatus("Pending");
+        profile.setStatus(STATUS_SUBMITTED);
         profile.setVerificationmethod(VERIFICATION_METHOD);
         profile.setCreatedat(now);
         profile.setUpdatedat(now);
@@ -564,18 +556,19 @@ public class EkycServiceImpl implements EkycService {
 
         String idCardNumberHash = aesEncryptionService.hmac(idCardNumber);
         boolean isDuplicate = isUpdateFlow
-                ? ekycProfileRepository.existsByIdcardnumberhashAndStatusAndUseridNot(
-                        idCardNumberHash, "Verified", user)
-                : ekycProfileRepository.existsByIdcardnumberhashAndStatus(
-                        idCardNumberHash, "Verified");
+                ? ekycProfileRepository.existsVerifiedByIdcardnumberhashAndUseridNot(idCardNumberHash, user)
+                : ekycProfileRepository.existsVerifiedByIdcardnumberhash(idCardNumberHash);
 
         if (isDuplicate) {
-            String reason = "Số CCCD này đã được đăng ký bởi một tài khoản khác";
-            self.markAsRejectedNewTx(profile.getId(), reason, now);
             throw new RuntimeException("Số CCCD này đã được liên kết với một tài khoản khác.");
         }
 
-        // Cập nhật EkycProfile → Verified
+        String registeredIdCardNumber = normalizeIdCardNumber(user.getIdcardnumber());
+        if (registeredIdCardNumber == null || !registeredIdCardNumber.equals(idCardNumber)) {
+            throw new RuntimeException("So CCCD tren anh khong khop voi so CCCD da dang ky tai khoan.");
+        }
+
+        // Cập nhật EkycProfile -> VERIFIED
         ekycProfileRepository.markAsVerified(profile.getId(), now, now, VERIFICATION_METHOD);
 
         // Mã hóa AES-256-GCM
@@ -605,14 +598,14 @@ public class EkycServiceImpl implements EkycService {
         saveAngleEmbeddings(user.getId(), faceResponse.getAngleEmbeddings(), now);
 
         // Cache Redis
-        cacheEkycStatus(user.getId(), "Verified");
+        cacheEkycStatus(user.getId(), STATUS_VERIFIED);
 
         String successMessage = isUpdateFlow
                 ? "CCCD đã được xác minh và FaceID đã được cập nhật thành công."
                 : "CCCD đã được xác minh và FaceID đã được đăng ký thành công cho check-in.";
 
         return EkycResponse.builder()
-                .status("Verified")
+                .status(STATUS_VERIFIED)
                 .message(successMessage)
                 .recognizedIdNumber(idCardNumber)
                 .build();
@@ -633,12 +626,12 @@ public class EkycServiceImpl implements EkycService {
 
     private boolean isAlreadyVerifiedInCache(Integer userId) {
         Object cached = redisTemplate.opsForValue().get(EKYC_CACHE_PREFIX + userId);
-        if (!"Verified".equals(cached)) {
+        if (!STATUS_VERIFIED.equals(cached)) {
             return false;
         }
         User userRef = new User();
         userRef.setId(userId);
-        boolean verifiedInDb = ekycProfileRepository.existsByUseridAndStatus(userRef, "Verified");
+        boolean verifiedInDb = ekycProfileRepository.existsVerifiedByUserid(userRef);
         if (!verifiedInDb) {
             redisTemplate.delete(EKYC_CACHE_PREFIX + userId);
             return false;
@@ -654,9 +647,31 @@ public class EkycServiceImpl implements EkycService {
         );
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void markAsRejectedNewTx(Integer ekycId, String reason, Instant updatedAt) {
-        ekycProfileRepository.markAsRejected(ekycId, reason, updatedAt);
+    private boolean isVerifiedStatus(String status) {
+        return STATUS_VERIFIED.equals(normalizeEkycStatus(status));
+    }
+
+    private String normalizeEkycStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return STATUS_SUBMITTED;
+        }
+        String normalized = status.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case STATUS_VERIFIED -> STATUS_VERIFIED;
+            case STATUS_AI_CHECKING -> STATUS_AI_CHECKING;
+            case "PENDING" -> STATUS_AI_CHECKING;
+            case STATUS_SUBMITTED, "REJECTED" -> STATUS_SUBMITTED;
+            default -> STATUS_SUBMITTED;
+        };
+    }
+
+    private String normalizeIdCardNumber(String value) {
+        String normalized = blankToNull(value);
+        if (normalized == null) {
+            return null;
+        }
+        String digitsOnly = normalized.replaceAll("[^0-9]", "");
+        return digitsOnly.isBlank() ? null : digitsOnly;
     }
 
     private String maskIdNumber(String id) {
