@@ -47,6 +47,9 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email đã tồn tại trong hệ thống");
         }
+        if (userRepository.existsByIdcardnumber(request.getIdCardNumber())) {
+            throw new RuntimeException("So CCCD nay da ton tai trong he thong");
+        }
 
         // Generate 6-digit OTP
         String otp = String.format("%06d", new Random().nextInt(999999));
@@ -80,11 +83,19 @@ public class AuthServiceImpl implements AuthService {
             registerRequest = mapper.convertValue(cachedRequestObj, RegisterRequest.class);
         }
 
+        if (registerRequest.getIdCardNumber() == null || !registerRequest.getIdCardNumber().matches("^[0-9]{12}$")) {
+            throw new RuntimeException("So CCCD phai gom dung 12 chu so");
+        }
+        if (userRepository.existsByIdcardnumber(registerRequest.getIdCardNumber())) {
+            throw new RuntimeException("So CCCD nay da ton tai trong he thong");
+        }
+
         User user = new User();
         user.setEmail(registerRequest.getEmail());
         user.setPasswordhash(passwordEncoder.encode(registerRequest.getPassword()));
         user.setFullname(registerRequest.getFullName());
         user.setPhonenumber(registerRequest.getPhone());
+        user.setIdcardnumber(registerRequest.getIdCardNumber());
         user.setRole(Role.customer); // Default role confirmed by user
         user.setStatus("Active");
         user.setCreatedat(Instant.now());

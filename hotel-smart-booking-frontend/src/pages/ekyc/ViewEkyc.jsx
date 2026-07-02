@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   ShieldCheck, ShieldAlert, ShieldX, Clock, RefreshCcw,
-  CheckCircle2, XCircle, Loader2, CreditCard, Smartphone,
+  CheckCircle2, Loader2,
   ArrowLeft
 } from 'lucide-react';
 import { getEkycProfile } from '../../services/ekycService';
@@ -9,10 +9,10 @@ import { getEkycProfile } from '../../services/ekycService';
 // Status badge component
 function StatusBadge({ status }) {
   const map = {
-    VERIFIED:  { label: 'ĐÃ XÁC MINH',   icon: CheckCircle2, cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-    PENDING:   { label: 'ĐANG CHỜ DUYỆT', icon: Clock,        cls: 'bg-amber-500/10  text-amber-400  border-amber-500/20'  },
-    REJECTED:  { label: 'BỊ TỪ CHỐI',    icon: XCircle,      cls: 'bg-red-500/10    text-red-400    border-red-500/20'    },
-    NOT_FOUND: { label: 'CHƯA XÁC MINH',  icon: ShieldAlert,  cls: 'bg-white/5       text-white/40   border-white/10'      },
+    VERIFIED: { label: 'ĐÃ XÁC MINH', icon: CheckCircle2, cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+    SUBMITTED: { label: 'ĐÃ NỘP HỒ SƠ', icon: Clock, cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+    AI_CHECKING: { label: 'AI ĐANG KIỂM TRA', icon: Clock, cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+    NOT_FOUND: { label: 'CHƯA XÁC MINH', icon: ShieldAlert, cls: 'bg-white/5 text-white/40 border-white/10' },
   };
   const cfg = map[status] || map.NOT_FOUND;
   const Icon = cfg.icon;
@@ -36,17 +36,17 @@ function InfoRow({ label, value }) {
 
 // Uploaded image placeholder / component (UC-31 EXC-01)
 function EkycImage({ label, src, onImageError }) {
-  const [error, setError] = useState(!src);
+  const [erroredSrc, setErroredSrc] = useState(null);
+  const hasError = !src || erroredSrc === src;
 
   useEffect(() => {
     if (!src) {
-      setError(true);
       onImageError?.();
     }
   }, [src, onImageError]);
 
   const handleError = () => {
-    setError(true);
+    setErroredSrc(src);
     onImageError?.();
   };
 
@@ -54,7 +54,7 @@ function EkycImage({ label, src, onImageError }) {
     <div className="flex flex-col gap-2.5">
       <span className="text-[9px] uppercase tracking-widest text-white/40 font-bold">{label}</span>
       <div className="w-full aspect-[4/3] bg-white/5 border border-white/10 rounded-none overflow-hidden flex items-center justify-center relative hover:border-white/20 transition-colors shadow-inner">
-        {error ? (
+        {hasError ? (
           <div className="flex flex-col items-center gap-1.5 p-4 text-center">
             <div className="w-8 h-8 rounded-none bg-red-500/10 flex items-center justify-center border border-red-500/20">
               <ShieldX size={16} className="text-red-400" />
@@ -76,40 +76,37 @@ function EkycImage({ label, src, onImageError }) {
 }
 
 const STATUS_STEPS = [
-  { key: 'SUBMITTED',   label: 'ĐÃ NỘP HỒ SƠ',       desc: 'Tài liệu và ảnh chân dung đã được tải lên.' },
-  { key: 'AI_CHECKING', label: 'AI ĐANG ĐỐI CHIẾU',   desc: 'Hệ thống AI đang trích xuất dữ liệu.' },
-  { key: 'REVIEWING',   label: 'CHỜ DUYỆT THỦ CÔNG',  desc: 'Nhân viên kiểm tra và phê duyệt.' },
-  { key: 'VERIFIED',    label: 'XÁC MINH THÀNH CÔNG', desc: 'Đã hoàn tất xác minh eKYC.' },
+  { key: 'SUBMITTED', label: 'ĐÃ NỘP HỒ SƠ', desc: 'Hồ sơ eKYC đã được gửi thành công.' },
+  { key: 'AI_CHECKING', label: 'AI ĐANG TRÍCH XUẤT DỮ LIỆU', desc: 'AI đang đọc CCCD và đối chiếu với số đã đăng ký.' },
+  { key: 'VERIFIED', label: 'XÁC MINH THÀNH CÔNG', desc: 'Đã hoàn tất xác minh eKYC.' },
 ];
 
 function StatusTimeline({ status }) {
   const stepIndex = {
     NOT_FOUND: -1,
-    PENDING: 2,
-    VERIFIED: 3,
-    REJECTED: 3,
+    SUBMITTED: 0,
+    AI_CHECKING: 1,
+    VERIFIED: 2,
   }[status] ?? 0;
-
-  const isRejected = status === 'REJECTED';
 
   return (
     <div className="flex flex-col gap-0">
         {STATUS_STEPS.map((step, idx) => {
           const done = idx < stepIndex;
-          const active = idx === stepIndex && !isRejected;
-          const failed = idx === stepIndex && isRejected;
+          const active = idx === stepIndex;
+          const verifiedActive = active && status === 'VERIFIED';
+          const stepComplete = done || verifiedActive;
 
           return (
             <div key={step.key} className="flex gap-4">
               <div className="flex flex-col items-center">
                 <div className={`
                   w-6 h-6 rounded-none flex items-center justify-center flex-shrink-0 border text-[9px] font-black transition-all duration-300
-                  ${done ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 
+                  ${stepComplete ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' :
                     active ? 'bg-amber-500/20 border-amber-500 text-amber-400' : 
-                    failed ? 'bg-red-500/20 border-red-500 text-red-400' : 
                     'bg-white/5 border-white/10 text-white/30'}
                 `}>
-                  {done ? '✓' : active ? '⏳' : failed ? '✗' : idx + 1}
+                  {stepComplete ? '✓' : active ? '…' : idx + 1}
                 </div>
                 {idx < STATUS_STEPS.length - 1 && (
                   <div className={`w-px flex-1 my-1 ${done ? 'bg-emerald-500' : 'bg-white/10'} min-h-[1.5rem]`} />
@@ -117,12 +114,12 @@ function StatusTimeline({ status }) {
               </div>
 
               <div className={`pb-4 flex-1 ${idx === STATUS_STEPS.length - 1 ? 'pb-0' : ''}`}>
-                <p className={`text-[10px] font-black tracking-widest uppercase ${done ? 'text-emerald-400' : active ? 'text-amber-400' : failed ? 'text-red-400' : 'text-white/30'}`}>
+                <p className={`text-[10px] font-black tracking-widest uppercase ${stepComplete ? 'text-emerald-400' : active ? 'text-amber-400' : 'text-white/30'}`}>
                   {step.label}
-                  {active && <span className="ml-2 text-[8px] bg-amber-500/20 text-amber-400 px-2 py-0.5 animate-pulse font-bold tracking-widest">ĐANG XỬ LÝ</span>}
+                  {active && !verifiedActive && <span className="ml-2 text-[8px] bg-amber-500/20 text-amber-400 px-2 py-0.5 animate-pulse font-bold tracking-widest">ĐANG XỬ LÝ</span>}
                 </p>
-                <p className={`text-[9px] font-bold uppercase tracking-wider mt-1 ${done || active || failed ? 'text-white/50' : 'text-white/25'}`}>
-                  {failed && idx === stepIndex ? 'Xác minh không thành công do hình ảnh mờ hoặc thông tin bị trùng.' : step.desc}
+                <p className={`text-[9px] font-bold uppercase tracking-wider mt-1 ${stepComplete || active ? 'text-white/50' : 'text-white/25'}`}>
+                  {step.desc}
                 </p>
               </div>
             </div>
@@ -163,7 +160,9 @@ export default function ViewEkyc({ onBack, onRegister, onUpdate }) {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    void Promise.resolve().then(load);
+  }, [load]);
 
   const status = ekycData?.status || 'NOT_FOUND';
 
@@ -177,19 +176,19 @@ export default function ViewEkyc({ onBack, onRegister, onUpdate }) {
           desc: 'ĐÃ KÍCH HOẠT FACEID EXPRESS CHECK-IN',
           icon: <ShieldCheck className="text-emerald-500 size-7" />,
         };
-      case 'PENDING':
+      case 'SUBMITTED':
         return {
           border: 'border-l-amber-500',
-          title: 'HỒ SƠ CHỜ DUYỆT',
-          desc: 'Hồ sơ xác minh eKYC đang được xử lý. Vui lòng chờ trong giây lát.',
+          title: 'ĐÃ NỘP HỒ SƠ',
+          desc: 'Hồ sơ eKYC đã được gửi thành công.',
           icon: <Clock className="text-amber-500 size-7" />,
         };
-      case 'REJECTED':
+      case 'AI_CHECKING':
         return {
-          border: 'border-l-red-500',
-          title: 'XÁC MINH THẤT BẠI',
-          desc: 'Hồ sơ eKYC bị từ chối do hình ảnh mờ hoặc thông tin không trùng khớp.',
-          icon: <ShieldX className="text-red-500 size-7" />,
+          border: 'border-l-amber-500',
+          title: 'AI ĐANG TRÍCH XUẤT DỮ LIỆU',
+          desc: 'AI đang đọc CCCD và đối chiếu với số CCCD đã đăng ký.',
+          icon: <Clock className="text-amber-500 size-7 animate-pulse" />,
         };
       case 'NOT_FOUND':
       default:
@@ -251,6 +250,7 @@ export default function ViewEkyc({ onBack, onRegister, onUpdate }) {
               <p className="text-neutral-400 text-xs font-medium leading-relaxed uppercase tracking-wider max-w-lg">
                 {currentStyles.desc}
               </p>
+              <StatusBadge status={status} />
             </div>
             {currentStyles.icon}
           </div>
@@ -296,17 +296,6 @@ export default function ViewEkyc({ onBack, onRegister, onUpdate }) {
                 </div>
               )}
 
-              {/* Rejection Reason Alert Box */}
-              {status === 'REJECTED' && ekycData?.rejectionReason && (
-                <div className="bg-red-950/20 border border-red-900/30 rounded-none p-5 flex items-start gap-3">
-                  <XCircle size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-red-300 text-xs font-bold uppercase tracking-wider mb-1">Lý do từ chối:</p>
-                    <p className="text-red-400/80 text-[10px] uppercase font-bold tracking-wider leading-relaxed">{ekycData.rejectionReason}</p>
-                  </div>
-                </div>
-              )}
-
             </div>
           )}
 
@@ -326,7 +315,7 @@ export default function ViewEkyc({ onBack, onRegister, onUpdate }) {
             {/* Action group for existing profile */}
             {status !== 'NOT_FOUND' && (
               <div className="flex gap-4 w-full">
-                {(status === 'REJECTED' || status === 'VERIFIED' || hasImageError) && (
+                {(status === 'VERIFIED' || hasImageError) && (
                   <button
                     onClick={onUpdate}
                     className="flex-1 py-4 bg-primary hover:bg-white hover:text-black text-white font-black uppercase text-[10px] tracking-[0.15em] transition-all duration-300 cursor-pointer border-none flex items-center justify-center gap-2 parallelogram-btn rounded-none"

@@ -1,6 +1,7 @@
 package com.example.hotelsmartbookingbackend.exception;
 
 import com.example.hotelsmartbookingbackend.dto.response.ApiResponse;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
@@ -21,6 +22,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<String>> handleRuntimeException(RuntimeException ex) {
         return ResponseEntity.badRequest().body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<String>> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
+        String detail = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : "";
+        if (detail != null) {
+            if (detail.contains("users_idcardnumber_key")) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("So CCCD nay da ton tai trong he thong"));
+            }
+            if (detail.contains("users_idcardnumber_check")) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("So CCCD phai gom dung 12 chu so"));
+            }
+        }
+        return ResponseEntity.badRequest().body(ApiResponse.error("Du lieu khong hop le hoac bi trung lap"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

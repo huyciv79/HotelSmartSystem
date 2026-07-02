@@ -27,6 +27,11 @@ const registerSchema = z
         { message: 'Số điện thoại Việt Nam không hợp lệ (VD: 0912345678 hoặc +84912345678)' }
       ),
 
+    idCardNumber: z
+      .string()
+      .min(1, { message: 'Vui long nhap so CCCD' })
+      .regex(/^[0-9]{12}$/, { message: 'So CCCD phai gom dung 12 chu so' }),
+
     password: z
       .string()
       .min(8, { message: 'Mật khẩu phải có ít nhất 8 ký tự' })
@@ -263,6 +268,22 @@ export default function Register({ setActivePage }) {
               />
               {errors.phone && (
                 <p className="text-xs text-error font-medium mt-1">{errors.phone.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('register_idcard_label', 'So CCCD')}</label>
+              <input
+                {...register('idCardNumber')}
+                type="text"
+                inputMode="numeric"
+                maxLength={12}
+                placeholder="012345678901"
+                disabled={isLoading}
+                className="w-full bg-transparent border-b border-on-surface py-2 font-bold text-sm outline-none focus:border-primary disabled:opacity-50"
+              />
+              {errors.idCardNumber && (
+                <p className="text-xs text-error font-medium mt-1">{errors.idCardNumber.message}</p>
               )}
             </div>
 

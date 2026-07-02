@@ -107,7 +107,7 @@ public class BookingController {
         String customerEmail = resolveCustomerEmail(authentication);
         QrTokenResponse response = bookingService.generateQrCheckInToken(bookingId, customerEmail);
         return ResponseEntity.ok(ApiResponse.success(
-                "Tao ma QR check-in thanh cong",
+                "Tao ma QR check-in thành công",
                 response
         ));
     }
