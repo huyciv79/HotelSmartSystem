@@ -11,6 +11,8 @@ import java.util.List;
 
 public interface RoomRepository extends JpaRepository<Room, Integer>, JpaSpecificationExecutor<Room> {
 
+    long countByStatus(String status);
+
     long countByRoomtypeid_IdAndStatus(Integer roomTypeId, String status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

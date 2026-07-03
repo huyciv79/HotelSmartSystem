@@ -35,6 +35,7 @@ import {
   rejectEarlyCheckOutRequest
 } from '../services/earlyCheckOutService';
 import { getUserProfile } from '../services/userService';
+import { getDashboardStats } from '../services/statisticService';
 import Profile from './Profile';
 import { useToast, ToastContainer } from '../components/Toast';
 
@@ -73,6 +74,8 @@ export default function StaffDashboard({ setActivePage }) {
 
   // Simulated Booking states
   const [bookings, setBookings] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Live Room Types states for Manager CRUD
@@ -284,6 +287,9 @@ export default function StaffDashboard({ setActivePage }) {
       fetchPendingRefunds();
     } else if (activeTab === 'overview' || activeTab === 'operations') {
       fetchRealBookings();
+    }
+    if (activeTab === 'overview' || activeTab === 'reports') {
+      fetchStats();
     }
   }, [activeTab]);
 
@@ -759,8 +765,23 @@ export default function StaffDashboard({ setActivePage }) {
       } else {
         setBookings([]);
       }
+      fetchStats();
     } catch (err) {
       console.error('Lỗi trong fetchRealBookings:', err);
+    }
+  };
+
+  const fetchStats = async () => {
+    setStatsLoading(true);
+    try {
+      const response = await getDashboardStats();
+      if (response && response.success) {
+        setStats(response.data);
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải thông tin thống kê:', err);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -1280,6 +1301,7 @@ export default function StaffDashboard({ setActivePage }) {
                 startScanner={startScanner}
                 handleDirectCheckInOut={handleDirectCheckInOut}
                 handleOpenWalkIn={() => setIsWalkInModalOpen(true)}
+                stats={stats}
               />
             )}
 
@@ -1521,7 +1543,7 @@ export default function StaffDashboard({ setActivePage }) {
 
             {/* BÁO CÁO DOANH THU (MANAGER REPORTS) */}
             {activeTab === 'reports' && isManager && (
-              <RevenueReports />
+              <RevenueReports stats={stats} />
             )}
 
 
