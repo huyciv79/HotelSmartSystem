@@ -11,13 +11,28 @@ const StaffOverview = ({
   setSelectedBooking,
   startScanner,
   handleDirectCheckInOut,
-  handleOpenWalkIn
+  handleOpenWalkIn,
+  stats
 }) => {
   const [carouselIndex, setCarouselIndex] = useState(0);
 
   // Calcs
   const confirmedCount = bookings.filter(b => ['confirmed', 'paid', 'partially paid'].includes(String(b.status || '').toLowerCase())).length;
   const checkedInCount = bookings.filter(b => ['checked in', 'checked-in', 'staying'].includes(String(b.status || '').toLowerCase())).length;
+
+  const displayConfirmed = stats ? stats.confirmedCount : confirmedCount;
+  const displayCheckedIn = stats ? stats.checkedInCount : checkedInCount;
+  const displayOccupancyRate = stats ? `${stats.occupancyRate.toFixed(1)}%` : '0.0%';
+
+  const formatExpectedRevenue = (amount) => {
+    if (!amount) return '0 đ';
+    if (amount >= 1000000) {
+      return (amount / 1000000).toFixed(1) + 'M đ';
+    }
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  };
+  
+  const displayExpectedRevenue = stats ? formatExpectedRevenue(stats.expectedRevenue) : '0 đ';
 
   const nextCarousel = () => {
     if (roomTypes.length > 0) {
@@ -64,7 +79,7 @@ const StaffOverview = ({
             <span className="text-[9px] font-black tracking-widest text-primary uppercase bg-primary/10 px-2 py-0.5">ACTIVE</span>
           </div>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-3xl font-black text-white">{confirmedCount}</span>
+            <span className="text-3xl font-black text-white">{displayConfirmed}</span>
             <span className="text-[10px] text-slate-500 font-bold uppercase">đơn chờ</span>
           </div>
         </div>
@@ -74,7 +89,7 @@ const StaffOverview = ({
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">ĐANG LƯU TRÚ</span>
           </div>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-3xl font-black text-white">{checkedInCount}</span>
+            <span className="text-3xl font-black text-white">{displayCheckedIn}</span>
             <span className="text-[10px] text-slate-500 font-bold uppercase">phòng hoạt động</span>
           </div>
         </div>
@@ -84,7 +99,7 @@ const StaffOverview = ({
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">TỶ LỆ LẤP ĐẦY</span>
           </div>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-3xl font-black text-white">78.5%</span>
+            <span className="text-3xl font-black text-white">{displayOccupancyRate}</span>
           </div>
         </div>
 
@@ -93,7 +108,7 @@ const StaffOverview = ({
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">DOANH THU DỰ TÍNH</span>
           </div>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-black text-primary">147.0M đ</span>
+            <span className="text-2xl font-black text-primary">{displayExpectedRevenue}</span>
           </div>
         </div>
       </div>
