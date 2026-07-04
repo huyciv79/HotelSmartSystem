@@ -43,6 +43,7 @@ public class RefundServiceImpl implements RefundService {
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
     private final com.example.hotelsmartbookingbackend.service.PaypalService paypalService;
+    private final com.example.hotelsmartbookingbackend.service.NotificationService notificationService;
 
     @org.springframework.beans.factory.annotation.Value("${paypal.conversion-rate:25000.0}")
     private BigDecimal conversionRate;
@@ -119,6 +120,19 @@ public class RefundServiceImpl implements RefundService {
         customerRequest.setCreatedat(Instant.now());
 
         Customerrequest savedRequest = customerrequestRepository.save(customerRequest);
+
+        try {
+            String refundMsg = String.format("Khách hàng %s đã yêu cầu hoàn tiền cho đơn đặt phòng %s. Lý do: %s. Số tiền dự kiến: %,.0f VND.", 
+                    customer.getFullname(), booking.getBookingreference(), request.getReason(), estimatedRefund);
+            notificationService.sendNotificationToRoles(
+                    List.of(com.example.hotelsmartbookingbackend.enums.Role.receptionist, com.example.hotelsmartbookingbackend.enums.Role.manager), 
+                    "Yêu cầu hoàn tiền mới", 
+                    refundMsg, 
+                    "Refund", 
+                    booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send refund request notification: ", e);
+        }
 
         return mapToResponse(savedRequest);
     }
@@ -198,6 +212,14 @@ public class RefundServiceImpl implements RefundService {
         req.setNewvalue(refundAmount.toString()); // save actual approved refund amount
         Customerrequest savedRequest = customerrequestRepository.save(req);
 
+        try {
+            String approveMsg = String.format("Yêu cầu hoàn tiền của bạn cho đơn đặt phòng %s đã được phê duyệt. Số tiền hoàn trả: %,.0f VND.", 
+                    booking.getBookingreference(), refundAmount);
+            notificationService.sendNotification(booking.getUserid(), "Hoàn tiền được phê duyệt", approveMsg, "Refund", booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send refund approved notification: ", e);
+        }
+
         return mapToResponse(savedRequest);
     }
 
@@ -223,6 +245,14 @@ public class RefundServiceImpl implements RefundService {
         req.setResolvedat(Instant.now());
         req.setRejectionreason(request.getRejectionReason());
         Customerrequest savedRequest = customerrequestRepository.save(req);
+
+        try {
+            String rejectMsg = String.format("Yêu cầu hoàn tiền của bạn cho đơn đặt phòng %s đã bị từ chối. Lý do: %s.", 
+                    req.getBookingid().getBookingreference(), request.getRejectionReason());
+            notificationService.sendNotification(req.getBookingid().getUserid(), "Hoàn tiền bị từ chối", rejectMsg, "Refund", req.getBookingid().getId());
+        } catch (Exception e) {
+            log.error("Failed to send refund rejected notification: ", e);
+        }
 
         return mapToResponse(savedRequest);
     }

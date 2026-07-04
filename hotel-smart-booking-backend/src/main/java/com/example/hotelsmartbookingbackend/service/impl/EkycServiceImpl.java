@@ -56,6 +56,7 @@ public class EkycServiceImpl implements EkycService {
     private final WebClient webClient;
     private final AesEncryptionService aesEncryptionService;
     private final SupabaseStorageService supabaseStorageService;
+    private final com.example.hotelsmartbookingbackend.service.NotificationService notificationService;
 
     // ── Config ────────────────────────────────────────────────────────────────
     @Value("${ai.service.ekyc-url:http://localhost:8000/api/v1/ai/verify-ekyc}")
@@ -603,6 +604,17 @@ public class EkycServiceImpl implements EkycService {
         String successMessage = isUpdateFlow
                 ? "CCCD đã được xác minh và FaceID đã được cập nhật thành công."
                 : "CCCD đã được xác minh và FaceID đã được đăng ký thành công cho check-in.";
+
+        try {
+            notificationService.sendNotification(
+                    user, 
+                    "Xác minh danh tính eKYC thành công", 
+                    "Hồ sơ danh tính eKYC của bạn đã được xác minh tự động thành công. Bạn đã có thể check-in phòng bằng nhận diện khuôn mặt và mã QR.", 
+                    "Ekyc", 
+                    profile.getId());
+        } catch (Exception e) {
+            log.error("Failed to send ekyc success notification: ", e);
+        }
 
         return EkycResponse.builder()
                 .status(STATUS_VERIFIED)

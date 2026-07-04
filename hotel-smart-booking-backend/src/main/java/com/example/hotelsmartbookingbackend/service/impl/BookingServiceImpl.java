@@ -131,6 +131,7 @@ public class BookingServiceImpl implements BookingService {
     private final ServiceRepository serviceRepository;
     private final EmailService emailService;
     private final CustomerrequestRepository customerrequestRepository;
+    private final com.example.hotelsmartbookingbackend.service.NotificationService notificationService;
 
     @Value("${ai.service.face-verify-url:http://localhost:8000/api/v1/face/verify}")
     private String aiFaceVerifyUrl;
@@ -265,6 +266,25 @@ public class BookingServiceImpl implements BookingService {
         detail.setUpdatedat(now);
 
         bookingdetailRepository.save(detail);
+
+        try {
+            // Gửi thông báo cho khách hàng
+            String customerMsg = String.format("Đặt phòng thành công! Mã đơn của bạn là %s. Phương thức check-in: %s.", 
+                    savedBooking.getBookingreference(), savedBooking.getCheckinmethod());
+            notificationService.sendNotification(customer, "Đặt phòng thành công", customerMsg, "Booking", savedBooking.getId());
+
+            // Gửi thông báo cho nhân viên lễ tân và quản lý
+            String staffMsg = String.format("Đơn đặt phòng mới %s từ khách hàng %s (%s).", 
+                    savedBooking.getBookingreference(), customer.getFullname(), savedBooking.getBookingtype());
+            notificationService.sendNotificationToRoles(
+                    List.of(Role.receptionist, Role.manager), 
+                    "Đơn đặt phòng mới", 
+                    staffMsg, 
+                    "Booking", 
+                    savedBooking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send booking notifications: ", e);
+        }
 
         return mapToResponse(savedBooking, detail, roomtype);
     }
@@ -896,6 +916,16 @@ public class BookingServiceImpl implements BookingService {
         bookingRepository.save(booking);
         bookingdetailRepository.save(detail);
 
+        try {
+            String roomsText = selectedRooms.stream()
+                    .map(Room::getRoomnumber)
+                    .collect(java.util.stream.Collectors.joining(", "));
+            String checkInMsg = String.format("Bạn đã nhận phòng thành công! Số phòng của bạn: %s. Mã khóa phòng đã được cập nhật trong thông tin chi tiết đặt phòng.", roomsText);
+            notificationService.sendNotification(booking.getUserid(), "Nhận phòng thành công", checkInMsg, "CheckIn", booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send check-in notification: ", e);
+        }
+
         return mapToResponse(booking, detail, detail.getRoomtypeid());
     }
 
@@ -1014,6 +1044,13 @@ public class BookingServiceImpl implements BookingService {
             webSocketService.broadcastRoomStatus(room.getId(), room.getRoomnumber(), "Cleaning");
         }
         bookingdetailRepository.save(detail);
+
+        try {
+            String checkOutMsg = String.format("Bạn đã trả phòng thành công cho đơn đặt phòng %s! Cảm ơn bạn đã lựa chọn Elysian Hotel. Chúc bạn một ngày tốt lành!", booking.getBookingreference());
+            notificationService.sendNotification(booking.getUserid(), "Trả phòng thành công", checkOutMsg, "CheckOut", booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send check-out notification: ", e);
+        }
 
         return mapToResponse(booking, detail, detail.getRoomtypeid());
     }
@@ -1893,6 +1930,14 @@ public class BookingServiceImpl implements BookingService {
 
         Booking cancelledBooking = bookingRepository.save(booking);
 
+        try {
+            String cancelMsg = String.format("Đơn đặt phòng %s của bạn đã bị hủy bởi nhân viên khách sạn. Lý do: %s.", 
+                    booking.getBookingreference(), booking.getCancellationreason());
+            notificationService.sendNotification(booking.getUserid(), "Đơn đặt phòng bị hủy", cancelMsg, "Cancellation", booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send staff cancellation notification: ", e);
+        }
+
         return mapToBookingResponse(cancelledBooking);
     }
 
@@ -1929,6 +1974,19 @@ public class BookingServiceImpl implements BookingService {
         bookingdetailRepository.save(detail);
 
         Booking saved = bookingRepository.save(booking);
+
+        try {
+            String cancelMsg = String.format("Khách hàng %s đã hủy đơn đặt phòng %s. Lý do: %s.", 
+                    customer.getFullname(), booking.getBookingreference(), booking.getCancellationreason());
+            notificationService.sendNotificationToRoles(
+                    List.of(Role.receptionist, Role.manager), 
+                    "Đơn đặt phòng bị hủy", 
+                    cancelMsg, 
+                    "Cancellation", 
+                    booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send customer cancellation notification: ", e);
+        }
 
         return mapToBookingResponse(saved);
     }

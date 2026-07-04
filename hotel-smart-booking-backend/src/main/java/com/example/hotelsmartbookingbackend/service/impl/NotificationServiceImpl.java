@@ -1,0 +1,117 @@
+package com.example.hotelsmartbookingbackend.service.impl;
+
+import com.example.hotelsmartbookingbackend.dto.response.NotificationResponse;
+import com.example.hotelsmartbookingbackend.entity.Notification;
+import com.example.hotelsmartbookingbackend.entity.User;
+import com.example.hotelsmartbookingbackend.enums.Role;
+import com.example.hotelsmartbookingbackend.repository.NotificationRepository;
+import com.example.hotelsmartbookingbackend.repository.UserRepository;
+import com.example.hotelsmartbookingbackend.service.NotificationService;
+import com.example.hotelsmartbookingbackend.service.WebSocketService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.List;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class NotificationServiceImpl implements NotificationService {
+
+    private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
+    private final WebSocketService webSocketService;
+
+    @Override
+    @Transactional
+    public void sendNotification(User user, String title, String message, String type, Integer referenceId) {
+        Notification notification = new Notification();
+        notification.setUser(user);
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setType(type);
+        notification.setReferenceid(referenceId);
+        notification.setIsread(false);
+        notification.setSentat(Instant.now());
+
+        Notification saved = notificationRepository.save(notification);
+
+        try {
+            webSocketService.sendNotification(user.getEmail(), mapToResponse(saved));
+        } catch (Exception e) {
+            log.error("Failed to send real-time notification to user {}: ", user.getEmail(), e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void sendNotificationToRoles(List<Role> roles, String title, String message, String type, Integer referenceId) {
+        List<User> targetUsers = userRepository.findAllByRoleIn(roles);
+        for (User user : targetUsers) {
+            sendNotification(user, title, message, type, referenceId);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<NotificationResponse> getNotifications(User user, boolean unreadOnly, Pageable pageable) {
+        Page<Notification> page;
+        if (unreadOnly) {
+            page = notificationRepository.findByUserAndIsreadOrderBySentatDesc(user, false, pageable);
+        } else {
+            page = notificationRepository.findByUserOrderBySentatDesc(user, pageable);
+        }
+        return page.map(this::mapToResponse);
+    }
+
+    @Override
+    @Transactional
+    public void markAsRead(Integer id, User user) {
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông báo"));
+        if (!notification.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Bạn không có quyền đánh dấu đã đọc thông báo này");
+        }
+        if (!notification.getIsread()) {
+            notification.setIsread(true);
+            notification.setReadat(Instant.now());
+            notificationRepository.save(notification);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void markAllAsRead(User user) {
+        List<Notification> unread = notificationRepository.findByUserAndIsread(user, false);
+        Instant now = Instant.now();
+        for (Notification notification : unread) {
+            notification.setIsread(true);
+            notification.setReadat(now);
+        }
+        notificationRepository.saveAll(unread);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long getUnreadCount(User user) {
+        return notificationRepository.countByUserAndIsread(user, false);
+    }
+
+    private NotificationResponse mapToResponse(Notification n) {
+        return NotificationResponse.builder()
+                .id(n.getId())
+                .title(n.getTitle())
+                .message(n.getMessage())
+                .type(n.getType())
+                .referenceid(n.getReferenceid())
+                .isread(n.getIsread())
+                .readat(n.getReadat())
+                .sentat(n.getSentat())
+                .build();
+    }
+}
