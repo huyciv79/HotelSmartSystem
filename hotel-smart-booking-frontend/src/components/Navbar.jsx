@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Profile from '../pages/Profile';
 import ChangePassword from '../pages/ChangePassword';
 import { useToast, ToastContainer } from './Toast';
+import NotificationDropdown from './NotificationDropdown';
 import { getUserProfile } from '../services/userService';
 import { getRoomTypes, getRoomTypeDetail } from '../services/roomService';
 import RoomDetailModern from './room/RoomDetailModern';
@@ -364,7 +365,12 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
         </nav>
 
         {/* Book Now / Profile Dropdown */}
-        <div className="h-full flex items-center pr-6 relative">
+        <div className="h-full flex items-center pr-6 relative gap-2">
+          {isLoggedIn && (
+            <NotificationDropdown dark={false} onNewNotification={(n) => {
+              showToast(`${n.title}: ${n.message}`, 'info');
+            }} />
+          )}
           {isLoggedIn ? (
             <div className="relative h-full flex items-center" ref={dropdownRef}>
               <button

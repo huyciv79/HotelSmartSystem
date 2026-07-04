@@ -54,4 +54,8 @@ public class Notification {
     @Column(name = "sentat", nullable = false)
     private Instant sentat;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "userid", nullable = false)
+    private User user;
+
 }

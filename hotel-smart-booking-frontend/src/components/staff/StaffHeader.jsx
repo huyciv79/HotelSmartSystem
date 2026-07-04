@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Search, Bell } from "lucide-react";
+import { Search } from "lucide-react";
+import NotificationDropdown from "../NotificationDropdown";
 
 const getInitials = (name) => {
   if (!name) return 'EH';
@@ -41,10 +42,7 @@ const StaffHeader = ({ currentUser, isManager, searchQuery, setSearchQuery }) =>
         </div>
 
         <div className="flex items-center gap-4">
-          <button className="relative p-2 text-slate-400 hover:text-white transition-colors cursor-pointer bg-transparent border-none">
-            <Bell size={18} />
-            <span className="absolute top-1.5 right-1.5 size-2 bg-primary rounded-full" />
-          </button>
+          <NotificationDropdown dark={true} />
 
           <div className="flex items-center gap-3 pl-4 border-l border-neutral-800">
             <div className="text-right">

@@ -111,6 +111,7 @@ public class RoomChangeServiceImpl implements RoomChangeService {
     private final UserRepository userRepository;
     private final WebSocketService webSocketService;
     private final CustomerrequestRepository customerrequestRepository;
+    private final com.example.hotelsmartbookingbackend.service.NotificationService notificationService;
 
     // ═════════════════════════════════════════════════════════════════════════
     //  PUBLIC API
@@ -161,6 +162,14 @@ public class RoomChangeServiceImpl implements RoomChangeService {
                 oldRoomType, newRoomType,
                 financialResult, isSameRoomType,
                 newRoomPassword, staff, now, request.getReason());
+
+        try {
+            String changeMsg = String.format("Phòng của bạn đã được chuyển từ phòng %s (%s) sang phòng %s (%s) thành công. Mật khẩu cửa phòng mới đã được cập nhật.",
+                    currentRoom.getRoomnumber(), oldRoomType.getName(), newRoom.getRoomnumber(), newRoomType.getName());
+            notificationService.sendNotification(booking.getUserid(), "Chuyển phòng thành công", changeMsg, "RoomChange", booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send room change notification: ", e);
+        }
 
         log.info("[RoomChange] Hoàn thành chuyển phòng: bookingId={}, phòng {} → {}, loại={}",
                 booking.getId(), currentRoom.getRoomnumber(), newRoom.getRoomnumber(),
@@ -766,6 +775,19 @@ public class RoomChangeServiceImpl implements RoomChangeService {
 
         Customerrequest saved = customerrequestRepository.save(customerRequest);
 
+        try {
+            String changeReqMsg = String.format("Khách hàng %s yêu cầu đổi phòng cho đơn %s. Lý do: %s.", 
+                    customer.getFullname(), booking.getBookingreference(), customerRequest.getDescription());
+            notificationService.sendNotificationToRoles(
+                    List.of(com.example.hotelsmartbookingbackend.enums.Role.receptionist, com.example.hotelsmartbookingbackend.enums.Role.manager), 
+                    "Yêu cầu đổi phòng mới", 
+                    changeReqMsg, 
+                    "RoomChange", 
+                    booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send room change request notification: ", e);
+        }
+
         return mapToCustomerRequestResponse(saved);
     }
 
@@ -854,6 +876,14 @@ public class RoomChangeServiceImpl implements RoomChangeService {
         req.setRejectionreason(rejectionReason);
         req.setResolvedat(Instant.now());
         Customerrequest saved = customerrequestRepository.save(req);
+
+        try {
+            String rejectMsg = String.format("Yêu cầu đổi hạng phòng của bạn cho đơn đặt phòng %s đã bị từ chối. Lý do: %s.", 
+                    req.getBookingid().getBookingreference(), rejectionReason);
+            notificationService.sendNotification(req.getBookingid().getUserid(), "Yêu cầu đổi phòng bị từ chối", rejectMsg, "RoomChange", req.getBookingid().getId());
+        } catch (Exception e) {
+            log.error("Failed to send room change rejection notification: ", e);
+        }
 
         return mapToCustomerRequestResponse(saved);
     }
@@ -1025,6 +1055,20 @@ public class RoomChangeServiceImpl implements RoomChangeService {
         customerrequest.setCreatedat(Instant.now());
 
         Customerrequest saved = customerrequestRepository.save(customerrequest);
+
+        try {
+            String extensionMsg = String.format("Khách hàng %s yêu cầu gia hạn lưu trú cho đơn đặt phòng %s đến ngày %s. Lý do: %s.", 
+                    customer.getFullname(), booking.getBookingreference(), newCheckOut, request.getDescription());
+            notificationService.sendNotificationToRoles(
+                    List.of(com.example.hotelsmartbookingbackend.enums.Role.receptionist, com.example.hotelsmartbookingbackend.enums.Role.manager), 
+                    "Yêu cầu gia hạn mới", 
+                    extensionMsg, 
+                    "StayExtension", 
+                    booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send stay extension request notification: ", e);
+        }
+
         return mapToCustomerRequestResponse(saved);
     }
 
@@ -1109,6 +1153,14 @@ public class RoomChangeServiceImpl implements RoomChangeService {
         req.setResolvedat(Instant.now());
         Customerrequest saved = customerrequestRepository.save(req);
 
+        try {
+            String approveMsg = String.format("Yêu cầu gia hạn lưu trú cho đơn đặt phòng %s đã được phê duyệt. Ngày trả phòng mới: %s.", 
+                    booking.getBookingreference(), req.getNewvalue());
+            notificationService.sendNotification(booking.getUserid(), "Gia hạn lưu trú thành công", approveMsg, "StayExtension", booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send stay extension approval notification: ", e);
+        }
+
         return mapToCustomerRequestResponse(saved);
     }
 
@@ -1136,6 +1188,14 @@ public class RoomChangeServiceImpl implements RoomChangeService {
         req.setResolvedat(Instant.now());
 
         Customerrequest saved = customerrequestRepository.save(req);
+
+        try {
+            String rejectMsg = String.format("Yêu cầu gia hạn lưu trú của bạn cho đơn đặt phòng %s đã bị từ chối. Lý do: %s.", 
+                    req.getBookingid().getBookingreference(), rejectionReason);
+            notificationService.sendNotification(req.getBookingid().getUserid(), "Gia hạn lưu trú bị từ chối", rejectMsg, "StayExtension", req.getBookingid().getId());
+        } catch (Exception e) {
+            log.error("Failed to send stay extension rejection notification: ", e);
+        }
 
         return mapToCustomerRequestResponse(saved);
     }
@@ -1202,6 +1262,20 @@ public class RoomChangeServiceImpl implements RoomChangeService {
         customerrequest.setCreatedat(Instant.now());
 
         Customerrequest saved = customerrequestRepository.save(customerrequest);
+
+        try {
+            String earlyMsg = String.format("Khách hàng %s yêu cầu check-out sớm cho đơn đặt phòng %s vào ngày %s. Lý do: %s.", 
+                    customer.getFullname(), booking.getBookingreference(), newCheckOut, request.getDescription());
+            notificationService.sendNotificationToRoles(
+                    List.of(com.example.hotelsmartbookingbackend.enums.Role.receptionist, com.example.hotelsmartbookingbackend.enums.Role.manager), 
+                    "Yêu cầu trả phòng sớm mới", 
+                    earlyMsg, 
+                    "EarlyCheckOut", 
+                    booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send early check-out request notification: ", e);
+        }
+
         return mapToCustomerRequestResponse(saved);
     }
 
@@ -1271,6 +1345,14 @@ public class RoomChangeServiceImpl implements RoomChangeService {
         req.setResolvedat(Instant.now());
         Customerrequest saved = customerrequestRepository.save(req);
 
+        try {
+            String approveMsg = String.format("Yêu cầu trả phòng sớm cho đơn đặt phòng %s đã được phê duyệt. Ngày trả phòng mới của bạn: %s.", 
+                    booking.getBookingreference(), req.getNewvalue());
+            notificationService.sendNotification(booking.getUserid(), "Trả phòng sớm được phê duyệt", approveMsg, "EarlyCheckOut", booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send early checkout approval notification: ", e);
+        }
+
         return mapToCustomerRequestResponse(saved);
     }
 
@@ -1298,6 +1380,15 @@ public class RoomChangeServiceImpl implements RoomChangeService {
         req.setResolvedat(Instant.now());
 
         Customerrequest saved = customerrequestRepository.save(req);
+
+        try {
+            String rejectMsg = String.format("Yêu cầu trả phòng sớm của bạn cho đơn đặt phòng %s đã bị từ chối. Lý do: %s.", 
+                    req.getBookingid().getBookingreference(), rejectionReason);
+            notificationService.sendNotification(req.getBookingid().getUserid(), "Trả phòng sớm bị từ chối", rejectMsg, "EarlyCheckOut", req.getBookingid().getId());
+        } catch (Exception e) {
+            log.error("Failed to send early checkout rejection notification: ", e);
+        }
+
         return mapToCustomerRequestResponse(saved);
     }
 

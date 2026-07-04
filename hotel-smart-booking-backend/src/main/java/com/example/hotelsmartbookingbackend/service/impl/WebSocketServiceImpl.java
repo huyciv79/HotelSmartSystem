@@ -28,4 +28,14 @@ public class WebSocketServiceImpl implements WebSocketService {
             log.error("Failed to broadcast room status update via WS: ", e);
         }
     }
+
+    @Override
+    public void sendNotification(String email, com.example.hotelsmartbookingbackend.dto.response.NotificationResponse notification) {
+        try {
+            log.info("Sending real-time notification to user {}: {}", email, notification.getTitle());
+            messagingTemplate.convertAndSendToUser(email, "/queue/notifications", notification);
+        } catch (Exception e) {
+            log.error("Failed to send real-time notification via WS to user {}: ", email, e);
+        }
+    }
 }

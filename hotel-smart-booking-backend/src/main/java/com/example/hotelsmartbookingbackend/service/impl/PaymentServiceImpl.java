@@ -35,6 +35,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaypalService paypalService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final UserRepository userRepository;
+    private final com.example.hotelsmartbookingbackend.service.NotificationService notificationService;
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PaymentServiceImpl.class);
     private static final String ORDER_BOOKING_PREFIX = "paypal:order_booking:";
@@ -181,6 +182,14 @@ public class PaymentServiceImpl implements PaymentService {
 
         bookingRepository.save(booking);
 
+        try {
+            String payMsg = String.format("Thanh toán thành công số tiền %s cho đơn đặt phòng %s bằng PayPal.", 
+                    formatCurrency(expectedChargeAmount), booking.getBookingreference());
+            notificationService.sendNotification(booking.getUserid(), "Thanh toán thành công", payMsg, "Payment", booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send payment capture notification: ", e);
+        }
+
         // Clean up Redis mapping
         redisTemplate.delete(redisKey);
 
@@ -246,6 +255,14 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         bookingRepository.save(booking);
+
+        try {
+            String payMsg = String.format("Thanh toán thành công số tiền %s cho đơn đặt phòng %s bằng chuyển khoản ngân hàng.", 
+                    formatCurrency(chargeAmount), booking.getBookingreference());
+            notificationService.sendNotification(booking.getUserid(), "Thanh toán thành công", payMsg, "Payment", booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send payment capture notification: ", e);
+        }
     }
 
     @Override
@@ -313,5 +330,18 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         bookingRepository.save(booking);
+
+        try {
+            String payMsg = String.format("Thanh toán thành công số tiền %s cho đơn đặt phòng %s tại quầy lễ tân (phương thức: %s).", 
+                    formatCurrency(chargeAmount), booking.getBookingreference(), payment.getPaymentmethod());
+            notificationService.sendNotification(booking.getUserid(), "Thanh toán thành công", payMsg, "Payment", booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send payment capture notification: ", e);
+        }
+    }
+
+    private String formatCurrency(BigDecimal amount) {
+        if (amount == null) return "0 VND";
+        return String.format("%,.0f/VND", amount).replace("/", " ");
     }
 }

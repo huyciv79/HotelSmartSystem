@@ -1,120 +1,117 @@
 package com.example.hotelsmartbookingbackend.service.impl;
 
-import com.example.hotelsmartbookingbackend.dto.request.NotificationRequest;
 import com.example.hotelsmartbookingbackend.dto.response.NotificationResponse;
 import com.example.hotelsmartbookingbackend.entity.Notification;
 import com.example.hotelsmartbookingbackend.entity.User;
+import com.example.hotelsmartbookingbackend.enums.Role;
 import com.example.hotelsmartbookingbackend.repository.NotificationRepository;
+import com.example.hotelsmartbookingbackend.repository.UserRepository;
+import com.example.hotelsmartbookingbackend.service.NotificationService;
+import com.example.hotelsmartbookingbackend.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-@Slf4j
-public class NotificationServiceImpl {
+public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
+    private final WebSocketService webSocketService;
 
-    public NotificationResponse getUserNotifications(User user, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<com.example.hotelsmartbookingbackend.dto.response.Notification> notificationsPage = notificationRepository
-                .findByUserOrderBySentatDesc(user, pageable)
-                .map(com.example.hotelsmartbookingbackend.dto.response.Notification::fromEntity);
+    @Override
+    @Transactional
+    public void sendNotification(User user, String title, String message, String type, Integer referenceId) {
+        Notification notification = new Notification();
+        notification.setUser(user);
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setType(type);
+        notification.setReferenceid(referenceId);
+        notification.setIsread(false);
+        notification.setSentat(Instant.now());
 
-        long unreadCount = notificationRepository.countByUserAndIsread(user, false);
+        Notification saved = notificationRepository.save(notification);
 
-        return NotificationResponse.fromPage(notificationsPage, unreadCount);
+        try {
+            webSocketService.sendNotification(user.getEmail(), mapToResponse(saved));
+        } catch (Exception e) {
+            log.error("Failed to send real-time notification to user {}: ", user.getEmail(), e);
+        }
     }
 
-    public NotificationResponse getUnreadNotifications(User user, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<com.example.hotelsmartbookingbackend.dto.response.Notification> notificationsPage = notificationRepository
-                .findByUserAndIsreadOrderBySentatDesc(user, false, pageable)
-                .map(com.example.hotelsmartbookingbackend.dto.response.Notification::fromEntity);
-
-        long unreadCount = notificationRepository.countByUserAndIsread(user, false);
-
-        return NotificationResponse.fromPage(notificationsPage, unreadCount);
+    @Override
+    @Transactional
+    public void sendNotificationToRoles(List<Role> roles, String title, String message, String type, Integer referenceId) {
+        List<User> targetUsers = userRepository.findAllByRoleIn(roles);
+        for (User user : targetUsers) {
+            sendNotification(user, title, message, type, referenceId);
+        }
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<NotificationResponse> getNotifications(User user, boolean unreadOnly, Pageable pageable) {
+        Page<Notification> page;
+        if (unreadOnly) {
+            page = notificationRepository.findByUserAndIsreadOrderBySentatDesc(user, false, pageable);
+        } else {
+            page = notificationRepository.findByUserOrderBySentatDesc(user, pageable);
+        }
+        return page.map(this::mapToResponse);
+    }
+
+    @Override
+    @Transactional
+    public void markAsRead(Integer id, User user) {
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông báo"));
+        if (!notification.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Bạn không có quyền đánh dấu đã đọc thông báo này");
+        }
+        if (!notification.getIsread()) {
+            notification.setIsread(true);
+            notification.setReadat(Instant.now());
+            notificationRepository.save(notification);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void markAllAsRead(User user) {
+        List<Notification> unread = notificationRepository.findByUserAndIsread(user, false);
+        Instant now = Instant.now();
+        for (Notification notification : unread) {
+            notification.setIsread(true);
+            notification.setReadat(now);
+        }
+        notificationRepository.saveAll(unread);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public long getUnreadCount(User user) {
         return notificationRepository.countByUserAndIsread(user, false);
     }
 
-    @Transactional
-    public com.example.hotelsmartbookingbackend.dto.response.Notification markAsRead(User user, Integer notificationId) {
-        Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new RuntimeException("Notification not found"));
-
-        if (!notification.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Unauthorized access to notification");
-        }
-
-        notificationRepository.markAsRead(user, notificationId, Instant.now());
-        notification = notificationRepository.findById(notificationId).orElseThrow();
-
-        log.info("Notification {} marked as read for user {}", notificationId, user.getId());
-        return com.example.hotelsmartbookingbackend.dto.response.Notification.fromEntity(notification);
-    }
-
-    @Transactional
-    public void markAllAsRead(User user) {
-        notificationRepository.markAllAsRead(user, Instant.now());
-        log.info("All notifications marked as read for user {}", user.getId());
-    }
-
-    @Transactional
-    public void deleteNotification(User user, Integer notificationId) {
-        Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new RuntimeException("Notification not found"));
-
-        if (!notification.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Unauthorized access to notification");
-        }
-
-        notificationRepository.deleteByUserAndId(user, notificationId);
-        log.info("Notification {} deleted for user {}", notificationId, user.getId());
-    }
-
-    @Transactional
-    public void deleteAllNotifications(User user) {
-        notificationRepository.findByUserOrderBySentatDesc(user).forEach(notification ->
-                notificationRepository.deleteByUserAndId(user, notification.getId())
-        );
-        log.info("All notifications deleted for user {}", user.getId());
-    }
-
-    @Transactional
-    public Notification createNotification(Notification notification) {
-        notification.setSentat(Instant.now());
-        notification.setIsread(false);
-        notification.setReadat(null);
-
-        Notification saved = notificationRepository.save(notification);
-        log.info("Notification created with id {} for user {}", saved.getId(),
-                saved.getUser() != null ? saved.getUser().getId() : "broadcast");
-
-        return saved;
-    }
-
-    @Transactional
-    public Notification sendNotificationToUser(User user, NotificationRequest request) {
-        Notification notification = new Notification();
-        notification.setUser(user);
-        notification.setTitle(request.getTitle());
-        notification.setMessage(request.getMessage());
-        notification.setType(request.getType() != null ? request.getType() : "System");
-        notification.setReferenceid(request.getReferenceId());
-        notification.setIsread(false);
-        notification.setSentat(Instant.now());
-
-        return createNotification(notification);
+    private NotificationResponse mapToResponse(Notification n) {
+        return NotificationResponse.builder()
+                .id(n.getId())
+                .title(n.getTitle())
+                .message(n.getMessage())
+                .type(n.getType())
+                .referenceid(n.getReferenceid())
+                .isread(n.getIsread())
+                .readat(n.getReadat())
+                .sentat(n.getSentat())
+                .build();
     }
 }
