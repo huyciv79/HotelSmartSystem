@@ -19,6 +19,10 @@ public class Notification {
     @Column(name = "notificationid", nullable = false)
     private Integer id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "userid")
+    private User user;
+
     @Size(max = 255)
     @NotNull
     @Column(name = "title", nullable = false)
