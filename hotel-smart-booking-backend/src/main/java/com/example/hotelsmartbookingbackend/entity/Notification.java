@@ -53,9 +53,4 @@ public class Notification {
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "sentat", nullable = false)
     private Instant sentat;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "userid", nullable = false)
-    private User user;
-
 }

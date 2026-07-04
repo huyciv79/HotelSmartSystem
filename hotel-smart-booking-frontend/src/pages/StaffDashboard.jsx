@@ -45,6 +45,7 @@ import StaffHeader from '../components/staff/StaffHeader';
 import StaffOverview from '../components/staff/StaffOverview';
 import RoomTypesManager from '../components/staff/RoomTypesManager';
 import RoomsManager from '../components/staff/RoomsManager';
+import ServicesManager from '../components/staff/ServicesManager';
 import RevenueReports from '../components/staff/RevenueReports';
 import FaceCheckInStation from '../components/staff/FaceCheckInStation';
 import QrCheckInStation from '../components/staff/QrCheckInStation';
@@ -1538,6 +1539,14 @@ export default function StaffDashboard({ setActivePage }) {
                 fetchRealRooms={fetchRealRooms}
                 handleOpenEditRoomItem={handleOpenEditRoomItem}
                 roomTypes={roomTypes}
+              />
+            )}
+
+            {/* QUẢN LÝ DANH SÁCH DỊCH VỤ (MANAGER SERVICES CRUD) */}
+            {activeTab === 'services' && isManager && (
+              <ServicesManager
+                showToast={showToast}
+                triggerCustomConfirm={triggerCustomConfirm}
               />
             )}
 

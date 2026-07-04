@@ -32,5 +32,6 @@ public class NotificationRequest {
     private Integer userId;
 
     @JsonProperty("broadcastToAll")
+    @Builder.Default
     private Boolean broadcastToAll = false;
 }

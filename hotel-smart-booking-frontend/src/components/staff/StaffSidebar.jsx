@@ -124,6 +124,18 @@ const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleL
               </button>
 
               <button
+                onClick={() => setActiveTab('services')}
+                className={`w-full py-3.5 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-sm ${
+                  activeTab === 'services'
+                    ? 'bg-gradient-to-r from-primary/15 to-transparent border-l-4 border-primary text-primary font-black'
+                    : 'bg-transparent text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <span className="material-symbols-outlined text-base">room_service</span>
+                Quản lý dịch vụ
+              </button>
+
+              <button
                 onClick={() => setActiveTab('reports')}
                 className={`w-full py-3.5 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-sm ${
                   activeTab === 'reports'

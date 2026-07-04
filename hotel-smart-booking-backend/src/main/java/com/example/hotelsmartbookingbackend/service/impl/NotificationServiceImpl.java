@@ -57,6 +57,17 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
+    @Transactional
+    public Notification createNotification(Notification notification) {
+        if (notification.getSentat() == null) {
+            notification.setSentat(Instant.now());
+        }
+        if (notification.getIsread() == null) {
+            notification.setIsread(false);
+        }
+        return notificationRepository.save(notification);
+    }
+
     @Override
     @Transactional(readOnly = true)
     public Page<NotificationResponse> getNotifications(User user, boolean unreadOnly, Pageable pageable) {
