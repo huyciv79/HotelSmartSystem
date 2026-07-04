@@ -53,4 +53,8 @@ public class Service {
     @Column(name = "updatedat", nullable = false)
     private Instant updatedat;
 
+    @NotNull
+    @ColumnDefault("false")
+    @Column(name = "isdeleted", nullable = false)
+    private Boolean isDeleted = false;
 }

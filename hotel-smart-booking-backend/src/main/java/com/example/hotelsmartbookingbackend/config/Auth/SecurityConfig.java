@@ -52,12 +52,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/room-types/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/feedbacks/**").permitAll()
                         .requestMatchers("/api/room-types/**").hasRole("MANAGER")
+                        .requestMatchers("/api/services/**").hasRole("MANAGER")
                         .requestMatchers("/api/statistics/**").hasAnyRole("MANAGER", "RECEPTIONIST")
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/bookings/*/face-check-in",
                                 "/api/bookings/face-readiness"
                         ).hasRole("MANAGER")
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/rooms/status",
+                                "/api/rooms/*/status"
+                        ).hasAnyRole("RECEPTIONIST", "MANAGER")
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/error").permitAll()
