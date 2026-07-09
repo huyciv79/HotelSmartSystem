@@ -21,6 +21,7 @@ import com.example.hotelsmartbookingbackend.dto.response.QrTokenResponse;
 import com.example.hotelsmartbookingbackend.dto.response.RoomAccessResponse;
 
 import com.example.hotelsmartbookingbackend.entity.Booking;
+import com.example.hotelsmartbookingbackend.enums.BookingStatus;
 import com.example.hotelsmartbookingbackend.entity.BookingRoomAccess;
 import com.example.hotelsmartbookingbackend.entity.Bookingdetail;
 import com.example.hotelsmartbookingbackend.entity.Room;
@@ -99,7 +100,6 @@ public class BookingServiceImpl implements BookingService {
     private static final String AVAILABLE_ROOM_STATUS = "Available";
     private static final String BOOKING_TYPE_ONLINE = "Online";
     private static final String BOOKING_TYPE_GROUP = "Group";
-    private static final String BOOKING_STATUS_CONFIRMED = "Confirmed";
     private static final String DETAIL_STATUS_ACTIVE = "Active";
     private static final String ROOM_KEY_STATUS_ACTIVE = "Active";
     private static final String ROOM_KEY_STATUS_EXPIRED = "Expired";
@@ -107,8 +107,11 @@ public class BookingServiceImpl implements BookingService {
     private static final int DEFAULT_SINGLE_BOOKING_QUANTITY = 1;
     private static final int QR_TOKEN_RANDOM_BYTES = 32;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final List<String> INVENTORY_HOLDING_BOOKING_STATUSES = List.of("Pending", "Confirmed",
-            "Checked In");
+    private static final List<BookingStatus> INVENTORY_HOLDING_BOOKING_STATUSES = List.of(
+            BookingStatus.PENDING,
+            BookingStatus.CONFIRMED,
+            BookingStatus.CHECKED_IN
+    );
     private static final List<String> INVENTORY_HOLDING_DETAIL_STATUSES = List.of("Active");
     private static final DateTimeFormatter BOOKING_REFERENCE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
             .withZone(HOTEL_ZONE);
@@ -245,7 +248,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setTaxamount(taxAmount);
         booking.setServicechargeamount(BigDecimal.ZERO);
         booking.setFinalamount(finalAmount);
-        booking.setStatus(BOOKING_STATUS_CONFIRMED);
+        booking.setStatus(BookingStatus.CONFIRMED);
         booking.setSpecialrequests(specialRequests);
         booking.setCreatedat(now);
         booking.setUpdatedat(now);
@@ -588,9 +591,9 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
 
-        if (!"Confirmed".equalsIgnoreCase(booking.getStatus())
-                && !"Paid".equalsIgnoreCase(booking.getStatus())
-                && !"Partially Paid".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() != BookingStatus.CONFIRMED
+                && booking.getStatus() != BookingStatus.PAID
+                && booking.getStatus() != BookingStatus.PARTIALLY_PAID) {
             throw new RuntimeException("Đơn đặt phòng không ở trạng thái có thể nhận phòng");
         }
 
@@ -638,9 +641,9 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Booking chưa được liên kết với tài khoản khách hàng");
         }
 
-        if (!"Confirmed".equalsIgnoreCase(booking.getStatus())
-                && !"Paid".equalsIgnoreCase(booking.getStatus())
-                && !"Partially Paid".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() != BookingStatus.CONFIRMED
+                && booking.getStatus() != BookingStatus.PAID
+                && booking.getStatus() != BookingStatus.PARTIALLY_PAID) {
             throw new RuntimeException("Đơn đặt phòng không ở trạng thái có thể nhận phòng");
         }
         if (!"Face Recognition".equalsIgnoreCase(booking.getCheckinmethod())
@@ -908,7 +911,7 @@ public class BookingServiceImpl implements BookingService {
         clearQrToken(detail, now);
         detail.setUpdatedat(now);
 
-        booking.setStatus("Checked-in");
+        booking.setStatus(BookingStatus.CHECKED_IN);
         booking.setUpdatedat(now);
 
         roomRepository.saveAll(selectedRooms);
@@ -943,8 +946,7 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
 
-        if (!"Checked-in".equalsIgnoreCase(booking.getStatus())
-                && !"Checked In".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() != BookingStatus.CHECKED_IN) {
             throw new RuntimeException("Đơn đặt phòng chưa được check-in");
         }
 
@@ -1001,7 +1003,7 @@ public class BookingServiceImpl implements BookingService {
                     + formatCurrency(dueAmount) + " trước khi trả phòng.");
         }
 
-        booking.setStatus("Completed");
+        booking.setStatus(BookingStatus.COMPLETED);
         booking.setUpdatedat(Instant.now());
         bookingRepository.save(booking);
         now = Instant.now();
@@ -1192,17 +1194,16 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void validateCheckInEligibleStatus(Booking booking) {
-        if (!"Confirmed".equalsIgnoreCase(booking.getStatus()) &&
-                !"Partially Paid".equalsIgnoreCase(booking.getStatus()) &&
-                !"Paid".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() != BookingStatus.CONFIRMED &&
+                booking.getStatus() != BookingStatus.PARTIALLY_PAID &&
+                booking.getStatus() != BookingStatus.PAID) {
             throw new RuntimeException("Don dat phong khong o trang thai co the nhan phong");
         }
     }
 
     private void validateBookingNotCheckedIn(Booking booking, Bookingdetail detail) {
         if (detail.getActualcheckin() != null
-                || "Checked-in".equalsIgnoreCase(booking.getStatus())
-                || "Checked In".equalsIgnoreCase(booking.getStatus())) {
+                || booking.getStatus() == BookingStatus.CHECKED_IN) {
             throw new RuntimeException("Booking nay da duoc check-in");
         }
     }
@@ -1365,8 +1366,7 @@ public class BookingServiceImpl implements BookingService {
     private boolean isRoomAccessUsable(
             Booking booking,
             BookingRoomAccess access) {
-        return ("Checked-in".equalsIgnoreCase(booking.getStatus())
-                || "Checked In".equalsIgnoreCase(booking.getStatus()))
+        return (booking.getStatus() == BookingStatus.CHECKED_IN)
                 && ROOM_KEY_STATUS_ACTIVE.equalsIgnoreCase(access.getRoomkeystatus())
                 && access.getRoomkeyaccess() != null
                 && !access.getRoomkeyaccess().isBlank()
@@ -1375,8 +1375,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private boolean isRoomKeyUsable(Booking booking, Bookingdetail detail) {
-        return ("Checked-in".equalsIgnoreCase(booking.getStatus())
-                || "Checked In".equalsIgnoreCase(booking.getStatus()))
+        return (booking.getStatus() == BookingStatus.CHECKED_IN)
                 && detail.getActualcheckin() != null
                 && detail.getActualcheckout() == null
                 && ROOM_KEY_STATUS_ACTIVE.equalsIgnoreCase(detail.getRoomkeystatus())
@@ -1501,7 +1500,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setTaxamount(taxAmount);
         booking.setServicechargeamount(BigDecimal.ZERO);
         booking.setFinalamount(finalAmount);
-        booking.setStatus("Confirmed");
+        booking.setStatus(BookingStatus.CONFIRMED);
         booking.setSpecialrequests(request.getSpecialRequests());
         booking.setCreatedat(now);
         booking.setUpdatedat(now);
@@ -1540,9 +1539,9 @@ public class BookingServiceImpl implements BookingService {
 
             savedBooking.setPaidamount(request.getPaidAmount());
             if (savedBooking.getPaidamount().compareTo(savedBooking.getFinalamount()) >= 0) {
-                savedBooking.setStatus("Paid");
+                savedBooking.setStatus(BookingStatus.PAID);
             } else {
-                savedBooking.setStatus("Partially Paid");
+                savedBooking.setStatus(BookingStatus.PARTIALLY_PAID);
             }
             bookingRepository.save(savedBooking);
         }
@@ -1664,9 +1663,8 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
 
-        if ("Cancelled".equalsIgnoreCase(booking.getStatus())
-                || "Checked-out".equalsIgnoreCase(booking.getStatus())
-                || "Completed".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() == BookingStatus.CANCELLED
+                || booking.getStatus() == BookingStatus.COMPLETED) {
             throw new RuntimeException("Không thể thêm dịch vụ cho đơn đặt phòng ở trạng thái này");
         }
 
@@ -1702,8 +1700,8 @@ public class BookingServiceImpl implements BookingService {
         booking.setFinalamount(booking.getFinalamount().add(totalPrice).add(serviceTax));
 
         if (booking.getPaidamount().compareTo(booking.getFinalamount()) < 0) {
-            if ("Paid".equalsIgnoreCase(booking.getStatus())) {
-                booking.setStatus("Partially Paid");
+            if (booking.getStatus() == BookingStatus.PAID) {
+                booking.setStatus(BookingStatus.PARTIALLY_PAID);
             }
         }
 
@@ -1787,7 +1785,7 @@ public class BookingServiceImpl implements BookingService {
         User staff = userRepository.findByEmail(staffEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
 
-        if (booking.getStatus().equalsIgnoreCase("Cancelled") || booking.getStatus().equalsIgnoreCase("Checked Out") || booking.getStatus().equalsIgnoreCase("Completed")) {
+        if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.COMPLETED) {
             throw new RuntimeException("Không thể cập nhật đơn đặt phòng đã hủy hoặc đã hoàn thành");
         }
 
@@ -1905,15 +1903,15 @@ public class BookingServiceImpl implements BookingService {
         User staff = userRepository.findByEmail(staffEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
 
-        if (booking.getStatus().equalsIgnoreCase("Cancelled")) {
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
             throw new RuntimeException("Đơn đặt phòng này đã được hủy trước đó");
         }
 
-        if (booking.getStatus().equalsIgnoreCase("Checked Out")) {
+        if (booking.getStatus() == BookingStatus.COMPLETED) {
             throw new RuntimeException("Không thể hủy đơn đặt phòng đã trả phòng");
         }
 
-        booking.setStatus("Cancelled");
+        booking.setStatus(BookingStatus.CANCELLED);
         booking.setCancellationreason(request.getCancellationReason());
         booking.setCancelledat(Instant.now());
         booking.setCancelledby(staff);
@@ -1954,13 +1952,12 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Bạn không có quyền hủy đơn đặt phòng này");
         }
 
-        String status = booking.getStatus();
-        if ("Checked-in".equalsIgnoreCase(status) || "Checked In".equalsIgnoreCase(status)
-                || "Checked-out".equalsIgnoreCase(status) || "Completed".equalsIgnoreCase(status) || "Cancelled".equalsIgnoreCase(status)) {
-            throw new RuntimeException("Không thể hủy đơn đặt phòng ở trạng thái: " + status);
+        BookingStatus status = booking.getStatus();
+        if (status == BookingStatus.CHECKED_IN || status == BookingStatus.COMPLETED || status == BookingStatus.CANCELLED) {
+            throw new RuntimeException("Không thể hủy đơn đặt phòng ở trạng thái: " + (status != null ? status.getValue() : "null"));
         }
 
-        booking.setStatus("Cancelled");
+        booking.setStatus(BookingStatus.CANCELLED);
         booking.setCancellationreason(request != null && request.getCancellationReason() != null ? request.getCancellationReason() : "Khách hàng tự hủy trực tuyến");
         booking.setCancelledat(Instant.now());
         booking.setCancelledby(customer);

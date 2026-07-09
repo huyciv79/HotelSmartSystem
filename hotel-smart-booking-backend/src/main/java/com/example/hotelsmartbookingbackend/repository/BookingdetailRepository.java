@@ -12,6 +12,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import com.example.hotelsmartbookingbackend.enums.BookingStatus;
+
 public interface BookingdetailRepository extends JpaRepository<Bookingdetail, Integer> {
 
         Optional<Bookingdetail> findByBookingid_Id(Integer bookingId);
@@ -63,7 +65,7 @@ public interface BookingdetailRepository extends JpaRepository<Bookingdetail, In
                         @Param("roomTypeId") Integer roomTypeId,
                         @Param("periodStart") Instant periodStart,
                         @Param("periodEnd") Instant periodEnd,
-                        @Param("bookingStatuses") Collection<String> bookingStatuses,
+                        @Param("bookingStatuses") Collection<BookingStatus> bookingStatuses,
                         @Param("detailStatuses") Collection<String> detailStatuses);
 
         @Query("""
@@ -79,7 +81,7 @@ public interface BookingdetailRepository extends JpaRepository<Bookingdetail, In
                         from Bookingdetail d
                         where d.roomid.id = :roomId
                           and d.bookingid.id != :bookingId
-                          and d.bookingid.status not in ('Cancelled', 'Refunded')
+                          and d.bookingid.status <> com.example.hotelsmartbookingbackend.enums.BookingStatus.CANCELLED
                           and d.expectedcheckin < :periodEnd
                           and d.expectedcheckout > :periodStart
                         """)

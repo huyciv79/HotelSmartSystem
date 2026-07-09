@@ -6,6 +6,7 @@ import com.example.hotelsmartbookingbackend.dto.request.BankTransferRequest;
 import com.example.hotelsmartbookingbackend.dto.response.PaypalCaptureResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PaypalOrderResponse;
 import com.example.hotelsmartbookingbackend.entity.Booking;
+import com.example.hotelsmartbookingbackend.enums.BookingStatus;
 import com.example.hotelsmartbookingbackend.entity.Payment;
 import com.example.hotelsmartbookingbackend.repository.BookingRepository;
 import com.example.hotelsmartbookingbackend.repository.PaymentRepository;
@@ -49,10 +50,10 @@ public class PaymentServiceImpl implements PaymentService {
         Booking booking = bookingRepository.findById(request.getBookingId())
                 .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + request.getBookingId()));
 
-        if ("Paid".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() == BookingStatus.PAID) {
             throw new RuntimeException("Booking is already fully paid");
         }
-        if ("Cancelled".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
             throw new RuntimeException("Booking has been cancelled");
         }
 
@@ -171,12 +172,11 @@ public class PaymentServiceImpl implements PaymentService {
         }
         booking.setUpdatedat(Instant.now());
 
-        if (!"Checked-in".equalsIgnoreCase(booking.getStatus()) && !"Checked In".equalsIgnoreCase(booking.getStatus()) 
-                && !"Staying".equalsIgnoreCase(booking.getStatus()) && !"Completed".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() != BookingStatus.CHECKED_IN && booking.getStatus() != BookingStatus.STAYING && booking.getStatus() != BookingStatus.COMPLETED) {
             if (booking.getPaidamount().compareTo(booking.getFinalamount()) >= 0) {
-                booking.setStatus("Paid");
+                booking.setStatus(BookingStatus.PAID);
             } else if (booking.getPaidamount().compareTo(BigDecimal.ZERO) > 0) {
-                booking.setStatus("Partially Paid");
+                booking.setStatus(BookingStatus.PARTIALLY_PAID);
             }
         }
 
@@ -202,10 +202,10 @@ public class PaymentServiceImpl implements PaymentService {
         Booking booking = bookingRepository.findById(request.getBookingId())
                 .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + request.getBookingId()));
 
-        if ("Paid".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() == BookingStatus.PAID) {
             throw new RuntimeException("Booking is already fully paid");
         }
-        if ("Cancelled".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
             throw new RuntimeException("Booking has been cancelled");
         }
 
@@ -245,12 +245,11 @@ public class PaymentServiceImpl implements PaymentService {
         }
         booking.setUpdatedat(Instant.now());
 
-        if (!"Checked-in".equalsIgnoreCase(booking.getStatus()) && !"Checked In".equalsIgnoreCase(booking.getStatus()) 
-                && !"Staying".equalsIgnoreCase(booking.getStatus()) && !"Completed".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() != BookingStatus.CHECKED_IN && booking.getStatus() != BookingStatus.STAYING && booking.getStatus() != BookingStatus.COMPLETED) {
             if (booking.getPaidamount().compareTo(booking.getFinalamount()) >= 0) {
-                booking.setStatus("Paid");
+                booking.setStatus(BookingStatus.PAID);
             } else if (booking.getPaidamount().compareTo(BigDecimal.ZERO) > 0) {
-                booking.setStatus("Partially Paid");
+                booking.setStatus(BookingStatus.PARTIALLY_PAID);
             }
         }
 
@@ -278,10 +277,10 @@ public class PaymentServiceImpl implements PaymentService {
         Booking booking = bookingRepository.findById(request.getBookingId())
                 .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + request.getBookingId()));
 
-        if ("Paid".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() == BookingStatus.PAID) {
             throw new RuntimeException("Booking is already fully paid");
         }
-        if ("Cancelled".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
             throw new RuntimeException("Booking has been cancelled");
         }
 
@@ -320,12 +319,11 @@ public class PaymentServiceImpl implements PaymentService {
         }
         booking.setUpdatedat(Instant.now());
 
-        if (!"Checked-in".equalsIgnoreCase(booking.getStatus()) && !"Checked In".equalsIgnoreCase(booking.getStatus()) 
-                && !"Staying".equalsIgnoreCase(booking.getStatus()) && !"Completed".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() != BookingStatus.CHECKED_IN && booking.getStatus() != BookingStatus.STAYING && booking.getStatus() != BookingStatus.COMPLETED) {
             if (booking.getPaidamount().compareTo(booking.getFinalamount()) >= 0) {
-                booking.setStatus("Paid");
+                booking.setStatus(BookingStatus.PAID);
             } else if (booking.getPaidamount().compareTo(BigDecimal.ZERO) > 0) {
-                booking.setStatus("Partially Paid");
+                booking.setStatus(BookingStatus.PARTIALLY_PAID);
             }
         }
 

@@ -28,7 +28,8 @@ public class NotificationController {
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
             Principal principal) {
-        User user = resolveCurrentUser(principal);
+        User user = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin người dùng"));
         Pageable pageable = PageRequest.of(page, size);
         Page<NotificationResponse> result = notificationService.getNotifications(user, unreadOnly, pageable);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách thông báo thành công", result));
@@ -38,30 +39,25 @@ public class NotificationController {
     public ResponseEntity<ApiResponse<String>> markAsRead(
             @PathVariable("id") Integer id,
             Principal principal) {
-        User user = resolveCurrentUser(principal);
+        User user = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin người dùng"));
         notificationService.markAsRead(id, user);
         return ResponseEntity.ok(ApiResponse.success("Đã đánh dấu thông báo là đã đọc", "SUCCESS"));
     }
 
     @PutMapping("/read-all")
     public ResponseEntity<ApiResponse<String>> markAllAsRead(Principal principal) {
-        User user = resolveCurrentUser(principal);
+        User user = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin người dùng"));
         notificationService.markAllAsRead(user);
         return ResponseEntity.ok(ApiResponse.success("Đã đánh dấu tất cả thông báo là đã đọc", "SUCCESS"));
     }
 
     @GetMapping("/unread-count")
     public ResponseEntity<ApiResponse<Long>> getUnreadCount(Principal principal) {
-        User user = resolveCurrentUser(principal);
+        User user = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin người dùng"));
         long count = notificationService.getUnreadCount(user);
         return ResponseEntity.ok(ApiResponse.success("Lấy số lượng thông báo chưa đọc thành công", count));
-    }
-
-    private User resolveCurrentUser(Principal principal) {
-        if (principal == null) {
-            throw new RuntimeException("Bạn cần đăng nhập để thực hiện chức năng này");
-        }
-        return userRepository.findByEmail(principal.getName())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin người dùng"));
     }
 }

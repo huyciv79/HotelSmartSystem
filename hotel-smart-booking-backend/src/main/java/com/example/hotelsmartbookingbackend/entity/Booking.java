@@ -1,6 +1,7 @@
 package com.example.hotelsmartbookingbackend.entity;
 
 import jakarta.persistence.*;
+import com.example.hotelsmartbookingbackend.enums.BookingStatus;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -77,11 +78,11 @@ public class Booking {
     @Column(name = "finalamount", nullable = false, precision = 12, scale = 2)
     private BigDecimal finalamount;
 
-    @Size(max = 50)
     @NotNull
     @ColumnDefault("'Pending'")
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
-    private String status;
+    private BookingStatus status;
 
     @Size(max = 500)
     @Column(name = "cancellationreason", length = 500)

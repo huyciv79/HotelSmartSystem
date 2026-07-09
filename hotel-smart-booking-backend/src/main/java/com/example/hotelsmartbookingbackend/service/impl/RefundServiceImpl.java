@@ -5,6 +5,7 @@ import com.example.hotelsmartbookingbackend.dto.request.RefundRequest;
 import com.example.hotelsmartbookingbackend.dto.request.RejectRefundRequest;
 import com.example.hotelsmartbookingbackend.dto.response.CustomerRequestResponse;
 import com.example.hotelsmartbookingbackend.entity.Booking;
+import com.example.hotelsmartbookingbackend.enums.BookingStatus;
 import com.example.hotelsmartbookingbackend.entity.Bookingdetail;
 import com.example.hotelsmartbookingbackend.entity.Cancellationpolicy;
 import com.example.hotelsmartbookingbackend.entity.Customerrequest;
@@ -67,10 +68,9 @@ public class RefundServiceImpl implements RefundService {
             throw new RuntimeException("Bạn không có quyền yêu cầu hoàn tiền cho đơn đặt phòng này");
         }
 
-        String status = booking.getStatus();
-        if ("Checked-in".equalsIgnoreCase(status) || "Checked In".equalsIgnoreCase(status)
-                || "Checked-out".equalsIgnoreCase(status) || "Completed".equalsIgnoreCase(status) || "Cancelled".equalsIgnoreCase(status)) {
-            throw new RuntimeException("Không thể yêu cầu hoàn tiền cho đơn đặt phòng ở trạng thái: " + status);
+        BookingStatus status = booking.getStatus();
+        if (status == BookingStatus.CHECKED_IN || status == BookingStatus.COMPLETED || status == BookingStatus.CANCELLED) {
+            throw new RuntimeException("Không thể yêu cầu hoàn tiền cho đơn đặt phòng ở trạng thái: " + (status != null ? status.getValue() : "null"));
         }
 
         if (booking.getPaidamount().compareTo(BigDecimal.ZERO) <= 0) {
@@ -199,7 +199,7 @@ public class RefundServiceImpl implements RefundService {
 
         // Update booking
         booking.setPaidamount(booking.getPaidamount().subtract(refundAmount));
-        booking.setStatus("Cancelled"); // Mark as Cancelled because of refund
+        booking.setStatus(BookingStatus.CANCELLED); // Mark as Cancelled because of refund
         booking.setCancelledat(Instant.now());
         booking.setCancelledby(staff);
         booking.setCancellationreason("Refund Approved: " + req.getDescription());

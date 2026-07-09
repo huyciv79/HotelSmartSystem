@@ -50,7 +50,7 @@ public class BookingController {
     public ResponseEntity<ApiResponse<BookingResponse>> createBooking(
             @Valid @RequestBody CreateBookingRequest request,
             Authentication authentication) {
-        String customerEmail = resolveCustomerEmail(authentication);
+        String customerEmail = authentication.getName();
         BookingResponse response = bookingService.createBooking(request, customerEmail);
         return ResponseEntity.ok(ApiResponse.success("Đặt phòng thành công", response));
     }
@@ -59,14 +59,14 @@ public class BookingController {
     public ResponseEntity<ApiResponse<BookingResponse>> createGroupBooking(
             @Valid @RequestBody CreateGroupBookingRequest request,
             Authentication authentication) {
-        String customerEmail = resolveCustomerEmail(authentication);
+        String customerEmail = authentication.getName();
         BookingResponse response = bookingService.createGroupBooking(request, customerEmail);
         return ResponseEntity.ok(ApiResponse.success("Đặt phòng nhóm thành công", response));
     }
 
     @GetMapping("/history")
     public ResponseEntity<ApiResponse<List<BookingHistoryResponse>>> getBookingHistory(Authentication authentication) {
-        String customerEmail = resolveCustomerEmail(authentication);
+        String customerEmail = authentication.getName();
         List<BookingHistoryResponse> response = bookingService.getBookingHistory(customerEmail);
         return ResponseEntity.ok(ApiResponse.success("Lấy lịch sử đặt phòng thành công", response));
     }
@@ -75,111 +75,23 @@ public class BookingController {
     public ResponseEntity<ApiResponse<BookingResponse>> getBookingDetail(
             @PathVariable Integer bookingId,
             Authentication authentication) {
-        String customerEmail = resolveCustomerEmail(authentication);
+        String customerEmail = authentication.getName();
         BookingResponse response = bookingService.getBookingDetail(bookingId, customerEmail);
         return ResponseEntity.ok(ApiResponse.success("Lấy chi tiết đặt phòng thành công", response));
     }
 
     @GetMapping("/all")
     public ResponseEntity<ApiResponse<List<BookingHistoryResponse>>> getAllBookings(Authentication authentication) {
-        String staffEmail = resolveCustomerEmail(authentication);
+        String staffEmail = authentication.getName();
         List<BookingHistoryResponse> response = bookingService.getAllBookingsForStaff(staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Lấy toàn bộ lịch sử đặt phòng thành công", response));
-    }
-
-    @PostMapping("/{bookingId}/check-in")
-    public ResponseEntity<ApiResponse<BookingResponse>> checkIn(
-            @PathVariable Integer bookingId,
-            Authentication authentication) {
-        String staffEmail = resolveCustomerEmail(authentication);
-        BookingResponse response = bookingService.performCheckIn(bookingId, staffEmail);
-        return ResponseEntity.ok(ApiResponse.success("Nhận phòng thành công", response));
-    }
-
-    @PostMapping("/{bookingId}/qr-token")
-    @Operation(
-            summary = "Tao QR token check-in",
-            description = "Khach hang da Verified eKYC tao token QR ngan han cho booking QR Code chua check-in."
-    )
-    public ResponseEntity<ApiResponse<QrTokenResponse>> generateQrCheckInToken(
-            @PathVariable Integer bookingId,
-            Authentication authentication) {
-        String customerEmail = resolveCustomerEmail(authentication);
-        QrTokenResponse response = bookingService.generateQrCheckInToken(bookingId, customerEmail);
-        return ResponseEntity.ok(ApiResponse.success(
-                "Tao ma QR check-in thành công",
-                response
-        ));
-    }
-
-    @PostMapping(
-            value = "/{bookingId}/face-check-in",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
-    )
-    @Operation(
-            summary = "Liveness detection và FaceID check-in",
-            description = "Chỉ Manager được gọi. Camera lấy frame chính diện và một hướng quay ngẫu nhiên; hệ thống kiểm tra active liveness nhanh, anti-spoofing và face template nhiều góc đã đăng ký."
-    )
-    public ResponseEntity<ApiResponse<BookingResponse>> faceCheckIn(
-            @PathVariable Integer bookingId,
-            @RequestPart("selfieImage") MultipartFile selfieImage,
-            @RequestPart("challengeImage") MultipartFile challengeImage,
-            @RequestPart("challengeImage2") MultipartFile challengeImage2,
-            @RequestPart("challengeImage3") MultipartFile challengeImage3,
-            @RequestPart("challengeDirection") String challengeDirection,
-            Authentication authentication) {
-        String actorEmail = resolveCustomerEmail(authentication);
-        BookingResponse response = bookingService.performFaceCheckIn(
-                bookingId,
-                selfieImage,
-                challengeImage,
-                challengeImage2,
-                challengeImage3,
-                challengeDirection,
-                actorEmail
-        );
-        return ResponseEntity.ok(ApiResponse.success(
-                "Xác minh khuôn mặt và nhận phòng thành công",
-                response
-        ));
-    }
-
-    @PostMapping(
-            value = "/face-readiness",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
-    )
-    @Operation(
-            summary = "Kiểm tra camera trước khi quét FaceID",
-            description = "Chỉ Manager được gọi. Kiểm tra đúng một khuôn mặt, đủ gần và nhìn thẳng."
-    )
-    public ResponseEntity<ApiResponse<AiFaceReadinessResponse>> checkFaceReadiness(
-            @RequestPart("selfieImage") MultipartFile selfieImage,
-            Authentication authentication) {
-        String actorEmail = resolveCustomerEmail(authentication);
-        AiFaceReadinessResponse response = bookingService.checkFaceReadiness(
-                selfieImage,
-                actorEmail
-        );
-        return ResponseEntity.ok(ApiResponse.success(
-                "Kiểm tra camera FaceID thành công",
-                response
-        ));
-    }
-
-    @PostMapping("/{bookingId}/check-out")
-    public ResponseEntity<ApiResponse<BookingResponse>> checkOut(
-            @PathVariable Integer bookingId,
-            Authentication authentication) {
-        String staffEmail = resolveCustomerEmail(authentication);
-        BookingResponse response = bookingService.performCheckOut(bookingId, staffEmail);
-        return ResponseEntity.ok(ApiResponse.success("Trả phòng thành công", response));
     }
 
     @PostMapping("/walk-in")
     public ResponseEntity<ApiResponse<BookingResponse>> createWalkInBooking(
             @Valid @RequestBody WalkInBookingRequest request,
             Authentication authentication) {
-        String staffEmail = resolveCustomerEmail(authentication);
+        String staffEmail = authentication.getName();
         BookingResponse response = bookingService.createWalkInBooking(request, staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Đặt phòng trực tiếp (Walk-in) thành công", response));
     }
@@ -188,7 +100,7 @@ public class BookingController {
     public ResponseEntity<ApiResponse<InvoiceResponse>> getInvoice(
             @PathVariable Integer bookingId,
             Authentication authentication) {
-        String actorEmail = resolveCustomerEmail(authentication);
+        String actorEmail = authentication.getName();
         InvoiceResponse response = bookingService.getInvoiceDetails(bookingId, actorEmail);
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin hóa đơn thành công", response));
     }
@@ -197,7 +109,7 @@ public class BookingController {
     public ResponseEntity<byte[]> getStatementPdf(
             @PathVariable Integer bookingId,
             Authentication authentication) {
-        String actorEmail = resolveCustomerEmail(authentication);
+        String actorEmail = authentication.getName();
         byte[] pdfBytes = pdfService.generateInvoicePdf(bookingId, actorEmail);
 
         org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
@@ -213,7 +125,7 @@ public class BookingController {
             @PathVariable Integer bookingId,
             @Valid @RequestBody AddServiceRequest request,
             Authentication authentication) {
-        String staffEmail = resolveCustomerEmail(authentication);
+        String staffEmail = authentication.getName();
         bookingService.addServiceToBooking(bookingId, request, staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Thêm dịch vụ vào đơn đặt phòng thành công", "SUCCESS"));
     }
@@ -226,7 +138,7 @@ public class BookingController {
     public ResponseEntity<ApiResponse<PageResponse<BookingHistoryResponse>>> filterBookings(
             @Valid @RequestBody BookingFilter criteria,
             Authentication authentication) {
-        resolveCustomerEmail(authentication);
+        authentication.getName();
         PageResponse<BookingHistoryResponse> response = bookingService.filterBookings(criteria);
         return ResponseEntity.ok(ApiResponse.success("Lọc đơn đặt phòng thành công", response));
     }
@@ -240,7 +152,7 @@ public class BookingController {
             @PathVariable Integer bookingId,
             @Valid @RequestBody UpdateBookingRequest request,
             Authentication authentication) {
-        String staffEmail = resolveCustomerEmail(authentication);
+        String staffEmail = authentication.getName();
         BookingResponse response = bookingService.updateBooking(bookingId, request, staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật đơn đặt phòng thành công", response));
     }
@@ -254,7 +166,7 @@ public class BookingController {
             @PathVariable Integer bookingId,
             @Valid @RequestBody CancelBookingRequest request,
             Authentication authentication) {
-        String staffEmail = resolveCustomerEmail(authentication);
+        String staffEmail = authentication.getName();
         BookingResponse response = bookingService.cancelBooking(bookingId, request, staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Hủy đơn đặt phòng thành công", response));
     }
@@ -268,20 +180,11 @@ public class BookingController {
             @PathVariable Integer bookingId,
             @Valid @RequestBody(required = false) CancelBookingRequest request,
             Authentication authentication) {
-        String customerEmail = resolveCustomerEmail(authentication);
+        String customerEmail = authentication.getName();
         CancelBookingRequest body = request != null ? request : new CancelBookingRequest();
         BookingResponse response = bookingService.customerCancelBooking(bookingId, body, customerEmail);
         return ResponseEntity.ok(ApiResponse.success("Hủy đơn đặt phòng thành công", response));
     }
-
-    private String resolveCustomerEmail(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()
-                || "anonymousUser".equals(authentication.getPrincipal())) {
-            throw new RuntimeException("Bạn cần đăng nhập để thực hiện chức năng này");
-        }
-        return authentication.getName();
-    }
-    
 
     @GetMapping("/services/all")
     public ResponseEntity<ApiResponse<List<com.example.hotelsmartbookingbackend.entity.Service>>> getAllServices() {

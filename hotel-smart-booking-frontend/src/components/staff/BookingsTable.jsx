@@ -82,7 +82,6 @@ const BookingsTable = ({
     fetchBookings();
   }, [fetchBookings]);
 
-  // Expose reload listener
   useEffect(() => {
     const handleReload = () => fetchBookings();
     window.addEventListener('reload-bookings', handleReload);
@@ -116,13 +115,13 @@ const BookingsTable = ({
           const bk = row.original;
           return (
             <div className="space-y-1">
-              <span className="inline-block px-2 py-0.5 text-[7px] font-black tracking-widest text-slate-400 bg-neutral-900 border border-neutral-800 uppercase mb-0.5">
-                {bk.bookingType && bk.bookingType.toLowerCase() === 'group' ? 'ĐOÀN (GROUP)' : 'ĐƠN LẺ'}
+              <span className="inline-block px-2 py-0.5 text-[7px] font-black tracking-widest text-slate-500 bg-slate-100 border border-slate-200 uppercase mb-0.5">
+                {bk.bookingType && bk.bookingType.toLowerCase() === 'group' ? 'ĐOÀN (GROUP)' : 'ĐƠN LÊ'}
               </span>
-              <h5 className="text-xs font-black text-white uppercase tracking-wider m-0">
+              <h5 className="text-xs font-black text-slate-800 uppercase tracking-wider m-0">
                 {bk.guestName}
               </h5>
-              <p className="text-[9px] text-slate-500 font-bold truncate max-w-[150px]">
+              <p className="text-[9px] text-slate-600 font-bold truncate max-w-[150px]">
                 {bk.email}
               </p>
             </div>
@@ -133,7 +132,7 @@ const BookingsTable = ({
         header: 'Mã đơn',
         accessorKey: 'bookingReference',
         cell: ({ getValue }) => (
-          <span className="font-mono text-slate-300 font-bold text-xs uppercase">
+          <span className="font-mono text-slate-600 font-bold text-xs uppercase">
             {getValue()}
           </span>
         )
@@ -142,7 +141,7 @@ const BookingsTable = ({
         header: 'Loại phòng',
         accessorKey: 'roomType',
         cell: ({ getValue }) => (
-          <span className="text-slate-300 font-semibold text-xs">
+          <span className="text-slate-700 font-semibold text-xs">
             {getValue() || 'Standard'}
           </span>
         )
@@ -152,7 +151,7 @@ const BookingsTable = ({
         cell: ({ row }) => {
           const bk = row.original;
           return (
-            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+            <div className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">
               <div>{bk.checkInDate} đến {bk.checkOutDate}</div>
               <div className="text-slate-500 text-[9px] mt-0.5">({bk.nights} đêm)</div>
             </div>
@@ -163,7 +162,7 @@ const BookingsTable = ({
         header: 'Tổng chi phí',
         accessorKey: 'totalAmount',
         cell: ({ getValue }) => (
-          <span className="text-xs font-black text-white">
+          <span className="text-xs font-black text-slate-800">
             {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(getValue())}
           </span>
         )
@@ -176,29 +175,29 @@ const BookingsTable = ({
           const norm = status.toLowerCase().replace('-', ' ').trim();
 
           let label = status.toUpperCase();
-          let badgeClass = 'bg-neutral-900 text-slate-400 border border-neutral-800';
+          let badgeClass = 'bg-slate-100 text-slate-600 border border-slate-200';
 
           if (norm === 'confirmed') {
             label = 'ĐÃ XÁC NHẬN';
-            badgeClass = 'bg-green-500/10 text-green-400 border border-green-500/20';
+            badgeClass = 'bg-green-50 text-green-700 border border-green-200';
           } else if (norm === 'checked in' || norm === 'checkedin') {
             label = 'ĐÃ NHẬN PHÒNG';
-            badgeClass = 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
+            badgeClass = 'bg-blue-50 text-blue-700 border border-blue-200';
           } else if (norm === 'checked out' || norm === 'checkedout') {
             label = 'ĐÃ TRẢ PHÒNG';
-            badgeClass = 'bg-neutral-800 text-slate-400 border border-neutral-700/60';
+            badgeClass = 'bg-slate-100 text-slate-600 border border-slate-200';
           } else if (norm === 'cancelled') {
             label = 'ĐÃ HỦY';
-            badgeClass = 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+            badgeClass = 'bg-rose-50 text-rose-700 border border-rose-200';
           } else if (norm === 'pending') {
             label = 'CHỜ XỬ LÝ';
-            badgeClass = 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20';
+            badgeClass = 'bg-amber-50 text-amber-700 border border-amber-250/60';
           } else if (norm === 'paid') {
             label = 'ĐÃ THANH TOÁN';
-            badgeClass = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+            badgeClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
           } else if (norm === 'partially paid' || norm === 'partiallypaid') {
             label = 'THANH TOÁN 1 PHẦN';
-            badgeClass = 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+            badgeClass = 'bg-amber-50 text-amber-700 border border-amber-200';
           }
 
           return (
@@ -225,7 +224,7 @@ const BookingsTable = ({
             <div className="flex flex-wrap items-center gap-1.5 justify-start">
               <button
                 onClick={() => setSelectedBooking(bk)}
-                className="bg-slate-900/50 border border-slate-700 text-slate-300 text-[8.5px] font-black uppercase tracking-widest px-2.5 py-1.5 cursor-pointer flex items-center gap-1 hover:bg-slate-800 transition-colors"
+                className="bg-slate-100 border border-slate-200 text-slate-700 text-[8.5px] font-black uppercase tracking-widest px-3 py-1.5 cursor-pointer flex items-center gap-1 hover:bg-slate-200 hover:text-slate-900 rounded-sm transition-all"
               >
                 Chi tiết
               </button>
@@ -237,7 +236,7 @@ const BookingsTable = ({
                     await handleDirectCheckInOut(bk, 'Checked In');
                     fetchBookings();
                   }}
-                  className="bg-green-600 hover:bg-green-500 text-white text-[8.5px] font-black uppercase tracking-widest px-2.5 py-1.5 border border-green-500/20 cursor-pointer flex items-center gap-1 transition-all"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-[8.5px] font-black uppercase tracking-widest px-3 py-1.5 cursor-pointer flex items-center gap-1.5 rounded-sm shadow-sm transition-all border-none"
                 >
                   <span className="material-symbols-outlined text-[10px]">how_to_reg</span>
                   Check-in tại quầy
@@ -250,7 +249,7 @@ const BookingsTable = ({
                   onClick={() => onFaceCheckInSelect(bk.id)}
                   disabled={!isManager}
                   title={!isManager ? "Yêu cầu tài khoản Quản lý để thực hiện FaceID check-in" : "Check-in bằng nhận diện khuôn mặt"}
-                  className="bg-primary hover:brightness-110 disabled:bg-neutral-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-[8.5px] font-black uppercase tracking-widest px-2.5 py-1.5 border border-primary/20 cursor-pointer flex items-center gap-1 transition-all"
+                  className="bg-primary hover:brightness-110 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-[8.5px] font-black uppercase tracking-widest px-3 py-1.5 cursor-pointer flex items-center gap-1.5 rounded-sm shadow-sm transition-all border-none"
                 >
                   <span className="material-symbols-outlined text-[10px]">face</span>
                   {isManager ? 'FaceID Check-in' : 'Cần Manager'}
@@ -261,7 +260,7 @@ const BookingsTable = ({
               {canCheckIn && usesQrCode && (
                 <button
                   onClick={() => startScanner(bk, 'qr')}
-                  className="bg-blue-600 hover:bg-blue-500 text-white text-[8.5px] font-black uppercase tracking-widest px-2.5 py-1.5 border border-blue-500/20 cursor-pointer flex items-center gap-1 transition-all"
+                  className="bg-blue-600 hover:bg-blue-750 text-white text-[8.5px] font-black uppercase tracking-widest px-3 py-1.5 cursor-pointer flex items-center gap-1.5 rounded-sm shadow-sm transition-all border-none"
                 >
                   <span className="material-symbols-outlined text-[10px]">qr_code_scanner</span>
                   Quét QR
@@ -274,7 +273,7 @@ const BookingsTable = ({
                     await handleDirectCheckInOut(bk, 'Checked Out');
                     fetchBookings();
                   }}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-[8.5px] font-black uppercase tracking-widest px-3 py-1.5 border border-indigo-500/20 cursor-pointer transition-all"
+                  className="bg-indigo-600 hover:bg-indigo-750 text-white text-[8.5px] font-black uppercase tracking-widest px-3 py-1.5 cursor-pointer rounded-sm shadow-sm transition-all border-none"
                 >
                   Trả phòng (Check-out)
                 </button>
@@ -302,7 +301,7 @@ const BookingsTable = ({
   return (
     <div className="space-y-6 text-left">
       {/* Filtering UI */}
-      <div className="bg-[#0f0f12] border border-neutral-900 p-5 shadow-sm flex flex-wrap gap-4 items-center justify-between">
+      <div className="bg-white border border-slate-200/85 p-5 shadow-sm flex flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap gap-4 items-center flex-1">
           {/* Keyword Search */}
           <div className="relative min-w-[220px] flex-1 max-w-xs">
@@ -314,9 +313,9 @@ const BookingsTable = ({
                 setKeyword(e.target.value);
                 setPagination(prev => ({ ...prev, pageIndex: 0 }));
               }}
-              className="w-full bg-transparent border-b border-neutral-800 py-2 pr-8 font-bold text-xs outline-none text-white focus:border-primary placeholder:text-slate-600"
+              className="w-full bg-transparent border-b border-slate-200 py-2 pr-8 font-bold text-xs outline-none text-slate-800 focus:border-primary placeholder:text-slate-450"
             />
-            <span className="absolute right-0 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 text-sm">
+            <span className="absolute right-0 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-sm">
               search
             </span>
           </div>
@@ -330,7 +329,7 @@ const BookingsTable = ({
                 setStatus(e.target.value);
                 setPagination(prev => ({ ...prev, pageIndex: 0 }));
               }}
-              className="bg-transparent border-b border-neutral-800 py-1 font-bold text-xs outline-none text-white focus:border-primary [&>option]:bg-neutral-900 [&>option]:text-white"
+              className="bg-transparent border-b border-slate-200 py-1 font-bold text-xs outline-none text-slate-800 focus:border-primary [&>option]:bg-white [&>option]:text-slate-800"
             >
               <option value="">Tất cả</option>
               <option value="Pending">Chờ xử lý</option>
@@ -352,7 +351,7 @@ const BookingsTable = ({
                 setBookingType(e.target.value);
                 setPagination(prev => ({ ...prev, pageIndex: 0 }));
               }}
-              className="bg-transparent border-b border-neutral-800 py-1 font-bold text-xs outline-none text-white focus:border-primary [&>option]:bg-neutral-900 [&>option]:text-white"
+              className="bg-transparent border-b border-slate-200 py-1 font-bold text-xs outline-none text-slate-800 focus:border-primary [&>option]:bg-white [&>option]:text-slate-800"
             >
               <option value="">Tất cả</option>
               <option value="Single">Đơn lẻ</option>
@@ -368,19 +367,19 @@ const BookingsTable = ({
             setBookingType('');
             setPagination({ pageIndex: 0, pageSize: 10 });
           }}
-          className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-primary border border-neutral-800 hover:border-primary/30 px-3 py-2 transition-all bg-transparent cursor-pointer"
+          className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-primary border border-slate-200 hover:border-primary/30 px-3 py-2 transition-all bg-transparent cursor-pointer"
         >
           Xóa bộ lọc
         </button>
       </div>
 
       {/* TanStack Table UI */}
-      <div className="bg-[#0f0f12] border border-neutral-900 shadow-md overflow-hidden">
+      <div className="bg-white border border-slate-200/85 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-xs text-slate-400">
+          <table className="w-full border-collapse text-left text-xs text-slate-600">
             <thead>
               {table.getHeaderGroups().map(headerGroup => (
-                <tr key={headerGroup.id} className="border-b border-neutral-900 text-[9px] font-black uppercase tracking-wider text-slate-500 bg-neutral-950/15">
+                <tr key={headerGroup.id} className="border-b border-slate-100 text-[9px] font-black uppercase tracking-wider text-slate-500 bg-slate-50/50">
                   {headerGroup.headers.map(header => (
                     <th key={header.id} className="p-4 font-black">
                       {header.isPlaceholder
@@ -391,7 +390,7 @@ const BookingsTable = ({
                 </tr>
               ))}
             </thead>
-            <tbody className="divide-y divide-neutral-900/60">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
                   <td colSpan={columns.length} className="p-12 text-center text-slate-500 font-bold uppercase tracking-wider">
@@ -407,7 +406,7 @@ const BookingsTable = ({
                 </tr>
               ) : (
                 table.getRowModel().rows.map(row => (
-                  <tr key={row.id} className="hover:bg-white/[0.02] transition-colors">
+                  <tr key={row.id} className="hover:bg-slate-50/50 transition-colors">
                     {row.getVisibleCells().map(cell => (
                       <td key={cell.id} className="p-4 align-middle">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -422,19 +421,19 @@ const BookingsTable = ({
 
         {/* Server-side Pagination Controls */}
         {data.length > 0 && (
-          <div className="p-4 border-t border-neutral-900 bg-neutral-950/10 flex flex-wrap gap-4 items-center justify-between text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+          <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-wrap gap-4 items-center justify-between text-[10px] text-slate-500 font-bold uppercase tracking-widest">
             <div className="flex items-center gap-4">
-              <span className="text-slate-400">
-                Trang <strong className="text-white">{pagination.pageIndex + 1}</strong> trên <strong className="text-white">{table.getPageCount()}</strong>
+              <span className="text-slate-500 font-semibold">
+                Trang <strong className="text-slate-800">{pagination.pageIndex + 1}</strong> trên <strong className="text-slate-800">{table.getPageCount()}</strong>
               </span>
               <div className="flex items-center gap-1">
-                <span className="text-[9px] uppercase tracking-wider">Hiển thị:</span>
+                <span className="text-[9px] uppercase tracking-wider text-slate-400">Hiển thị:</span>
                 <select
                   value={pagination.pageSize}
                   onChange={e => {
                     setPagination(prev => ({ ...prev, pageSize: Number(e.target.value), pageIndex: 0 }));
                   }}
-                  className="bg-neutral-900 border border-neutral-800 text-white py-1 px-2 font-bold text-[10px] outline-none rounded-sm"
+                  className="bg-white border border-slate-200 text-slate-850 py-1 px-2 font-bold text-[10px] outline-none rounded-sm"
                 >
                   {[5, 10, 20, 50].map(pageSize => (
                     <option key={pageSize} value={pageSize}>
@@ -449,14 +448,14 @@ const BookingsTable = ({
               <button
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage() || loading}
-                className="bg-neutral-900 border border-neutral-800 text-slate-400 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-neutral-800 hover:text-white px-3 py-1.5 transition-all text-[9px] font-black uppercase tracking-widest cursor-pointer"
+                className="bg-slate-50 border border-slate-200 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 hover:text-slate-800 px-3 py-1.5 transition-all text-[9px] font-black uppercase tracking-widest cursor-pointer"
               >
                 Trước
               </button>
               <button
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage() || loading}
-                className="bg-neutral-900 border border-neutral-800 text-slate-400 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-neutral-800 hover:text-white px-3 py-1.5 transition-all text-[9px] font-black uppercase tracking-widest cursor-pointer"
+                className="bg-slate-50 border border-slate-200 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 hover:text-slate-800 px-3 py-1.5 transition-all text-[9px] font-black uppercase tracking-widest cursor-pointer"
               >
                 Sau
               </button>

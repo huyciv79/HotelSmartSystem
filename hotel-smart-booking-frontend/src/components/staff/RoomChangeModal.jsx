@@ -66,10 +66,10 @@ function RoomCard({ room, isSelected, currentPrice, onSelect, roomTypes = [] }) 
       type="button"
       onClick={() => onSelect(room)}
       className={`
-        w-full text-left border-2 p-4 transition-all duration-150 focus:outline-none
+        w-full text-left border p-4 transition-all duration-150 focus:outline-none
         ${isSelected
-          ? 'border-primary bg-primary/5 shadow-md'
-          : 'border-surface-container-highest bg-white hover:border-primary/40 hover:shadow-sm'
+          ? 'border-primary bg-primary/5 shadow-sm'
+          : 'border-slate-200 bg-white hover:border-primary/45 hover:shadow-sm'
         }
       `}
       aria-pressed={isSelected}
@@ -80,8 +80,8 @@ function RoomCard({ room, isSelected, currentPrice, onSelect, roomTypes = [] }) 
           {/* Checkbox tròn — hiển thị trạng thái selected */}
           <div
             className={`
-              w-5 h-5 border-2 flex items-center justify-center flex-shrink-0 mt-0.5
-              ${isSelected ? 'border-primary bg-primary' : 'border-surface-dim'}
+              w-5 h-5 border flex items-center justify-center flex-shrink-0 mt-0.5
+              ${isSelected ? 'border-primary bg-primary' : 'border-slate-300'}
             `}
           >
             {isSelected && (
@@ -89,10 +89,10 @@ function RoomCard({ room, isSelected, currentPrice, onSelect, roomTypes = [] }) 
             )}
           </div>
           <div>
-            <p className="font-bold text-sm text-on-surface uppercase tracking-wide">
+            <p className="font-bold text-sm text-slate-800 uppercase tracking-wide">
               Phòng {room.roomNumber ?? room.roomnumber}
             </p>
-            <p className="text-xs text-secondary">
+            <p className="text-xs text-slate-500">
               {roomType.name}
               {(room.floorNumber !== undefined ? room.floorNumber : room.floornumber) && ` · Tầng ${room.floorNumber !== undefined ? room.floorNumber : room.floornumber}`}
             </p>
@@ -103,15 +103,15 @@ function RoomCard({ room, isSelected, currentPrice, onSelect, roomTypes = [] }) 
 
       {/* Mô tả ngắn loại phòng */}
       {roomType.description && (
-        <p className="text-xs text-secondary mt-1 line-clamp-2 pl-7">
+        <p className="text-xs text-slate-500 mt-1 line-clamp-2 pl-7">
           {roomType.description}
         </p>
       )}
 
       {/* Footer: giá gốc */}
-      <div className="mt-3 pl-7 flex items-center gap-1 text-xs text-secondary">
+      <div className="mt-3 pl-7 flex items-center gap-1 text-xs text-slate-500">
         <span className="material-symbols-outlined text-sm">payments</span>
-        <span>Giá gốc: <strong className="text-on-surface">{formatVND(roomType.baseprice)}</strong>/đêm</span>
+        <span>Giá gốc: <strong className="text-slate-700">{formatVND(roomType.baseprice)}</strong>/đêm</span>
       </div>
     </button>
   );
@@ -141,8 +141,8 @@ function ConfirmSummary({ booking, selectedRoom, isLoading, onConfirm, roomTypes
       : 'text-blue-700 bg-blue-50 border-blue-200';
 
   return (
-    <div className="bg-surface-container-low border border-surface-container-highest p-4 space-y-3">
-      <h3 className="text-xs font-bold uppercase tracking-widest text-secondary">
+    <div className="bg-slate-50 border border-slate-200 p-4 space-y-3">
+      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">
         Tóm tắt chuyển phòng
       </h3>
 
@@ -151,24 +151,24 @@ function ConfirmSummary({ booking, selectedRoom, isLoading, onConfirm, roomTypes
           {/* Thông tin chuyển */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-secondary">Phòng hiện tại</span>
-              <span className="font-semibold text-on-surface">
+              <span className="text-slate-500">Phòng hiện tại</span>
+              <span className="font-semibold text-slate-800">
                 {booking?.roomNumber ?? '—'}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-secondary">Chuyển sang</span>
+              <span className="text-slate-500">Chuyển sang</span>
               <span className="font-semibold text-primary">
                 Phòng {selectedRoom.roomNumber ?? selectedRoom.roomnumber}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-secondary">Loại phòng mới</span>
-              <span className="font-semibold text-on-surface">{roomType.name ?? '—'}</span>
+              <span className="text-slate-500">Loại phòng mới</span>
+              <span className="font-semibold text-slate-800">{roomType.name ?? '—'}</span>
             </div>
           </div>
 
-          <hr className="border-surface-container-highest" />
+          <hr className="border-slate-200" />
 
           {/* Chênh lệch giá */}
           <div className={`border px-3 py-2 flex items-center justify-between ${changeTypeColor}`}>
@@ -180,7 +180,7 @@ function ConfirmSummary({ booking, selectedRoom, isLoading, onConfirm, roomTypes
 
           {/* Ghi chú tiền cho nhân viên */}
           {diff !== 0 && (
-            <p className="text-xs text-secondary">
+            <p className="text-xs text-slate-500">
               {diff > 0
                 ? '⚠️ Nhân viên cần thu thêm phần chênh lệch từ khách.'
                 : 'ℹ️ Ghi nhận credit/hoàn tiền chênh lệch cho khách.'}
@@ -189,7 +189,7 @@ function ConfirmSummary({ booking, selectedRoom, isLoading, onConfirm, roomTypes
         </>
       ) : (
         /* Trạng thái chưa chọn phòng */
-        <p className="text-sm text-secondary text-center py-2">
+        <p className="text-sm text-slate-500 text-center py-2">
           Vui lòng chọn phòng muốn chuyển ở trên.
         </p>
       )}
@@ -202,10 +202,10 @@ function ConfirmSummary({ booking, selectedRoom, isLoading, onConfirm, roomTypes
         onClick={onConfirm}
         className={`
           w-full py-3 text-sm font-bold uppercase tracking-widest
-          flex items-center justify-center gap-2 transition-all duration-150
+          flex items-center justify-center gap-2 transition-all duration-150 border-none cursor-pointer
           ${!selectedRoom || isLoading
-            ? 'bg-surface-container-highest text-secondary cursor-not-allowed'
-            : 'bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.99]'
+            ? 'bg-slate-200 text-slate-450 cursor-not-allowed'
+            : 'bg-primary text-white hover:brightness-110 active:scale-[0.99]'
           }
         `}
       >
@@ -213,7 +213,7 @@ function ConfirmSummary({ booking, selectedRoom, isLoading, onConfirm, roomTypes
           <>
             {/* Spinner khi loading */}
             <svg
-              className="animate-spin h-4 w-4"
+              className="animate-spin h-4 w-4 text-slate-400"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -378,13 +378,13 @@ export default function RoomChangeModal({ isOpen, onClose, booking, onSuccess, s
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       {/* Semi-transparent backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
       {/* Modal container */}
-      <div className="relative z-10 w-full max-w-2xl max-h-[90vh] flex flex-col bg-surface shadow-2xl">
+      <div className="relative z-10 w-full max-w-2xl max-h-[90vh] flex flex-col bg-white shadow-2xl rounded-sm overflow-hidden">
 
         {/* ── HEADER ─────────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-container-highest bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-primary flex items-center justify-center flex-shrink-0">
               <span className="material-symbols-outlined text-white text-base">swap_horiz</span>
@@ -392,12 +392,12 @@ export default function RoomChangeModal({ isOpen, onClose, booking, onSuccess, s
             <div>
               <h2
                 id="modal-title-room-change"
-                className="font-bold text-base uppercase tracking-wide text-on-surface"
+                className="font-bold text-base uppercase tracking-wide text-slate-800"
               >
                 Yêu cầu chuyển phòng
               </h2>
-              <p className="text-xs text-secondary">
-                Mã đặt phòng: <strong>{booking?.bookingReference ?? '—'}</strong>
+              <p className="text-xs text-slate-500">
+                Mã đặt phòng: <strong className="text-slate-700">{booking?.bookingReference ?? '—'}</strong>
               </p>
             </div>
           </div>
@@ -406,9 +406,9 @@ export default function RoomChangeModal({ isOpen, onClose, booking, onSuccess, s
             type="button"
             onClick={onClose}
             aria-label="Đóng"
-            className="w-8 h-8 flex items-center justify-center text-secondary hover:text-on-surface hover:bg-surface-container-high transition-colors"
+            className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-50 transition-colors border-none cursor-pointer"
           >
-            <span className="material-symbols-outlined">close</span>
+            <span className="material-symbols-outlined text-lg">close</span>
           </button>
         </div>
 
@@ -416,24 +416,24 @@ export default function RoomChangeModal({ isOpen, onClose, booking, onSuccess, s
         <div className="flex-1 overflow-y-auto">
 
           {/* ── PHẦN 1: Thông tin phòng hiện tại & Lý do ─────────────────── */}
-          <section className="px-6 py-5 border-b border-surface-container-highest bg-white">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-secondary mb-3">
+          <section className="px-6 py-5 border-b border-slate-150 bg-white">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">
               Phần 1 — Phòng hiện tại
             </h3>
 
             {/* Info box phòng hiện tại */}
-            <div className="flex items-center gap-3 bg-surface-container-low border border-surface-container-highest px-4 py-3 mb-4">
+            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 px-4 py-3 mb-4">
               <div className="w-10 h-10 bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <span className="material-symbols-outlined text-primary">bed</span>
               </div>
               <div>
-                <p className="text-sm font-bold text-on-surface">
+                <p className="text-sm font-bold text-slate-800">
                   Phòng {booking?.roomNumber ?? '—'} — {booking?.roomTypeName ?? '—'}
                 </p>
-                <p className="text-xs text-secondary">
-                  Khách: <strong>{booking?.guestName ?? 'Không xác định'}</strong>
+                <p className="text-xs text-slate-500">
+                  Khách: <strong className="text-slate-700">{booking?.guestName ?? 'Không xác định'}</strong>
                   {booking?.priceatbooking && (
-                    <> · Giá hiện tại: <strong>{formatVND(booking.priceatbooking)}/đêm</strong></>
+                    <> · Giá hiện tại: <strong className="text-slate-700">{formatVND(booking.priceatbooking)}/đêm</strong></>
                   )}
                 </p>
               </div>
@@ -443,10 +443,10 @@ export default function RoomChangeModal({ isOpen, onClose, booking, onSuccess, s
             <div>
               <label
                 htmlFor="input-room-change-reason"
-                className="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5"
+                className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5"
               >
                 Lý do chuyển phòng
-                <span className="ml-1 font-normal normal-case tracking-normal text-secondary/70">(tuỳ chọn)</span>
+                <span className="ml-1 font-normal normal-case tracking-normal text-slate-400">(tuỳ chọn)</span>
               </label>
               <textarea
                 id="input-room-change-reason"
@@ -455,16 +455,16 @@ export default function RoomChangeModal({ isOpen, onClose, booking, onSuccess, s
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 maxLength={300}
-                className="w-full border border-surface-container-highest bg-white px-3 py-2 text-sm text-on-surface placeholder:text-secondary/50 focus:outline-none focus:border-primary resize-none"
+                className="w-full border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-primary resize-none rounded-sm"
               />
-              <p className="text-right text-xs text-secondary/60 mt-0.5">{reason.length}/300</p>
+              <p className="text-right text-xs text-slate-400 mt-0.5">{reason.length}/300</p>
             </div>
           </section>
 
           {/* ── PHẦN 2: Danh sách phòng trống ───────────────────────────── */}
-          <section className="px-6 py-5 border-b border-surface-container-highest">
+          <section className="px-6 py-5 border-b border-slate-150">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-secondary">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">
                 Phần 2 — Chọn phòng mới
               </h3>
               {/* Nút refresh danh sách */}
@@ -473,7 +473,7 @@ export default function RoomChangeModal({ isOpen, onClose, booking, onSuccess, s
                 type="button"
                 onClick={fetchAvailableRooms}
                 disabled={isLoadingRooms}
-                className="flex items-center gap-1 text-xs text-secondary hover:text-primary disabled:opacity-40 transition-colors"
+                className="flex items-center gap-1 text-xs text-slate-500 hover:text-primary disabled:opacity-40 transition-colors border-none bg-transparent cursor-pointer"
               >
                 <span className={`material-symbols-outlined text-sm ${isLoadingRooms ? 'animate-spin' : ''}`}>
                   refresh
@@ -486,14 +486,14 @@ export default function RoomChangeModal({ isOpen, onClose, booking, onSuccess, s
             {isLoadingRooms && (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="border border-surface-container-highest p-4 animate-pulse">
+                  <div key={i} className="border border-slate-150 p-4 animate-pulse">
                     <div className="flex items-center gap-3">
-                      <div className="w-5 h-5 bg-surface-container-high rounded-sm" />
+                      <div className="w-5 h-5 bg-slate-100 rounded-sm" />
                       <div className="flex-1 space-y-2">
-                        <div className="h-3 bg-surface-container-high w-1/3" />
-                        <div className="h-2 bg-surface-container-high w-1/2" />
+                        <div className="h-3 bg-slate-100 w-1/3" />
+                        <div className="h-2 bg-slate-100 w-1/2" />
                       </div>
-                      <div className="h-5 w-16 bg-surface-container-high" />
+                      <div className="h-5 w-16 bg-slate-100" />
                     </div>
                   </div>
                 ))}
@@ -518,16 +518,16 @@ export default function RoomChangeModal({ isOpen, onClose, booking, onSuccess, s
 
             {/* ── Không có phòng trống ── */}
             {!isLoadingRooms && availableRooms.length === 0 && !error && (
-              <div className="flex flex-col items-center justify-center py-8 text-secondary gap-2">
+              <div className="flex flex-col items-center justify-center py-8 text-slate-400 gap-2">
                 <span className="material-symbols-outlined text-4xl opacity-30">bed</span>
-                <p className="text-sm font-medium">Hiện không có phòng trống khả dụng</p>
+                <p className="text-sm font-medium text-slate-500">Hiện không có phòng trống khả dụng</p>
                 <p className="text-xs">Vui lòng thử lại sau hoặc kiểm tra trạng thái các phòng.</p>
               </div>
             )}
 
             {/* ── Thông báo lỗi fetch ── */}
             {!isLoadingRooms && error && !isSubmitting && (
-              <div className="flex items-start gap-2 bg-error-container text-on-error-container px-4 py-3 text-sm">
+              <div className="flex items-start gap-2 bg-rose-50 border border-rose-250 text-rose-700 px-4 py-3 text-sm rounded-sm">
                 <span className="material-symbols-outlined text-base mt-0.5 flex-shrink-0">error</span>
                 <span>{error}</span>
               </div>
@@ -536,13 +536,13 @@ export default function RoomChangeModal({ isOpen, onClose, booking, onSuccess, s
 
           {/* ── PHẦN 3: Tóm tắt & Xác nhận ─────────────────────────────── */}
           <section className="px-6 py-5">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-secondary mb-3">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">
               Phần 3 — Xác nhận
             </h3>
 
             {/* Hiển thị lỗi từ API submit */}
             {error && isSubmitting === false && selectedRoom && (
-              <div className="flex items-start gap-2 bg-error-container text-on-error-container px-4 py-3 text-sm mb-3">
+              <div className="flex items-start gap-2 bg-rose-50 border border-rose-250 text-rose-700 px-4 py-3 text-sm mb-3 rounded-sm">
                 <span className="material-symbols-outlined text-base mt-0.5 flex-shrink-0">error</span>
                 <span>{error}</span>
               </div>

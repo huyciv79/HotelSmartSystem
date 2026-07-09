@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import com.example.hotelsmartbookingbackend.enums.BookingStatus;
+
 import java.time.LocalDate;
 import java.util.List;
 
@@ -13,8 +15,8 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class BookingFilter {
-    private String status;
-    private List<String> statuses;
+    private BookingStatus status;
+    private List<BookingStatus> statuses;
     private String bookingReference;
     private String guestName;
     private String guestEmail;

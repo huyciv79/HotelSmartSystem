@@ -12,11 +12,13 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
+import com.example.hotelsmartbookingbackend.enums.BookingStatus;
+
 public interface BookingRepository extends JpaRepository<Booking, Integer>, JpaSpecificationExecutor<Booking> {
 
     boolean existsByBookingreference(String bookingreference);
 
-    Page<Booking> findByStatus(String status, Pageable pageable);
+    Page<Booking> findByStatus(BookingStatus status, Pageable pageable);
 
     Page<Booking> findByBookingreference(String bookingReference, Pageable pageable);
 
@@ -24,18 +26,18 @@ public interface BookingRepository extends JpaRepository<Booking, Integer>, JpaS
 
     Page<Booking> findByCreatedatBetween( Instant from, Instant to, Pageable pageable);
 
-    @Query("SELECT b FROM Booking b WHERE b.createdat >= :startDate AND b.status <> 'Cancelled'")
+    @Query("SELECT b FROM Booking b WHERE b.createdat >= :startDate AND b.status <> com.example.hotelsmartbookingbackend.enums.BookingStatus.CANCELLED")
     List<Booking> findActiveBookingsSince(@Param("startDate") Instant startDate);
 
-    @Query("SELECT SUM(b.finalamount) FROM Booking b WHERE b.status <> 'Cancelled'")
+    @Query("SELECT SUM(b.finalamount) FROM Booking b WHERE b.status <> com.example.hotelsmartbookingbackend.enums.BookingStatus.CANCELLED")
     BigDecimal sumExpectedRevenue();
 
-    @Query("SELECT COUNT(b) FROM Booking b WHERE b.status IN ('Confirmed', 'Paid', 'Partially Paid')")
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.status IN (com.example.hotelsmartbookingbackend.enums.BookingStatus.CONFIRMED, com.example.hotelsmartbookingbackend.enums.BookingStatus.PAID, com.example.hotelsmartbookingbackend.enums.BookingStatus.PARTIALLY_PAID)")
     long countConfirmedBookings();
 
-    @Query("SELECT COUNT(b) FROM Booking b WHERE b.status IN ('Checked-in', 'Checked In', 'Staying')")
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.status IN (com.example.hotelsmartbookingbackend.enums.BookingStatus.CHECKED_IN, com.example.hotelsmartbookingbackend.enums.BookingStatus.STAYING)")
     long countCheckedInBookings();
 
-    @Query("SELECT b FROM Booking b WHERE b.status <> 'Cancelled'")
+    @Query("SELECT b FROM Booking b WHERE b.status <> com.example.hotelsmartbookingbackend.enums.BookingStatus.CANCELLED")
     List<Booking> findAllActiveBookings();
 }

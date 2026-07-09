@@ -11,7 +11,7 @@ import axiosInstance from './axiosInstance';
  * @returns {Promise<object>} ApiResponse<RoomChangeResponse>
  */
 export const changeRoom = async (payload) => {
-  const response = await axiosInstance.post('/room-change', payload);
+  const response = await axiosInstance.post('/stay-adjustments/room-change', payload);
   return response.data;
 };
 
@@ -33,7 +33,7 @@ export const getAvailableRooms = async () => {
  * POST /api/room-change/customer/request
  */
 export const submitCustomerRoomChangeRequest = async (payload) => {
-  const response = await axiosInstance.post('/room-change/customer/request', payload);
+  const response = await axiosInstance.post('/stay-adjustments/room-change/request', payload);
   return response.data;
 };
 
@@ -42,7 +42,7 @@ export const submitCustomerRoomChangeRequest = async (payload) => {
  * GET /api/room-change/pending
  */
 export const getPendingRoomChangeRequests = async () => {
-  const response = await axiosInstance.get('/room-change/pending');
+  const response = await axiosInstance.get('/stay-adjustments/room-change/pending');
   return response.data;
 };
 
@@ -51,7 +51,7 @@ export const getPendingRoomChangeRequests = async () => {
  * POST /api/room-change/approve/{requestId}
  */
 export const approveRoomChangeRequest = async (requestId, newRoomId) => {
-  const response = await axiosInstance.post(`/room-change/approve/${requestId}?newRoomId=${newRoomId}`);
+  const response = await axiosInstance.post(`/stay-adjustments/room-change/approve/${requestId}?newRoomId=${newRoomId}`);
   return response.data;
 };
 
@@ -60,7 +60,7 @@ export const approveRoomChangeRequest = async (requestId, newRoomId) => {
  * POST /api/room-change/reject/{requestId}
  */
 export const rejectRoomChangeRequest = async (requestId, reason) => {
-  const response = await axiosInstance.post(`/room-change/reject/${requestId}`, reason, {
+  const response = await axiosInstance.post(`/stay-adjustments/room-change/reject/${requestId}`, reason, {
     headers: { 'Content-Type': 'text/plain' }
   });
   return response.data;

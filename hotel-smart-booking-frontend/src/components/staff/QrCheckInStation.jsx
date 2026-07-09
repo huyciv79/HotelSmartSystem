@@ -349,13 +349,13 @@ export default function QrCheckInStation({
 
   return (
     <div className="space-y-6 animate-scale-in text-left">
-      <div className="flex flex-col gap-4 border-b border-neutral-900 pb-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <span className="inline-flex items-center gap-2 bg-primary px-3 py-1 text-[9px] font-black uppercase tracking-widest text-white">
             <QrCode size={12} />
             QR Code Check-in
           </span>
-          <h3 className="mt-4 text-base font-black uppercase tracking-wider text-white">
+          <h3 className="mt-4 text-base font-black uppercase tracking-wider text-slate-800">
             Trạm quét QR realtime
           </h3>
           <p className="mt-1 max-w-3xl text-[10px] font-bold uppercase tracking-widest text-slate-500">
@@ -368,7 +368,7 @@ export default function QrCheckInStation({
             type="button"
             onClick={startCamera}
             disabled={cameraState === 'starting' || cameraState === 'scanning' || isSubmitting}
-            className="inline-flex h-10 items-center justify-center gap-2 border border-neutral-800 bg-neutral-900 px-4 text-[9px] font-black uppercase tracking-widest text-white transition-all hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:text-slate-600"
+            className="inline-flex h-10 items-center justify-center gap-2 border border-slate-200 bg-slate-50 px-4 text-[9px] font-black uppercase tracking-widest text-slate-800 transition-all hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:text-slate-400"
           >
             {cameraState === 'starting' ? <Loader2 size={13} className="animate-spin" /> : <RefreshCcw size={13} />}
             <span>Bật lại</span>
@@ -377,7 +377,7 @@ export default function QrCheckInStation({
             type="button"
             onClick={stopCamera}
             disabled={cameraState !== 'scanning' && cameraState !== 'starting'}
-            className="inline-flex h-10 items-center justify-center gap-2 border border-neutral-800 bg-neutral-900 px-4 text-[9px] font-black uppercase tracking-widest text-white transition-all hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:text-slate-600"
+            className="inline-flex h-10 items-center justify-center gap-2 border border-slate-200 bg-slate-50 px-4 text-[9px] font-black uppercase tracking-widest text-slate-800 transition-all hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:text-slate-400"
           >
             <VideoOff size={13} />
             <span>Tắt camera</span>
@@ -386,10 +386,10 @@ export default function QrCheckInStation({
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
-        <section className="border border-neutral-900 bg-[#0f0f12] p-5 shadow-md">
-          <div className="mb-4 flex items-center justify-between gap-3 border-b border-neutral-900 pb-3">
+        <section className="border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
             <div>
-              <h4 className="m-0 text-xs font-black uppercase tracking-widest text-white">
+              <h4 className="m-0 text-xs font-black uppercase tracking-widest text-slate-800">
                 Camera laptop
               </h4>
               <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-slate-500">
@@ -398,18 +398,18 @@ export default function QrCheckInStation({
             </div>
             <span className={`px-2.5 py-1 text-[8px] font-black uppercase tracking-widest ${
               cameraState === 'scanning'
-                ? 'border border-green-900/50 bg-green-900/20 text-green-400'
+                ? 'border border-green-200 bg-green-50 text-green-700'
                 : cameraState === 'starting'
-                ? 'border border-amber-900/50 bg-amber-900/20 text-amber-300'
+                ? 'border border-amber-200 bg-amber-50 text-amber-700'
                 : cameraState === 'error'
-                ? 'border border-red-900/50 bg-red-900/20 text-red-400'
-                : 'border border-neutral-800 bg-neutral-900 text-slate-500'
+                ? 'border border-red-200 bg-red-50 text-red-650'
+                : 'border border-slate-200 bg-slate-50 text-slate-500'
             }`}>
               {cameraState === 'scanning' ? 'Đang quét realtime' : cameraState === 'starting' ? 'Đang mở' : cameraState === 'error' ? 'Lỗi camera' : 'Đã tắt'}
             </span>
           </div>
 
-          <div className="relative aspect-video overflow-hidden border border-neutral-900 bg-black">
+          <div className="relative aspect-video overflow-hidden border border-slate-200 bg-black">
             <video
               ref={videoRef}
               playsInline
@@ -454,17 +454,17 @@ export default function QrCheckInStation({
           </div>
 
           {cameraError && cameraState !== 'error' && (
-            <div className="mt-4 border border-red-900/50 bg-red-950/30 p-4 text-xs font-bold uppercase tracking-wider text-red-200">
+            <div className="mt-4 border border-red-200 bg-red-50 p-4 text-xs font-bold uppercase tracking-wider text-red-700">
               {cameraError}
             </div>
           )}
 
           {lastScannedToken && (
-            <div className="mt-4 border border-neutral-800 bg-neutral-950 p-4">
+            <div className="mt-4 border border-slate-200 bg-slate-50 p-4">
               <span className="mb-2 block text-[9px] font-black uppercase tracking-widest text-slate-500">
                 Token vừa xử lý
               </span>
-              <code className="block break-all font-mono text-[11px] font-bold text-slate-300">
+              <code className="block break-all font-mono text-[11px] font-bold text-slate-650">
                 {lastScannedToken}
               </code>
             </div>
@@ -472,13 +472,13 @@ export default function QrCheckInStation({
         </section>
 
         <section className="space-y-5">
-          <div className="border border-neutral-900 bg-[#0f0f12] p-5 shadow-md">
+          <div className="border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-start gap-3">
               <span className="flex h-10 w-10 items-center justify-center bg-primary text-white">
                 {isSubmitting ? <Loader2 size={20} className="animate-spin" /> : <ShieldCheck size={20} />}
               </span>
               <div>
-                <h4 className="m-0 text-xs font-black uppercase tracking-widest text-white">
+                <h4 className="m-0 text-xs font-black uppercase tracking-widest text-slate-800">
                   Trạng thái quét
                 </h4>
                 <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
@@ -493,19 +493,19 @@ export default function QrCheckInStation({
           </div>
 
           {result && (
-            <div className="border border-green-900/50 bg-green-950/20 p-5">
+            <div className="border border-green-200 bg-green-50 p-5">
               <div className="mb-4 flex items-center gap-3">
-                <CheckCircle2 size={22} className="text-green-400" />
+                <CheckCircle2 size={22} className="text-green-600" />
                 <div>
-                  <h4 className="m-0 text-xs font-black uppercase tracking-widest text-green-300">
+                  <h4 className="m-0 text-xs font-black uppercase tracking-widest text-green-700">
                     Check-in thành công
                   </h4>
-                  <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-green-100/70">
+                  <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-green-600">
                     {result.bookingReference || `Booking #${result.bookingId}`}
                   </p>
                 </div>
               </div>
-              <h5 className="mb-3 mt-0 text-[10px] font-black uppercase tracking-widest text-white">
+              <h5 className="mb-3 mt-0 text-[10px] font-black uppercase tracking-widest text-slate-800">
                 {resultAccessItems.length > 1
                   ? `${resultAccessItems.length} phòng đã được cấp`
                   : 'Phòng đã được cấp'}
@@ -514,31 +514,31 @@ export default function QrCheckInStation({
                 {resultAccessItems.map((access) => (
                   <div
                     key={access.roomId || access.roomNumber}
-                    className="border border-green-900/40 bg-black/20 p-4"
+                    className="border border-green-150 bg-green-50/50 p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <span className="block text-[8px] font-black uppercase tracking-widest text-green-200/60">
+                        <span className="block text-[8px] font-black uppercase tracking-widest text-green-700">
                           Phòng
                         </span>
-                        <span className="mt-1 block text-base font-black uppercase tracking-wider text-white">
+                        <span className="mt-1 block text-base font-black uppercase tracking-wider text-slate-800">
                           {access.roomNumber || 'Đang cập nhật'}
                         </span>
                         {access.floorNumber !== null && access.floorNumber !== undefined && (
-                          <span className="mt-1 block text-[8px] font-bold uppercase tracking-widest text-green-100/50">
+                          <span className="mt-1 block text-[8px] font-bold uppercase tracking-widest text-green-600">
                             Tầng {access.floorNumber}
                           </span>
                         )}
                       </div>
                       <KeyRound size={18} className="mt-1 shrink-0 text-primary" />
                     </div>
-                    <span className="mt-3 block text-[8px] font-black uppercase tracking-widest text-green-200/60">
+                    <span className="mt-3 block text-[8px] font-black uppercase tracking-widest text-green-700">
                       Mật khẩu
                     </span>
                     <strong className="mt-1 block break-all font-mono text-xl font-black tracking-[0.2em] text-primary">
                       {access.roomPassword || 'Đã khóa'}
                     </strong>
-                    <span className="mt-2 block text-[8px] font-bold uppercase tracking-wider text-green-100/50">
+                    <span className="mt-2 block text-[8px] font-bold uppercase tracking-wider text-green-600">
                       Hiệu lực đến{' '}
                       {access.roomKeyExpiresAt
                         ? new Date(access.roomKeyExpiresAt).toLocaleString('vi-VN')
@@ -547,7 +547,7 @@ export default function QrCheckInStation({
                   </div>
                 ))}
                 {resultAccessItems.length === 0 && (
-                  <div className="border border-green-900/40 bg-black/20 p-4 text-[10px] font-bold uppercase tracking-widest text-green-100/70">
+                  <div className="border border-green-150 bg-green-50/50 p-4 text-[10px] font-bold uppercase tracking-widest text-green-600">
                     Đã check-in, phòng sẽ hiển thị trong chi tiết booking.
                   </div>
                 )}
@@ -555,8 +555,8 @@ export default function QrCheckInStation({
             </div>
           )}
 
-          <details className="border border-neutral-900 bg-[#0f0f12] p-5 shadow-md">
-            <summary className="cursor-pointer text-[10px] font-black uppercase tracking-widest text-slate-400 transition-colors hover:text-primary">
+          <details className="border border-slate-200 bg-white p-5 shadow-sm">
+            <summary className="cursor-pointer text-[10px] font-black uppercase tracking-widest text-slate-600 transition-colors hover:text-primary">
               Nhập token thủ công khi cần dự phòng
             </summary>
             <form onSubmit={handleManualSubmit} className="mt-4">
@@ -568,14 +568,14 @@ export default function QrCheckInStation({
                 onChange={(event) => setManualToken(event.target.value)}
                 rows={4}
                 placeholder="Dán token QR của khách tại đây"
-                className="h-28 w-full resize-none border border-neutral-800 bg-neutral-950 p-3 font-mono text-xs font-bold text-white outline-none transition-colors placeholder:text-slate-600 focus:border-primary"
+                className="h-28 w-full resize-none border border-slate-200 bg-slate-50 p-3 font-mono text-xs font-bold text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-primary"
               />
 
               <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={handlePasteToken}
-                  className="inline-flex h-11 items-center justify-center gap-2 border border-neutral-800 bg-neutral-900 px-4 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:border-primary hover:text-primary"
+                  className="inline-flex h-11 items-center justify-center gap-2 border border-slate-200 bg-slate-50 px-4 text-[10px] font-black uppercase tracking-widest text-slate-800 transition-all hover:border-primary hover:text-primary"
                 >
                   <ClipboardPaste size={14} />
                   <span>Dán mã</span>
@@ -583,7 +583,7 @@ export default function QrCheckInStation({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex h-11 items-center justify-center gap-2 bg-primary px-4 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-slate-500"
+                  className="inline-flex h-11 items-center justify-center gap-2 bg-primary px-4 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                 >
                   {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
                   <span>{isSubmitting ? 'Đang xác thực' : 'Check-in QR'}</span>
@@ -594,10 +594,10 @@ export default function QrCheckInStation({
         </section>
       </div>
 
-      <section className="border border-neutral-900 bg-[#0f0f12] shadow-md">
-        <div className="flex flex-col gap-3 border-b border-neutral-900 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <section className="border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h4 className="m-0 text-xs font-black uppercase tracking-widest text-white">
+            <h4 className="m-0 text-xs font-black uppercase tracking-widest text-slate-800">
               Booking QR đang chờ check-in
             </h4>
             <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-slate-500">
@@ -605,17 +605,17 @@ export default function QrCheckInStation({
             </p>
           </div>
           <div className="relative w-full sm:w-80">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Tìm booking, khách, email"
-              className="h-10 w-full border border-neutral-800 bg-neutral-950 pl-9 pr-3 text-[10px] font-bold uppercase tracking-widest text-white outline-none transition-colors placeholder:text-slate-600 focus:border-primary"
+              className="h-10 w-full border border-slate-200 bg-slate-50 pl-9 pr-3 text-[10px] font-bold uppercase tracking-widest text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-primary"
             />
           </div>
         </div>
 
-        <div className="divide-y divide-neutral-900/60">
+        <div className="divide-y divide-slate-100">
           {filteredBookings.length === 0 ? (
             <div className="py-12 text-center text-xs font-bold uppercase tracking-widest text-slate-500">
               Không có booking QR Code đang chờ check-in
@@ -624,22 +624,22 @@ export default function QrCheckInStation({
             filteredBookings.map((booking) => (
               <div
                 key={booking.id}
-                className="grid grid-cols-1 gap-4 p-5 transition-colors hover:bg-white/5 lg:grid-cols-[1.2fr_0.8fr_0.6fr]"
+                className="grid grid-cols-1 gap-4 p-5 transition-colors hover:bg-slate-50/50 lg:grid-cols-[1.2fr_0.8fr_0.6fr]"
               >
                 <div>
-                  <span className="block text-sm font-black uppercase tracking-wider text-white">
+                  <span className="block text-sm font-black uppercase tracking-wider text-slate-800">
                     {booking.guestName}
                   </span>
                   <span className="mt-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     {booking.bookingReference} | {booking.roomType}
                   </span>
                 </div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-650">
                   {booking.checkInDate} đến {booking.checkOutDate}
-                  <span className="mt-1 block text-slate-600">{booking.email}</span>
+                  <span className="mt-1 block text-slate-450">{booking.email}</span>
                 </div>
                 <div className="flex items-center justify-start gap-2 lg:justify-end">
-                  <span className="border border-green-900/50 bg-green-900/20 px-2.5 py-1 text-[8px] font-black uppercase tracking-widest text-green-400">
+                  <span className="border border-green-200 bg-green-50 px-2.5 py-1 text-[8px] font-black uppercase tracking-widest text-green-700">
                     {booking.status}
                   </span>
                   <KeyRound size={15} className="text-primary" />

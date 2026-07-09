@@ -744,22 +744,22 @@ export default function FaceCheckInStation({
 
   return (
     <div className="space-y-6 animate-scale-in">
-      <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4 border-b border-neutral-900 pb-5">
+      <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <span className="text-[9px] font-black tracking-[0.22em] text-primary uppercase">
             Manager Lobby Station
           </span>
-          <h3 className="text-white font-black text-xl uppercase tracking-wider mt-2 mb-0">
+          <h3 className="text-slate-800 font-black text-xl uppercase tracking-wider mt-2 mb-0">
             FaceID Check-in tại sảnh
           </h3>
           <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-2">
             Kiểm tra người thật, đối chiếu eKYC và cấp mật khẩu phòng
           </p>
         </div>
-        <div className="flex items-center gap-3 bg-green-950/30 border border-green-900/40 px-4 py-3">
-          <ShieldCheck size={18} className="text-green-400" />
+        <div className="flex items-center gap-3 bg-green-50 border border-green-200 px-4 py-3">
+          <ShieldCheck size={18} className="text-green-700" />
           <div>
-            <span className="block text-[9px] font-black uppercase tracking-widest text-green-400">
+            <span className="block text-[9px] font-black uppercase tracking-widest text-green-700">
               Liveness + Face Matching
             </span>
             <span className="block text-[9px] text-slate-500 mt-0.5">
@@ -770,11 +770,11 @@ export default function FaceCheckInStation({
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)] gap-6">
-        <section className="bg-[#0f0f12] border border-neutral-900 min-h-[620px]">
-          <div className="p-5 border-b border-neutral-900">
+        <section className="bg-white border border-slate-200 min-h-[620px]">
+          <div className="p-5 border-b border-slate-100">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h4 className="text-xs font-black uppercase tracking-widest text-white m-0">
+                <h4 className="text-xs font-black uppercase tracking-widest text-slate-800 m-0">
                   Booking chờ FaceID
                 </h4>
                 <p className="text-[9px] text-slate-500 uppercase tracking-wider mt-1">
@@ -801,22 +801,22 @@ export default function FaceCheckInStation({
             <div className="relative mt-4">
               <Search
                 size={15}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
               />
               <input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Mã booking, tên hoặc email..."
-                className="w-full bg-neutral-950 border border-neutral-800 text-white text-xs py-3 pl-10 pr-3 outline-none focus:border-primary placeholder:text-slate-700"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-850 text-xs py-3 pl-10 pr-3 outline-none focus:border-primary placeholder:text-slate-400"
               />
             </div>
           </div>
 
-          <div className="max-h-[515px] overflow-y-auto divide-y divide-neutral-900">
+          <div className="max-h-[515px] overflow-y-auto divide-y divide-slate-150">
             {faceBookingsError ? (
               <div className="p-10 text-center">
-                <UserRound size={32} className="mx-auto text-red-800" />
-                <p className="text-[10px] text-red-300 uppercase tracking-widest font-bold mt-4 leading-relaxed">
+                <UserRound size={32} className="mx-auto text-red-500" />
+                <p className="text-[10px] text-red-750 uppercase tracking-widest font-bold mt-4 leading-relaxed">
                   {faceBookingsError}
                 </p>
               </div>
@@ -829,7 +829,7 @@ export default function FaceCheckInStation({
               </div>
             ) : filteredBookings.length === 0 ? (
               <div className="p-10 text-center">
-                <UserRound size={32} className="mx-auto text-slate-700" />
+                <UserRound size={32} className="mx-auto text-slate-400" />
                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-4 leading-relaxed">
                   Không có booking FaceID đã xác nhận phù hợp
                 </p>
@@ -846,7 +846,7 @@ export default function FaceCheckInStation({
                     className={`w-full text-left p-5 cursor-pointer transition-all ${
                       isSelected
                         ? 'bg-primary/10 border-y-0 border-r-0 border-l-4 border-l-primary'
-                        : 'bg-transparent hover:bg-white/[0.03] border-y-0 border-r-0 border-l-4 border-l-transparent'
+                        : 'bg-transparent hover:bg-slate-50 border-y-0 border-r-0 border-l-4 border-l-transparent'
                     }`}
                   >
                     <div className="flex justify-between items-start gap-3">
@@ -854,7 +854,7 @@ export default function FaceCheckInStation({
                         <span className="block text-[9px] text-primary font-black tracking-widest uppercase">
                           {booking.bookingReference}
                         </span>
-                        <span className="block text-xs text-white font-black uppercase tracking-wide mt-2 truncate">
+                        <span className="block text-xs text-slate-800 font-black uppercase tracking-wide mt-2 truncate">
                           {booking.guestName}
                         </span>
                         <span className="block text-[9px] text-slate-500 mt-1 truncate">
@@ -863,23 +863,23 @@ export default function FaceCheckInStation({
                       </div>
                       <ScanFace
                         size={19}
-                        className={isSelected ? 'text-primary' : 'text-slate-700'}
+                        className={isSelected ? 'text-primary' : 'text-slate-400'}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-neutral-900/80">
+                    <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100">
                       <div>
-                        <span className="block text-[8px] text-slate-600 uppercase">
+                        <span className="block text-[8px] text-slate-450 uppercase">
                           Ngày nhận
                         </span>
-                        <span className="block text-[9px] text-slate-300 font-bold mt-1">
+                        <span className="block text-[9px] text-slate-750 font-bold mt-1">
                           {booking.checkInDate}
                         </span>
                       </div>
                       <div>
-                        <span className="block text-[8px] text-slate-600 uppercase">
+                        <span className="block text-[8px] text-slate-450 uppercase">
                           Hạng phòng
                         </span>
-                        <span className="block text-[9px] text-slate-300 font-bold mt-1 truncate">
+                        <span className="block text-[9px] text-slate-750 font-bold mt-1 truncate">
                           {booking.roomType}
                         </span>
                       </div>
@@ -891,13 +891,13 @@ export default function FaceCheckInStation({
           </div>
         </section>
 
-        <section className="bg-[#0f0f12] border border-neutral-900 p-5 md:p-7">
+        <section className="bg-white border border-slate-200 p-5 md:p-7 shadow-sm">
           {!selectedBooking ? (
-            <div className="min-h-[560px] flex flex-col items-center justify-center text-center border border-dashed border-neutral-800 bg-neutral-950/30">
+            <div className="min-h-[560px] flex flex-col items-center justify-center text-center border border-dashed border-slate-200 bg-slate-50/50">
               <div className="w-20 h-20 border border-primary/30 bg-primary/10 flex items-center justify-center">
                 <ScanFace size={38} className="text-primary" />
               </div>
-              <h4 className="text-white text-sm font-black uppercase tracking-widest mt-6 mb-0">
+              <h4 className="text-slate-800 text-sm font-black uppercase tracking-widest mt-6 mb-0">
                 Chọn booking của khách
               </h4>
               <p className="text-[10px] text-slate-500 uppercase tracking-wider max-w-sm mt-3 leading-relaxed">
@@ -906,19 +906,19 @@ export default function FaceCheckInStation({
             </div>
           ) : (
             <div className="space-y-5">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-neutral-950 border border-neutral-900 p-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-slate-50 border border-slate-200 p-4">
                 <div>
                   <span className="text-[9px] text-primary font-black uppercase tracking-widest">
                     Khách đang check-in
                   </span>
-                  <h4 className="text-white font-black uppercase tracking-wide mt-1 mb-0">
+                  <h4 className="text-slate-800 font-black uppercase tracking-wide mt-1 mb-0">
                     {selectedBooking.guestName}
                   </h4>
                   <p className="text-[9px] text-slate-500 mt-1">
                     {selectedBooking.bookingReference} · {selectedBooking.roomType}
                   </p>
                 </div>
-                <span className="px-3 py-1.5 bg-green-950/30 border border-green-900/40 text-green-400 text-[9px] font-black uppercase tracking-widest">
+                <span className="px-3 py-1.5 bg-green-50 border border-green-200 text-green-700 text-[9px] font-black uppercase tracking-widest">
                   eKYC required
                 </span>
               </div>
@@ -928,12 +928,12 @@ export default function FaceCheckInStation({
               />
 
               {result ? (
-                <div className="min-h-[475px] flex flex-col items-center justify-center text-center bg-green-950/10 border border-green-900/40 p-8">
-                  <CheckCircle2 size={56} className="text-green-400" />
-                  <span className="text-[10px] text-green-400 font-black uppercase tracking-[0.25em] mt-5">
+                <div className="min-h-[475px] flex flex-col items-center justify-center text-center bg-green-50 border border-green-200 p-8">
+                  <CheckCircle2 size={56} className="text-green-600" />
+                  <span className="text-[10px] text-green-700 font-black uppercase tracking-[0.25em] mt-5">
                     Check-in thành công
                   </span>
-                  <h4 className="text-white text-xl font-black uppercase mt-3 mb-0">
+                  <h4 className="text-slate-800 text-xl font-black uppercase mt-3 mb-0">
                     {result.roomAccesses?.length > 1
                       ? `${result.roomAccesses.length} phòng đã được cấp`
                       : `Phòng ${result.roomNumber || 'Đang cập nhật'}`}
@@ -951,16 +951,16 @@ export default function FaceCheckInStation({
                     ).map((access) => (
                       <div
                         key={access.roomId || access.roomNumber}
-                        className="bg-neutral-950 border border-primary/30 p-5"
+                        className="bg-slate-50 border border-slate-200 p-5"
                       >
                         <KeyRound size={20} className="text-primary mx-auto" />
                         <span className="block text-[9px] text-slate-500 uppercase tracking-widest mt-3">
                           Phòng {access.roomNumber || '---'}
                         </span>
-                        <strong className="block text-2xl text-white tracking-[0.22em] mt-2 pl-[0.22em]">
+                        <strong className="block text-2xl text-slate-800 tracking-[0.22em] mt-2 pl-[0.22em]">
                           {access.roomPassword || '------'}
                         </strong>
-                        <span className="block text-[8px] text-slate-600 mt-3">
+                        <span className="block text-[8px] text-slate-655 mt-3">
                           Hiệu lực đến{' '}
                           {access.roomKeyExpiresAt
                             ? new Date(access.roomKeyExpiresAt).toLocaleString('vi-VN')
@@ -976,7 +976,7 @@ export default function FaceCheckInStation({
                       setResult(null);
                       setSelectedBookingId('');
                     }}
-                    className="mt-6 px-6 py-3 bg-primary text-white border-none cursor-pointer text-[10px] font-black uppercase tracking-widest"
+                    className="mt-6 px-6 py-3 bg-primary text-white border-none cursor-pointer text-[10px] font-black uppercase tracking-widest hover:brightness-110"
                   >
                     Check-in khách tiếp theo
                   </button>
@@ -986,12 +986,12 @@ export default function FaceCheckInStation({
                   {verificationError && (
                     <div
                       role="alert"
-                      className="border border-red-800/70 bg-red-950/30 px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-red-300"
+                      className="border border-red-200 bg-red-50 px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-red-750"
                     >
                       {verificationError}
                     </div>
                   )}
-                  <div className="relative aspect-video bg-black border border-neutral-800 overflow-hidden">
+                  <div className="relative aspect-video bg-black border border-slate-200 overflow-hidden">
                     <video
                       ref={videoRef}
                       autoPlay
@@ -1001,13 +1001,13 @@ export default function FaceCheckInStation({
                     />
 
                     {cameraState !== 'ready' && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#08080a] text-center p-6">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 text-center p-6">
                         {cameraState === 'starting' ? (
                           <Loader2 size={34} className="text-primary animate-spin" />
                         ) : (
-                          <Camera size={38} className="text-slate-700" />
+                          <Camera size={38} className="text-slate-500" />
                         )}
-                        <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-4 max-w-sm leading-relaxed">
+                        <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-4 max-w-sm leading-relaxed">
                           {cameraError ||
                             'Camera chỉ được bật sau khi Manager xác nhận booking.'}
                         </p>
@@ -1057,7 +1057,7 @@ export default function FaceCheckInStation({
                     )}
                   </div>
 
-                  <div className="bg-neutral-950 border border-neutral-900 p-4">
+                  <div className="bg-slate-50 border border-slate-200 p-4">
                     <div className="flex items-start gap-3">
                       <div className="w-9 h-9 bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
                         <ScanFace size={18} className="text-primary" />
@@ -1066,7 +1066,7 @@ export default function FaceCheckInStation({
                         <span className="block text-[9px] text-slate-500 uppercase tracking-widest">
                           Hướng dẫn
                         </span>
-                        <strong className="block text-sm text-white mt-1">
+                        <strong className="block text-sm text-slate-800 mt-1">
                           {isVerifying
                             ? 'Đang đối chiếu với hồ sơ eKYC'
                             : isScanning
@@ -1093,10 +1093,10 @@ export default function FaceCheckInStation({
                                 key={step.key}
                                 className={`h-1.5 flex-1 transition-all ${
                                   completed
-                                    ? 'bg-green-400'
+                                    ? 'bg-green-500'
                                     : active
                                       ? 'bg-primary animate-pulse'
-                                      : 'bg-neutral-800'
+                                      : 'bg-slate-200'
                                 }`}
                               />
                             );
@@ -1112,7 +1112,7 @@ export default function FaceCheckInStation({
                         type="button"
                         onClick={startCamera}
                         disabled={cameraState === 'starting'}
-                        className="flex-1 py-4 bg-primary hover:brightness-110 disabled:opacity-50 text-white border-none cursor-pointer font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                        className="flex-1 py-4 bg-primary hover:brightness-110 disabled:opacity-50 text-white border-none cursor-pointer font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-sm shadow-sm transition-all"
                       >
                         {cameraState === 'starting' ? (
                           <Loader2 size={16} className="animate-spin" />
@@ -1127,7 +1127,7 @@ export default function FaceCheckInStation({
                           type="button"
                           onClick={startLivenessScan}
                           disabled={isVerifying || isScanning || !readiness.ready}
-                          className="flex-1 py-4 bg-primary hover:brightness-110 disabled:opacity-50 text-white border-none cursor-pointer font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                          className="flex-1 py-4 bg-primary hover:brightness-110 disabled:opacity-50 text-white border-none cursor-pointer font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-sm shadow-sm transition-all"
                         >
                           {isVerifying || isScanning ? (
                             <Loader2 size={16} className="animate-spin" />
@@ -1146,7 +1146,7 @@ export default function FaceCheckInStation({
                           type="button"
                           onClick={startCamera}
                           disabled={isVerifying || isScanning}
-                          className="px-5 py-4 bg-neutral-900 border border-neutral-800 text-slate-300 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                          className="px-5 py-4 bg-slate-50 border border-slate-200 text-slate-850 cursor-pointer disabled:opacity-50 hover:bg-slate-100 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest rounded-sm shadow-sm transition-all"
                         >
                           <RefreshCcw size={15} />
                           Camera

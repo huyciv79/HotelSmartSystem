@@ -4,6 +4,7 @@ import com.example.hotelsmartbookingbackend.dto.IdempotentRecord;
 import com.example.hotelsmartbookingbackend.dto.request.CaptureOrderRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CreateOrderRequest;
 import com.example.hotelsmartbookingbackend.dto.request.BankTransferRequest;
+import com.example.hotelsmartbookingbackend.dto.request.ManualPaymentRequest;
 import com.example.hotelsmartbookingbackend.dto.response.ApiResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PaypalCaptureResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PaypalOrderResponse;
@@ -13,12 +14,13 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/payments/paypal")
+@RequestMapping("/api/payments")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 public class PaymentController {
@@ -28,7 +30,7 @@ public class PaymentController {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PaymentController.class);
 
-    @PostMapping("/create-order")
+    @PostMapping("/paypal/create-order")
     public ResponseEntity<ApiResponse<PaypalOrderResponse>> createOrder(
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @RequestHeader(value = "X-Idempotency-Key", required = false) String xIdempotencyKey,
@@ -72,7 +74,7 @@ public class PaymentController {
         }
     }
 
-    @PostMapping("/capture-order")
+    @PostMapping("/paypal/capture-order")
     public ResponseEntity<ApiResponse<PaypalCaptureResponse>> captureOrder(
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @RequestHeader(value = "X-Idempotency-Key", required = false) String xIdempotencyKey,
@@ -111,6 +113,24 @@ public class PaymentController {
         } catch (Exception e) {
             log.error("Error capturing PayPal order with idempotency key {}: ", key, e);
             idempotencyService.removeKey(key);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/manual")
+    public ResponseEntity<ApiResponse<String>> processManualPayment(
+            @Valid @RequestBody ManualPaymentRequest request,
+            Authentication authentication) {
+        try {
+            if (authentication == null || !authentication.isAuthenticated()
+                    || "anonymousUser".equals(authentication.getPrincipal())) {
+                throw new RuntimeException("Bạn cần đăng nhập để thực hiện chức năng này");
+            }
+            String staffEmail = authentication.getName();
+            paymentService.processManualPayment(request, staffEmail);
+            return ResponseEntity.ok(ApiResponse.success("Ghi nhận thanh toán tại quầy thành công", "SUCCESS"));
+        } catch (Exception e) {
+            log.error("Error processing manual counter payment: ", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
         }
     }

@@ -209,7 +209,7 @@ export default function StaffDashboard({ setActivePage }) {
     try {
       const criteria = {
         page: page,
-        size: 10,
+        size: 1000,
         keyword: roomsSearchQuery,
         status: roomsFilterStatus,
         roomTypeId: roomsFilterType
@@ -1265,7 +1265,7 @@ export default function StaffDashboard({ setActivePage }) {
     <>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
-      <div className="min-h-screen bg-[#070708] flex font-['Montserrat'] text-slate-100 text-left pt-0">
+      <div className="min-h-screen bg-slate-50 flex font-['Montserrat'] text-slate-800 text-left pt-0">
 
         {/* SIDEBAR */}
         <StaffSidebar
@@ -1329,7 +1329,7 @@ export default function StaffDashboard({ setActivePage }) {
 
                 {/* Simulated Scanning Modal popup */}
                 {isScanning && scanningBooking && (
-                  <div className="bg-[#0f0f12] border-2 border-primary p-6 text-white text-center shadow-2xl relative animate-scale-in">
+                  <div className="bg-white border border-slate-200/80 p-6 text-slate-800 text-center shadow-xl relative animate-scale-in">
                     <div className="flex flex-col items-center justify-center gap-4 py-6">
                       <span className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></span>
                       <h4 className="text-sm font-black uppercase tracking-widest text-primary m-0">
@@ -1346,8 +1346,8 @@ export default function StaffDashboard({ setActivePage }) {
                 )}
 
                 {/* Bookings Queue */}
-                <div className="bg-[#0f0f12] border border-neutral-900 shadow-md overflow-hidden">
-                  <div className="p-4 border-b border-neutral-900 bg-neutral-950/20 text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                <div className="bg-white border border-slate-250/80 shadow-md overflow-hidden">
+                  <div className="p-4 border-b border-slate-100 bg-slate-50/50 text-[10px] font-black uppercase text-slate-500 tracking-wider">
                     Danh sách đặt phòng cần xử lý trong ngày
                   </div>
 
@@ -1398,20 +1398,20 @@ export default function StaffDashboard({ setActivePage }) {
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => setSelectedBooking(bk)}
-                                  className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
+                                  className="bg-slate-100 border border-slate-200 text-slate-700 text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-slate-200 hover:text-slate-900 rounded-sm transition-all"
                                 >
                                   <span className="material-symbols-outlined text-xs">info</span> Chi tiết
                                 </button>
                                 <button
                                   onClick={() => handleViewInvoice(bk.id)}
-                                  className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
+                                  className="bg-slate-100 border border-slate-200 text-slate-700 text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-slate-200 hover:text-slate-900 rounded-sm transition-all"
                                 >
                                   <span className="material-symbols-outlined text-xs">receipt_long</span> Hóa đơn
                                 </button>
 
                                 <button
                                   onClick={() => handleDownloadPdf(bk.id, bk.bookingReference)}
-                                  className="bg-neutral-900 border border-neutral-800 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-neutral-800"
+                                  className="bg-slate-100 border border-slate-200 text-slate-700 text-[9px] font-black uppercase tracking-widest px-3 py-2 cursor-pointer flex items-center gap-1 hover:bg-slate-200 hover:text-slate-900 rounded-sm transition-all"
                                 >
                                   <span className="material-symbols-outlined text-xs">download</span> Tải PDF
                                 </button>
@@ -1430,7 +1430,7 @@ export default function StaffDashboard({ setActivePage }) {
                                         handleDirectCheckInOut(bk, 'Checked In');
                                       }}
                                       disabled={usesFaceId && !isManager}
-                                      className="bg-primary hover:brightness-110 disabled:bg-neutral-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 border-none cursor-pointer flex items-center gap-1"
+                                      className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 border-none cursor-pointer flex items-center gap-1.5 rounded-sm shadow-sm transition-all"
                                     >
                                       <span className="material-symbols-outlined text-xs">
                                         {usesFaceId ? 'face' : usesQrCode ? 'qr_code_scanner' : 'how_to_reg'}
@@ -1448,7 +1448,7 @@ export default function StaffDashboard({ setActivePage }) {
                                 {isCheckedIn && (
                                   <button
                                     onClick={() => handleDirectCheckInOut(bk, 'Checked Out')}
-                                    className="bg-primary hover:brightness-110 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2 border-none cursor-pointer"
+                                    className="bg-indigo-600 hover:bg-indigo-750 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2 border-none cursor-pointer rounded-sm shadow-sm transition-all"
                                   >
                                     Trả phòng (Check-out)
                                   </button>
@@ -1589,7 +1589,7 @@ export default function StaffDashboard({ setActivePage }) {
                       >
                         <span className="material-symbols-outlined text-xs">arrow_back</span> Quay lại danh sách
                       </button>
-                      <h3 className="text-white font-black text-lg uppercase tracking-wider m-0">CHI TIẾT ĐƠN ĐẶT PHÒNG</h3>
+                      <h3 className="text-slate-800 font-black text-lg uppercase tracking-wider m-0">CHI TIẾT ĐƠN ĐẶT PHÒNG</h3>
                       <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">
                         Mã đặt phòng: {selectedBooking.bookingReference}
                       </p>
@@ -1602,38 +1602,38 @@ export default function StaffDashboard({ setActivePage }) {
                       
                       {/* Refund Request Block */}
                       {associatedRefund && (
-                        <div className="bg-[#1c1114] border border-rose-900/50 p-6 rounded-sm flex flex-col gap-4 animate-scale-in">
-                          <div className="flex items-center gap-2 border-b border-rose-950 pb-3">
-                            <span className="material-symbols-outlined text-rose-500 text-base">payments</span>
-                            <h4 className="text-xs font-black text-rose-400 uppercase tracking-widest m-0">Yêu cầu hoàn tiền chờ xử lý</h4>
-                            <span className="ml-auto px-2 py-0.5 text-[8px] font-black text-rose-500 bg-rose-500/10 border border-rose-500/20 uppercase tracking-widest rounded-sm">Pending</span>
+                        <div className="bg-rose-50/70 border border-rose-100 p-6 rounded-sm flex flex-col gap-4 animate-scale-in">
+                          <div className="flex items-center gap-2 border-b border-rose-200 pb-3">
+                            <span className="material-symbols-outlined text-rose-600 text-base">payments</span>
+                            <h4 className="text-xs font-black text-rose-700 uppercase tracking-widest m-0">Yêu cầu hoàn tiền chờ xử lý</h4>
+                            <span className="ml-auto px-2 py-0.5 text-[8px] font-black text-rose-600 bg-rose-50 border border-rose-200 uppercase tracking-widest rounded-sm">Pending</span>
                           </div>
                           
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
                             <div className="space-y-2">
                               <div>
                                 <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Lý do hoàn tiền từ khách:</span>
-                                <span className="text-slate-300 font-medium italic">"{associatedRefund.description}"</span>
+                                <span className="text-slate-700 font-semibold italic">"{associatedRefund.description}"</span>
                               </div>
                               <div className="pt-1">
                                 <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Gửi lúc:</span>
-                                <span className="text-slate-400 font-semibold">{new Date(associatedRefund.createdAt).toLocaleString('vi-VN')}</span>
+                                <span className="text-slate-500 font-bold">{new Date(associatedRefund.createdAt).toLocaleString('vi-VN')}</span>
                               </div>
                             </div>
 
-                            <div className="bg-neutral-950/40 p-4 border border-neutral-900/60 space-y-2 rounded-sm font-semibold">
+                            <div className="bg-white p-4 border border-rose-100/80 space-y-2 rounded-sm font-semibold">
                               <div className="flex justify-between text-[11px]">
-                                <span className="text-slate-400">Số tiền ban đầu:</span>
-                                <span className="text-white font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(associatedRefund.oldValue))}</span>
+                                <span className="text-slate-500">Số tiền ban đầu:</span>
+                                <span className="text-slate-800 font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(associatedRefund.oldValue))}</span>
                               </div>
-                              <div className="flex justify-between text-[11px] border-t border-neutral-900/40 pt-1.5">
-                                <span className="text-rose-400">Hoàn tiền dự kiến:</span>
-                                <strong className="text-rose-500 font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(associatedRefund.newValue))}</strong>
+                              <div className="flex justify-between text-[11px] border-t border-rose-100/50 pt-1.5">
+                                <span className="text-rose-600">Hoàn tiền dự kiến:</span>
+                                <strong className="text-rose-600 font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(associatedRefund.newValue))}</strong>
                               </div>
                             </div>
                           </div>
 
-                          <div className="flex gap-3 justify-end border-t border-rose-950/40 pt-3">
+                          <div className="flex gap-3 justify-end border-t border-rose-100/50 pt-3">
                             <button
                               onClick={() => {
                                 setSelectedRefund(associatedRefund);
@@ -1663,33 +1663,33 @@ export default function StaffDashboard({ setActivePage }) {
                         const associatedRoomChange = pendingRoomChanges.find(req => req.bookingId === selectedBooking.bookingId || req.bookingReference === selectedBooking.bookingReference);
                         if (!associatedRoomChange) return null;
                         return (
-                          <div className="bg-[#111624] border border-blue-900/50 p-6 rounded-sm flex flex-col gap-4 animate-scale-in">
-                            <div className="flex items-center gap-2 border-b border-blue-950 pb-3">
-                              <span className="material-symbols-outlined text-blue-500 text-base">autorenew</span>
-                              <h4 className="text-xs font-black text-blue-400 uppercase tracking-widest m-0">Yêu cầu đổi phòng chờ xử lý</h4>
-                              <span className="ml-auto px-2 py-0.5 text-[8px] font-black text-blue-500 bg-blue-500/10 border border-blue-500/20 uppercase tracking-widest rounded-sm">Pending</span>
+                          <div className="bg-blue-50/70 border border-blue-100 p-6 rounded-sm flex flex-col gap-4 animate-scale-in">
+                            <div className="flex items-center gap-2 border-b border-blue-200 pb-3">
+                              <span className="material-symbols-outlined text-blue-600 text-base">autorenew</span>
+                              <h4 className="text-xs font-black text-blue-700 uppercase tracking-widest m-0">Yêu cầu đổi phòng chờ xử lý</h4>
+                              <span className="ml-auto px-2 py-0.5 text-[8px] font-black text-blue-600 bg-blue-50 border border-blue-200 uppercase tracking-widest rounded-sm">Pending</span>
                             </div>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
                               <div className="space-y-2">
                                 <div>
                                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Lý do yêu cầu đổi phòng:</span>
-                                  <span className="text-slate-300 font-medium italic">"{associatedRoomChange.description || 'Không có lý do chi tiết'}"</span>
+                                  <span className="text-slate-700 font-semibold italic">"{associatedRoomChange.description || 'Không có lý do chi tiết'}"</span>
                                 </div>
                                 <div className="pt-1">
                                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Yêu cầu lúc:</span>
-                                  <span className="text-slate-400 font-semibold">{new Date(associatedRoomChange.createdAt).toLocaleString('vi-VN')}</span>
+                                  <span className="text-slate-500 font-bold">{new Date(associatedRoomChange.createdAt).toLocaleString('vi-VN')}</span>
                                 </div>
                               </div>
 
-                              <div className="bg-neutral-950/40 p-4 border border-neutral-900/60 space-y-3 rounded-sm font-semibold">
+                              <div className="bg-white p-4 border border-blue-100/80 space-y-3 rounded-sm font-semibold">
                                 <div className="flex justify-between text-[11px]">
-                                  <span className="text-slate-400">Hạng phòng đích:</span>
-                                  <span className="text-white font-bold">{associatedRoomChange.newValue === String(selectedBooking.roomTypeId) ? 'Cùng hạng phòng hiện tại' : 'Hạng phòng khác'}</span>
+                                  <span className="text-slate-500">Hạng phòng đích:</span>
+                                  <span className="text-slate-800 font-bold">{associatedRoomChange.newValue === String(selectedBooking.roomTypeId) ? 'Cùng hạng phòng hiện tại' : 'Hạng phòng khác'}</span>
                                 </div>
                                 
                                 <div className="space-y-1">
-                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Chọn phòng vật lý trống để gán:</span>
+                                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Chọn phòng vật lý trống để gán:</span>
                                   {isLoadingAvailableRooms ? (
                                     <div className="text-[10px] text-slate-500">Đang tải danh sách phòng...</div>
                                   ) : availableRoomsForChange.length === 0 ? (
@@ -1698,7 +1698,7 @@ export default function StaffDashboard({ setActivePage }) {
                                     <select
                                       value={selectedPhysicalRoomId}
                                       onChange={(e) => setSelectedPhysicalRoomId(e.target.value)}
-                                      className="w-full bg-[#1c1c24] border border-slate-700 text-white p-2 text-xs font-semibold focus:outline-none"
+                                      className="w-full bg-white border border-slate-200 text-slate-800 p-2 text-xs font-semibold focus:outline-none"
                                     >
                                       <option value="">-- Chọn phòng vật lý --</option>
                                       {availableRoomsForChange.map(r => (
@@ -1710,71 +1710,69 @@ export default function StaffDashboard({ setActivePage }) {
                               </div>
                             </div>
 
-                            <div className="flex gap-3 justify-end border-t border-blue-950/40 pt-3">
+                            <div className="flex gap-3 justify-end border-t border-blue-100/50 pt-3">
                               <button
                                 onClick={() => handleApproveRoomChange(associatedRoomChange)}
                                 disabled={isSubmittingRoomChangeAction}
-                                className="bg-green-600 hover:bg-green-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded-sm transition-all"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded shadow-sm transition-all"
                               >
                                 {isSubmittingRoomChangeAction ? 'Đang duyệt...' : 'Duyệt chuyển phòng'}
                               </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedRoomChange(associatedRoomChange);
-                                  setRoomChangeRejectionReason('');
-                                  setIsRejectRoomChangeOpen(true);
-                                }}
-                                disabled={isSubmittingRoomChangeAction}
-                                className="bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded-sm transition-all"
-                              >
-                                Từ chối
-                              </button>
+                               <button
+                                 onClick={() => {
+                                   setSelectedRoomChange(associatedRoomChange);
+                                   setRoomChangeRejectionReason('');
+                                   setIsRejectRoomChangeOpen(true);
+                                 }}
+                                 disabled={isSubmittingRoomChangeAction}
+                                 className="bg-rose-600 hover:bg-rose-750 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded shadow-sm transition-all"
+                               >
+                                 Từ chối
+                               </button>
                             </div>
                           </div>
                         );
-                      })()}
-
-                      {/* Stay Extension Request Block */}
+                      })()}                           {/* Stay Extension Request Block */}
                       {(() => {
                         const associatedStayExtension = pendingStayExtensions.find(req => req.bookingId === selectedBooking.bookingId || req.bookingReference === selectedBooking.bookingReference);
                         if (!associatedStayExtension) return null;
                         return (
-                          <div className="bg-[#112419] border border-emerald-900/50 p-6 rounded-sm flex flex-col gap-4 animate-scale-in">
-                            <div className="flex items-center gap-2 border-b border-emerald-950 pb-3">
-                              <span className="material-symbols-outlined text-emerald-500 text-base">calendar_add_on</span>
+                          <div className="bg-emerald-50/70 border border-emerald-100 p-6 rounded-sm flex flex-col gap-4 animate-scale-in">
+                            <div className="flex items-center gap-2 border-b border-emerald-200 pb-3">
+                              <span className="material-symbols-outlined text-emerald-600 text-base">calendar_add_on</span>
                               <h4 className="text-xs font-black text-emerald-400 uppercase tracking-widest m-0">Yêu cầu gia hạn lưu trú chờ xử lý</h4>
-                              <span className="ml-auto px-2 py-0.5 text-[8px] font-black text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 uppercase tracking-widest rounded-sm">Pending</span>
+                              <span className="ml-auto px-2 py-0.5 text-[8px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 uppercase tracking-widest rounded-sm">Pending</span>
                             </div>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
                               <div className="space-y-2">
                                 <div>
                                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Lý do yêu cầu từ khách:</span>
-                                  <span className="text-slate-300 font-medium italic">"{associatedStayExtension.description || 'Không có lý do chi tiết'}"</span>
+                                  <span className="text-slate-700 font-semibold italic">"{associatedStayExtension.description || 'Không có lý do chi tiết'}"</span>
                                 </div>
                                 <div className="pt-1">
                                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Gửi lúc:</span>
-                                  <span className="text-slate-400 font-semibold">{new Date(associatedStayExtension.createdAt).toLocaleString('vi-VN')}</span>
+                                  <span className="text-slate-500 font-bold">{new Date(associatedStayExtension.createdAt).toLocaleString('vi-VN')}</span>
                                 </div>
                               </div>
 
-                              <div className="bg-neutral-950/40 p-4 border border-neutral-900/60 space-y-2 rounded-sm font-semibold">
+                              <div className="bg-white p-4 border border-emerald-100/80 space-y-2 rounded-sm font-semibold">
                                 <div className="flex justify-between text-[11px]">
-                                  <span className="text-slate-400">Ngày check-out hiện tại:</span>
-                                  <span className="text-white font-mono">{associatedStayExtension.oldValue}</span>
+                                  <span className="text-slate-500">Ngày check-out hiện tại:</span>
+                                  <span className="text-slate-800 font-mono">{associatedStayExtension.oldValue}</span>
                                 </div>
-                                <div className="flex justify-between text-[11px] border-t border-neutral-900/40 pt-1.5">
-                                  <span className="text-emerald-400">Ngày check-out mong muốn:</span>
-                                  <strong className="text-emerald-500 font-mono">{associatedStayExtension.newValue}</strong>
+                                <div className="flex justify-between text-[11px] border-t border-emerald-100/50 pt-1.5">
+                                  <span className="text-emerald-600">Ngày check-out mong muốn:</span>
+                                  <strong className="text-emerald-600 font-mono">{associatedStayExtension.newValue}</strong>
                                 </div>
                               </div>
                             </div>
 
-                            <div className="flex gap-3 justify-end border-t border-emerald-950/40 pt-3">
+                            <div className="flex gap-3 justify-end border-t border-emerald-100/50 pt-3">
                               <button
                                 onClick={() => handleApproveStayExtension(associatedStayExtension)}
                                 disabled={isSubmittingStayExtensionAction}
-                                className="bg-green-600 hover:bg-green-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded-sm transition-all"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded shadow-sm transition-all"
                               >
                                 {isSubmittingStayExtensionAction ? 'Đang duyệt...' : 'Duyệt gia hạn'}
                               </button>
@@ -1785,7 +1783,7 @@ export default function StaffDashboard({ setActivePage }) {
                                   setIsRejectStayExtensionOpen(true);
                                 }}
                                 disabled={isSubmittingStayExtensionAction}
-                                className="bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded-sm transition-all"
+                                className="bg-rose-600 hover:bg-rose-750 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded shadow-sm transition-all"
                               >
                                 Từ chối
                               </button>
@@ -1799,42 +1797,42 @@ export default function StaffDashboard({ setActivePage }) {
                         const associatedEarlyCheckOut = pendingEarlyCheckOuts.find(req => req.bookingId === selectedBooking.bookingId || req.bookingReference === selectedBooking.bookingReference);
                         if (!associatedEarlyCheckOut) return null;
                         return (
-                          <div className="bg-[#241e11] border border-amber-900/50 p-6 rounded-sm flex flex-col gap-4 animate-scale-in">
-                            <div className="flex items-center gap-2 border-b border-amber-950 pb-3">
-                              <span className="material-symbols-outlined text-amber-500 text-base">history</span>
-                              <h4 className="text-xs font-black text-amber-400 uppercase tracking-widest m-0">Yêu cầu Checkout sớm chờ xử lý</h4>
-                              <span className="ml-auto px-2 py-0.5 text-[8px] font-black text-amber-500 bg-amber-500/10 border border-amber-500/20 uppercase tracking-widest rounded-sm">Pending</span>
+                          <div className="bg-amber-50/70 border border-amber-100 p-6 rounded-sm flex flex-col gap-4 animate-scale-in">
+                            <div className="flex items-center gap-2 border-b border-amber-200 pb-3">
+                              <span className="material-symbols-outlined text-amber-600 text-base">history</span>
+                              <h4 className="text-xs font-black text-amber-700 uppercase tracking-widest m-0">Yêu cầu Checkout sớm chờ xử lý</h4>
+                              <span className="ml-auto px-2 py-0.5 text-[8px] font-black text-amber-600 bg-amber-50 border border-amber-200 uppercase tracking-widest rounded-sm">Pending</span>
                             </div>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
                               <div className="space-y-2">
                                 <div>
                                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Lý do yêu cầu từ khách:</span>
-                                  <span className="text-slate-300 font-medium italic">"{associatedEarlyCheckOut.description || 'Không có lý do chi tiết'}"</span>
+                                  <span className="text-slate-700 font-semibold italic">"{associatedEarlyCheckOut.description || 'Không có lý do chi tiết'}"</span>
                                 </div>
                                 <div className="pt-1">
                                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Gửi lúc:</span>
-                                  <span className="text-slate-400 font-semibold">{new Date(associatedEarlyCheckOut.createdAt).toLocaleString('vi-VN')}</span>
+                                  <span className="text-slate-500 font-bold">{new Date(associatedEarlyCheckOut.createdAt).toLocaleString('vi-VN')}</span>
                                 </div>
                               </div>
 
-                              <div className="bg-neutral-950/40 p-4 border border-neutral-900/60 space-y-2 rounded-sm font-semibold">
+                              <div className="bg-white p-4 border border-amber-100/80 space-y-2 rounded-sm font-semibold">
                                 <div className="flex justify-between text-[11px]">
-                                  <span className="text-slate-400">Ngày check-out dự kiến gốc:</span>
-                                  <span className="text-white font-mono">{associatedEarlyCheckOut.oldValue}</span>
+                                  <span className="text-slate-500">Ngày check-out dự kiến gốc:</span>
+                                  <span className="text-slate-800 font-mono">{associatedEarlyCheckOut.oldValue}</span>
                                 </div>
-                                <div className="flex justify-between text-[11px] border-t border-neutral-900/40 pt-1.5">
-                                  <span className="text-amber-400">Ngày check-out mới rút ngắn:</span>
-                                  <strong className="text-amber-500 font-mono">{associatedEarlyCheckOut.newValue}</strong>
+                                <div className="flex justify-between text-[11px] border-t border-amber-100/50 pt-1.5">
+                                  <span className="text-amber-600">Ngày check-out mới rút ngắn:</span>
+                                  <strong className="text-amber-600 font-mono">{associatedEarlyCheckOut.newValue}</strong>
                                 </div>
                               </div>
                             </div>
 
-                            <div className="flex gap-3 justify-end border-t border-amber-950/40 pt-3">
+                            <div className="flex gap-3 justify-end border-t border-amber-100/50 pt-3">
                               <button
                                 onClick={() => handleApproveEarlyCheckOut(associatedEarlyCheckOut)}
                                 disabled={isSubmittingEarlyCheckOutAction}
-                                className="bg-green-600 hover:bg-green-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded-sm transition-all"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded shadow-sm transition-all"
                               >
                                 {isSubmittingEarlyCheckOutAction ? 'Đang duyệt...' : 'Duyệt rút ngắn ngày'}
                               </button>
@@ -1845,7 +1843,7 @@ export default function StaffDashboard({ setActivePage }) {
                                   setIsRejectEarlyCheckOutOpen(true);
                                 }}
                                 disabled={isSubmittingEarlyCheckOutAction}
-                                className="bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded-sm transition-all"
+                                className="bg-rose-600 hover:bg-rose-750 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded shadow-sm transition-all"
                               >
                                 Từ chối
                               </button>
@@ -1855,55 +1853,55 @@ export default function StaffDashboard({ setActivePage }) {
                       })()}
 
                       {/* Unified Info Card */}
-                      <div className="bg-[#0b0b0d] border border-neutral-900/60 p-6 md:p-8 rounded-sm space-y-6">
-                        <div className="flex items-center gap-2 border-b border-neutral-900 pb-3">
+                      <div className="bg-white border border-slate-200/80 p-6 md:p-8 rounded-sm space-y-6">
+                        <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                           <span className="material-symbols-outlined text-primary text-base">info</span>
-                          <h4 className="text-xs font-black text-white uppercase tracking-widest m-0">Thông tin chi tiết lưu trú</h4>
+                          <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest m-0">Thông tin chi tiết lưu trú</h4>
                         </div>
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6 text-xs">
                           {/* Col 1 */}
                           <div className="space-y-4">
-                            <div className="flex flex-col gap-1.5 bg-[#0e0e11] p-4 border border-neutral-900/50 rounded-sm shadow-sm">
+                            <div className="flex flex-col gap-1.5 bg-slate-50 p-4 border border-slate-200/55 rounded-sm shadow-sm">
                               <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Khách hàng</span>
-                              <strong className="text-white text-sm uppercase">{selectedBooking.guestName}</strong>
-                              <span className="text-slate-400 text-[10px] mt-0.5">{selectedBooking.email || selectedBooking.guestEmail || 'N/A'} • {selectedBooking.guestPhone || 'N/A'}</span>
+                              <strong className="text-slate-800 text-sm uppercase">{selectedBooking.guestName}</strong>
+                              <span className="text-slate-600 text-[10px] mt-0.5">{selectedBooking.email || selectedBooking.guestEmail || 'N/A'} • {selectedBooking.guestPhone || 'N/A'}</span>
                             </div>
 
-                            <div className="flex flex-col gap-1.5 bg-[#0e0e11] p-4 border border-neutral-900/50 rounded-sm shadow-sm">
+                            <div className="flex flex-col gap-1.5 bg-slate-50 p-4 border border-slate-200/55 rounded-sm shadow-sm">
                               <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Thời gian lưu trú</span>
-                              <strong className="text-white text-[11px]">{selectedBooking.checkInDate} đến {selectedBooking.checkOutDate}</strong>
+                              <strong className="text-slate-800 text-[11px]">{selectedBooking.checkInDate} đến {selectedBooking.checkOutDate}</strong>
                               <span className="text-primary text-[10px] font-black uppercase tracking-wider mt-0.5">{selectedBooking.nights} đêm lưu trú</span>
                             </div>
                           </div>
 
                           {/* Col 2 */}
                           <div className="space-y-4">
-                            <div className="flex flex-col gap-1.5 bg-[#0e0e11] p-4 border border-neutral-900/50 rounded-sm shadow-sm">
+                            <div className="flex flex-col gap-1.5 bg-slate-50 p-4 border border-slate-200/55 rounded-sm shadow-sm">
                               <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Phòng & Hạng phòng</span>
-                              <strong className="text-white text-sm uppercase">{selectedBooking.roomType || 'N/A'}</strong>
+                              <strong className="text-slate-800 text-sm uppercase">{selectedBooking.roomType || 'N/A'}</strong>
                               <div className="mt-1">
                                 {selectedBooking.roomNumber ? (
                                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-black text-primary bg-primary/10 border border-primary/20 rounded-sm">
                                     PHÒNG ASSIGNED: {selectedBooking.roomNumber}
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-black text-rose-500 bg-rose-500/10 border border-rose-500/20 rounded-sm uppercase tracking-wider">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-black text-rose-500 bg-rose-50 border border-rose-200 rounded-sm uppercase tracking-wider">
                                     Chưa gán phòng
                                   </span>
                                 )}
                               </div>
                             </div>
 
-                            <div className="flex flex-col gap-1.5 bg-[#0e0e11] p-4 border border-neutral-900/50 rounded-sm shadow-sm">
+                            <div className="flex flex-col gap-1.5 bg-slate-50 p-4 border border-slate-200/55 rounded-sm shadow-sm">
                               <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Trạng thái & Check-in</span>
                               <div>
                                 <span className={`inline-block px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest mr-2 rounded-sm ${
                                   isCheckedIn 
-                                    ? 'bg-blue-900/20 text-blue-400 border border-blue-900/30' 
+                                    ? 'bg-blue-50 text-blue-600 border border-blue-200' 
                                     : isConfirmed 
-                                    ? 'bg-green-900/20 text-green-400 border border-green-900/30' 
-                                    : 'bg-neutral-800 text-slate-500 border border-neutral-700/50'
+                                    ? 'bg-green-50 text-green-600 border border-green-200' 
+                                    : 'bg-slate-100 text-slate-600 border border-slate-200'
                                 }`}>
                                   {selectedBooking.status}
                                 </span>
@@ -1912,7 +1910,7 @@ export default function StaffDashboard({ setActivePage }) {
                                     FaceID eKYC
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-black text-slate-400 bg-neutral-900 border border-neutral-800 uppercase tracking-widest rounded-sm">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-black text-slate-500 bg-slate-100 border border-slate-200 uppercase tracking-widest rounded-sm">
                                     {selectedBooking.checkInMethod || 'Manual'}
                                   </span>
                                 )}
@@ -1927,25 +1925,25 @@ export default function StaffDashboard({ setActivePage }) {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                           {/* Digital Keys Column */}
                           {selectedBooking.roomAccesses?.length > 0 && (
-                            <div className="bg-[#0b0b0d] border border-neutral-900/60 p-6 rounded-sm flex flex-col gap-4">
-                              <div className="flex items-center gap-2 border-b border-neutral-900 pb-2">
+                            <div className="bg-white border border-slate-200/80 p-6 rounded-sm flex flex-col gap-4">
+                              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                                 <span className="material-symbols-outlined text-primary text-base">vpn_key</span>
-                                <h4 className="text-xs font-black text-white uppercase tracking-widest m-0">Khóa phòng số</h4>
+                                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest m-0">Khóa phòng số</h4>
                               </div>
                               <div className="space-y-3">
                                 {selectedBooking.roomAccesses.map((access) => (
-                                  <div key={access.roomId || access.roomNumber} className="border border-neutral-900/50 bg-[#0e0e11] p-4 flex justify-between items-center rounded-sm">
+                                  <div key={access.roomId || access.roomNumber} className="border border-slate-200 bg-slate-50 p-4 flex justify-between items-center rounded-sm font-semibold">
                                     <div>
-                                      <span className="block text-xs text-white font-black">Phòng {access.roomNumber}</span>
+                                      <span className="block text-xs text-slate-800 font-black">Phòng {access.roomNumber}</span>
                                       <span className="block text-[8px] text-slate-500 font-bold uppercase mt-0.5">Tầng {access.floorNumber ?? 'N/A'}</span>
                                     </div>
                                     <div className="text-right">
                                       {access.roomPassword ? (
-                                        <strong className="block font-mono text-xs text-primary tracking-[0.12em] bg-neutral-900/60 border border-primary/20 px-2 py-0.5 rounded-sm">
+                                        <strong className="block font-mono text-xs text-primary tracking-[0.12em] bg-white border border-primary/20 px-2 py-0.5 rounded-sm">
                                           {access.roomPassword}
                                         </strong>
                                       ) : (
-                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-black text-rose-500 bg-rose-500/10 border border-rose-500/20 uppercase tracking-wider rounded-sm">
+                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-black text-rose-600 bg-rose-50 border border-rose-200 uppercase tracking-wider rounded-sm">
                                           Đã khóa
                                         </span>
                                       )}
@@ -1958,12 +1956,12 @@ export default function StaffDashboard({ setActivePage }) {
 
                           {/* Special Requests Column */}
                           {selectedBooking.specialRequests && (
-                            <div className="bg-[#0b0b0d] border border-neutral-900/60 p-6 rounded-sm flex flex-col gap-4">
-                              <div className="flex items-center gap-2 border-b border-neutral-900 pb-2">
+                            <div className="bg-white border border-slate-200/80 p-6 rounded-sm flex flex-col gap-4">
+                              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                                 <span className="material-symbols-outlined text-primary text-base">rate_review</span>
-                                <h4 className="text-xs font-black text-white uppercase tracking-widest m-0">Yêu cầu đặc biệt</h4>
+                                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest m-0">Yêu cầu đặc biệt</h4>
                               </div>
-                              <p className="text-xs text-slate-300 font-semibold bg-[#0e0e11] p-4 border border-neutral-900/50 rounded-sm m-0 italic flex-1 flex items-center justify-center text-center">
+                              <p className="text-xs text-slate-700 font-semibold bg-slate-50 p-4 border border-slate-200/55 rounded-sm m-0 italic flex-1 flex items-center justify-center text-center">
                                 "{selectedBooking.specialRequests}"
                               </p>
                             </div>
@@ -1975,31 +1973,31 @@ export default function StaffDashboard({ setActivePage }) {
 
 
                     {/* Right column - Invoice summary */}
-                    <div className="bg-[#0f0f12] border border-neutral-900 p-6 md:p-8 flex flex-col justify-between h-fit space-y-6">
+                    <div className="bg-white border border-slate-200/80 shadow-md p-6 md:p-8 flex flex-col justify-between h-fit space-y-6">
                       <div>
-                        <h4 className="text-xs font-black text-white uppercase tracking-widest border-b border-neutral-900 pb-3 mb-4">Chi tiết hóa đơn</h4>
-                        <div className="space-y-3 text-xs text-slate-400 font-semibold">
+                        <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest border-b border-slate-100 pb-3 mb-4">Chi tiết hóa đơn</h4>
+                        <div className="space-y-3 text-xs text-slate-600 font-semibold">
                           <div className="flex justify-between">
                             <span>Tổng tiền phòng:</span>
-                            <span className="text-white font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.totalAmount || 0)}</span>
+                            <span className="text-slate-800 font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.totalAmount || 0)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Phí dịch vụ phụ thu:</span>
-                            <span className="text-white font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.serviceChargeAmount || 0)}</span>
+                            <span className="text-slate-800 font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.serviceChargeAmount || 0)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Thuế VAT (10%):</span>
-                            <span className="text-white font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.taxAmount || 0)}</span>
+                            <span className="text-slate-800 font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.taxAmount || 0)}</span>
                           </div>
-                          <div className="flex justify-between border-t border-neutral-900 pt-3 text-sm font-bold">
-                            <span className="text-white">TỔNG CỘNG:</span>
+                          <div className="flex justify-between border-t border-slate-100 pt-3 text-sm font-bold">
+                            <span className="text-slate-800">TỔNG CỘNG:</span>
                             <span className="text-primary font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.finalAmount || selectedBooking.totalAmount || 0)}</span>
                           </div>
-                          <div className="flex justify-between text-emerald-400 border-t border-neutral-900/50 pt-2">
+                          <div className="flex justify-between text-emerald-600 border-t border-slate-100 pt-2">
                             <span>Đã thanh toán:</span>
                             <span className="font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.paidAmount || 0)}</span>
                           </div>
-                          <div className="flex justify-between text-rose-500 font-bold">
+                          <div className="flex justify-between text-rose-600 font-bold">
                             <span>Còn lại cần thu:</span>
                             <span className="font-mono">
                               {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
@@ -2015,13 +2013,13 @@ export default function StaffDashboard({ setActivePage }) {
                         <div className="flex flex-col gap-2">
                           <button
                             onClick={() => handleViewInvoice(selectedBooking.id)}
-                            className="w-full py-2.5 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white text-[10px] font-black uppercase tracking-widest cursor-pointer flex items-center justify-center gap-1.5"
+                            className="w-full py-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-800 text-[10px] font-black uppercase tracking-widest cursor-pointer flex items-center justify-center gap-1.5"
                           >
                             <span className="material-symbols-outlined text-sm">receipt_long</span> Xem hóa đơn chi tiết
                           </button>
                           <button
                             onClick={() => handleDownloadPdf(selectedBooking.id, selectedBooking.bookingReference)}
-                            className="w-full py-2.5 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white text-[10px] font-black uppercase tracking-widest cursor-pointer flex items-center justify-center gap-1.5"
+                            className="w-full py-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-800 text-[10px] font-black uppercase tracking-widest cursor-pointer flex items-center justify-center gap-1.5"
                           >
                             <span className="material-symbols-outlined text-sm">download</span> Xuất file PDF bảng kê
                           </button>

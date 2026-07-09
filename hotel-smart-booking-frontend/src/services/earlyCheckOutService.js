@@ -4,7 +4,7 @@ import axiosInstance from './axiosInstance';
  * Khách hàng gửi yêu cầu check-out sớm
  */
 export const submitEarlyCheckOutRequest = async (payload) => {
-  const response = await axiosInstance.post('/early-checkout/request', payload);
+  const response = await axiosInstance.post('/stay-adjustments/early-checkout/request', payload);
   return response.data;
 };
 
@@ -12,7 +12,7 @@ export const submitEarlyCheckOutRequest = async (payload) => {
  * Nhân viên phê duyệt yêu cầu check-out sớm
  */
 export const approveEarlyCheckOutRequest = async (requestId) => {
-  const response = await axiosInstance.post(`/early-checkout/approve/${requestId}`);
+  const response = await axiosInstance.post(`/stay-adjustments/early-checkout/approve/${requestId}`);
   return response.data;
 };
 
@@ -20,7 +20,7 @@ export const approveEarlyCheckOutRequest = async (requestId) => {
  * Nhân viên từ chối yêu cầu check-out sớm
  */
 export const rejectEarlyCheckOutRequest = async (requestId, rejectionReason) => {
-  const response = await axiosInstance.post(`/early-checkout/reject/${requestId}`, null, {
+  const response = await axiosInstance.post(`/stay-adjustments/early-checkout/reject/${requestId}`, null, {
     params: { rejectionReason }
   });
   return response.data;
@@ -30,6 +30,6 @@ export const rejectEarlyCheckOutRequest = async (requestId, rejectionReason) => 
  * Lấy danh sách yêu cầu check-out sớm đang chờ phê duyệt
  */
 export const getPendingEarlyCheckOutRequests = async () => {
-  const response = await axiosInstance.get('/early-checkout/pending');
+  const response = await axiosInstance.get('/stay-adjustments/early-checkout/pending');
   return response.data;
 };

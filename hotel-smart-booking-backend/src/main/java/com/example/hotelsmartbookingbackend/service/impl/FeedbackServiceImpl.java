@@ -4,6 +4,7 @@ import com.example.hotelsmartbookingbackend.dto.request.FeedbackRequest;
 import com.example.hotelsmartbookingbackend.dto.response.FeedbackResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
 import com.example.hotelsmartbookingbackend.entity.Booking;
+import com.example.hotelsmartbookingbackend.enums.BookingStatus;
 import com.example.hotelsmartbookingbackend.entity.Feedback;
 import com.example.hotelsmartbookingbackend.entity.Feedbackimage;
 import com.example.hotelsmartbookingbackend.entity.User;
@@ -49,10 +50,7 @@ public class FeedbackServiceImpl implements FeedbackService {
         }
 
         // 2b. Kiểm tra trạng thái booking đã trả phòng thành công chưa (BR-60)
-        String bookingStatus = booking.getStatus();
-        if (!"Checked Out".equalsIgnoreCase(bookingStatus) &&
-                !"Checked-out".equalsIgnoreCase(bookingStatus) &&
-                !"Completed".equalsIgnoreCase(bookingStatus)) {
+        if (booking.getStatus() != BookingStatus.COMPLETED) {
             throw new RuntimeException("Bạn chỉ có thể đánh giá đặt phòng sau khi đã hoàn thành trả phòng (Checked Out)");
         }
 

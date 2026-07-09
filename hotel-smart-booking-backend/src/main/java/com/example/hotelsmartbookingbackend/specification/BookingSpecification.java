@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
+import com.example.hotelsmartbookingbackend.enums.BookingStatus;
+
 @RequiredArgsConstructor
 public class BookingSpecification implements Specification<Booking> {
     
@@ -32,16 +34,14 @@ public class BookingSpecification implements Specification<Booking> {
 
         List<Predicate> predicates = new ArrayList<>();
 
-        List<String> statuses = criteria.getStatuses() == null
+        List<BookingStatus> statuses = criteria.getStatuses() == null
                 ? List.of()
                 : criteria.getStatuses().stream()
                         .filter(Objects::nonNull)
-                        .map(String::trim)
-                        .filter(status -> !status.isEmpty())
                         .toList();
         if (!statuses.isEmpty()) {
             predicates.add(root.get("status").in(statuses));
-        } else if (criteria.getStatus() != null && !criteria.getStatus().isEmpty()) {
+        } else if (criteria.getStatus() != null) {
             predicates.add(cb.equal(root.get("status"), criteria.getStatus()));
         }
 

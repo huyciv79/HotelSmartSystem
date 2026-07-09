@@ -32,81 +32,81 @@ const RoomTypesManager = ({
 
       {/* Room Form Overlay / Collapsible form */}
       {isRoomFormOpen && (
-        <div className="bg-[#0f0f12] border border-neutral-900 p-6 md:p-8 shadow-xl">
-          <h4 className="text-xs font-black text-white uppercase tracking-widest border-b border-neutral-850 pb-3 mb-6">
+        <div className="bg-white border border-slate-200/85 p-6 md:p-8 shadow-md">
+          <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest border-b border-slate-100 pb-3 mb-6">
             {editingRoom ? `CHỈNH SỬA LOẠI PHÒNG: ${editingRoom.name}` : 'THÊM MỚI LOẠI PHÒNG'}
           </h4>
 
           <form onSubmit={handleRoomSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tên loại phòng</label>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tên loại phòng</label>
                 <input
                   type="text"
                   value={roomFormData.name}
                   onChange={(e) => setRoomFormData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="E.g., Suite River View"
-                  className="w-full bg-transparent border-b border-neutral-800 py-2 font-bold text-xs outline-none text-white focus:border-primary placeholder:text-slate-600"
+                  className="w-full bg-transparent border-b border-slate-200 py-2 font-bold text-xs outline-none text-slate-800 focus:border-primary placeholder:text-slate-400"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Đơn giá cơ bản (VND / đêm)</label>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Đơn giá cơ bản (VND / đêm)</label>
                 <input
                   type="number"
                   value={roomFormData.basePrice}
                   onChange={(e) => setRoomFormData(prev => ({ ...prev, basePrice: e.target.value }))}
                   placeholder="E.g., 5000000"
-                  className="w-full bg-transparent border-b border-neutral-800 py-2 font-bold text-xs outline-none text-white focus:border-primary placeholder:text-slate-600"
+                  className="w-full bg-transparent border-b border-slate-200 py-2 font-bold text-xs outline-none text-slate-800 focus:border-primary placeholder:text-slate-400"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sức chứa người lớn / phòng</label>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sức chứa người lớn / phòng</label>
                 <input
                   type="number"
                   value={roomFormData.adultCapacity}
                   onChange={(e) => setRoomFormData(prev => ({ ...prev, adultCapacity: e.target.value }))}
-                  className="w-full bg-transparent border-b border-neutral-800 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                  className="w-full bg-transparent border-b border-slate-200 py-2 font-bold text-xs outline-none text-slate-800 focus:border-primary"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sức chứa trẻ em / phòng</label>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sức chứa trẻ em / phòng</label>
                 <input
                   type="number"
                   value={roomFormData.childCapacity}
                   onChange={(e) => setRoomFormData(prev => ({ ...prev, childCapacity: e.target.value }))}
-                  className="w-full bg-transparent border-b border-neutral-800 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                  className="w-full bg-transparent border-b border-slate-200 py-2 font-bold text-xs outline-none text-slate-800 focus:border-primary"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Loại giường</label>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Loại giường</label>
                 <input
                   type="text"
                   value={roomFormData.bedType}
                   onChange={(e) => setRoomFormData(prev => ({ ...prev, bedType: e.target.value }))}
-                  className="w-full bg-transparent border-b border-neutral-800 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                  className="w-full bg-transparent border-b border-slate-200 py-2 font-bold text-xs outline-none text-slate-800 focus:border-primary"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Diện tích phòng (m²)</label>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Diện tích phòng (m²)</label>
                 <input
                   type="number"
                   value={roomFormData.roomSize}
                   onChange={(e) => setRoomFormData(prev => ({ ...prev, roomSize: e.target.value }))}
-                  className="w-full bg-transparent border-b border-neutral-800 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                  className="w-full bg-transparent border-b border-slate-200 py-2 font-bold text-xs outline-none text-slate-800 focus:border-primary"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Trạng thái hoạt động</label>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Trạng thái hoạt động</label>
                 <select
                   value={roomFormData.status}
                   onChange={(e) => setRoomFormData(prev => ({ ...prev, status: e.target.value }))}
-                  className="w-full bg-transparent border-b border-neutral-800 py-2 font-bold text-xs outline-none text-white focus:border-primary [&>option]:bg-neutral-900 [&>option]:text-white"
+                  className="w-full bg-transparent border-b border-slate-200 py-2 font-bold text-xs outline-none text-slate-800 focus:border-primary [&>option]:bg-white [&>option]:text-slate-800"
                 >
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
@@ -114,22 +114,22 @@ const RoomTypesManager = ({
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hình ảnh phòng</label>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Hình ảnh phòng</label>
                 <input
                   type="file"
                   onChange={handleFileChange}
-                  className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:border file:border-neutral-800 file:text-[10px] file:font-black file:uppercase file:bg-neutral-900 file:text-white hover:file:bg-neutral-850 cursor-pointer"
+                  className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:border file:border-slate-200 file:text-[10px] file:font-black file:uppercase file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100 cursor-pointer"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Mô tả loại phòng</label>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Mô tả loại phòng</label>
               <textarea
                 rows="3"
                 value={roomFormData.description}
                 onChange={(e) => setRoomFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="w-full bg-transparent border border-neutral-800 p-3 font-bold text-xs outline-none text-white focus:border-primary resize-none"
+                className="w-full bg-transparent border border-slate-200 p-3 font-bold text-xs outline-none text-slate-800 focus:border-primary resize-none"
               />
             </div>
 
@@ -144,7 +144,7 @@ const RoomTypesManager = ({
               <button
                 type="button"
                 onClick={() => setIsRoomFormOpen(false)}
-                className="bg-neutral-900 hover:bg-neutral-800 text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest border border-neutral-800 cursor-pointer"
+                className="bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold px-8 py-3.5 uppercase text-xs tracking-widest border border-slate-200 cursor-pointer"
               >
                 Hủy bỏ
               </button>
@@ -154,10 +154,10 @@ const RoomTypesManager = ({
       )}
 
       {/* Room Types table */}
-      <div className="bg-[#0f0f12] border border-neutral-900 shadow-md overflow-hidden">
-        <table className="w-full border-collapse text-left text-xs text-slate-400">
+      <div className="bg-white border border-slate-200/85 shadow-sm overflow-hidden">
+        <table className="w-full border-collapse text-left text-xs text-slate-600">
           <thead>
-            <tr className="border-b border-neutral-900 text-[9px] font-black uppercase tracking-wider text-slate-500">
+            <tr className="border-b border-slate-100 text-[9px] font-black uppercase tracking-wider text-slate-500">
               <th className="p-4">Hình ảnh</th>
               <th className="p-4">Tên loại phòng</th>
               <th className="p-4">Giá / đêm</th>
@@ -167,18 +167,18 @@ const RoomTypesManager = ({
               <th className="p-4 text-right">Thao tác</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-900/60">
+          <tbody className="divide-y divide-slate-100">
             {roomTypes.map((room) => (
-              <tr key={room.id} className="hover:bg-white/5 transition-colors">
+              <tr key={room.id} className="hover:bg-slate-50/50 transition-colors">
                 <td className="p-4">
                   <img
                     src={room.primaryImageUrl || 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=100&q=80'}
                     alt={room.name}
-                    className="w-16 h-12 object-cover border border-neutral-900"
+                    className="w-16 h-12 object-cover border border-slate-200"
                   />
                 </td>
                 <td className="p-4">
-                  <span className="text-white font-black uppercase text-sm block">{room.name}</span>
+                  <span className="text-slate-800 font-black uppercase text-sm block">{room.name}</span>
                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mt-0.5">ID: {room.id}</span>
                 </td>
                 <td className="p-4 text-primary font-black">
@@ -194,27 +194,27 @@ const RoomTypesManager = ({
                 <td className="p-4">
                   <span className={`px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${
                     room.status === 'Active' || !room.status 
-                      ? 'bg-green-900/30 text-green-400 border border-green-900/50' 
-                      : 'bg-red-900/30 text-red-400 border border-red-900/50'
+                      ? 'bg-green-50 text-green-700 border border-green-200' 
+                      : 'bg-red-50 text-red-600 border border-red-200'
                   }`}>
                     {room.status || 'Active'}
                   </span>
                 </td>
                 <td className="p-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => handleOpenEditRoom(room)}
-                      className="bg-neutral-900 border border-neutral-800 text-white hover:bg-neutral-800 text-[10px] font-bold uppercase px-3 py-1.5 cursor-pointer flex items-center gap-1"
-                    >
-                      Sửa
-                    </button>
-                    <button
-                      onClick={() => handleDeleteRoom(room.id, room.name)}
-                      className="bg-red-900/10 border border-red-900/30 text-red-500 hover:bg-red-900/20 text-[10px] font-bold uppercase px-3 py-1.5 cursor-pointer flex items-center gap-1"
-                    >
-                      Xóa
-                    </button>
-                  </div>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleOpenEditRoom(room)}
+                        className="bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 hover:text-slate-900 text-[8.5px] font-black uppercase tracking-widest px-2.5 py-1.5 cursor-pointer rounded-sm transition-all"
+                      >
+                        Sửa
+                      </button>
+                      <button
+                        onClick={() => handleDeleteRoom(room.id, room.name)}
+                        className="bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 hover:border-rose-350 text-[8.5px] font-black uppercase tracking-widest px-2.5 py-1.5 cursor-pointer rounded-sm transition-all"
+                      >
+                        Xóa
+                      </button>
+                    </div>
                 </td>
               </tr>
             ))}

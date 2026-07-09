@@ -38,12 +38,12 @@ export const getAllBookings = async () => {
 };
 
 export const checkInBooking = async (bookingId) => {
-  const response = await axiosInstance.post(`/bookings/${bookingId}/check-in`);
+  const response = await axiosInstance.post(`/checkin/${bookingId}/manual`);
   return response.data;
 };
 
 export const generateQrCheckInToken = async (bookingId) => {
-  const response = await axiosInstance.post(`/bookings/${bookingId}/qr-token`);
+  const response = await axiosInstance.post(`/checkin/${bookingId}/qr-token`);
   return response.data;
 };
 
@@ -53,7 +53,7 @@ export const qrCheckInBooking = async (token) => {
 };
 
 export const checkOutBooking = async (bookingId) => {
-  const response = await axiosInstance.post(`/bookings/${bookingId}/check-out`);
+  const response = await axiosInstance.post(`/checkin/${bookingId}/check-out`);
   return response.data;
 };
 
@@ -77,7 +77,7 @@ export const faceCheckInBooking = async (
   formData.append('challengeDirection', challengeDirection);
 
   const response = await axiosInstance.post(
-    `/bookings/${bookingId}/face-check-in`,
+    `/checkin/${bookingId}/face`,
     formData,
     {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -112,7 +112,7 @@ export const checkFaceReadiness = async (selfieImage) => {
   formData.append('selfieImage', selfieImage);
 
   const response = await axiosInstance.post(
-    '/bookings/face-readiness',
+    '/checkin/face-readiness',
     formData,
     {
       headers: { 'Content-Type': 'multipart/form-data' },

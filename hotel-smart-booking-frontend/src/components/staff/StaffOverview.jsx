@@ -49,13 +49,13 @@ const StaffOverview = ({
   return (
     <div className="space-y-8 animate-scale-in text-left">
       {/* Welcome Banner */}
-      <div className="h-64 rounded-none overflow-hidden relative border border-neutral-900 shadow-xl">
+      <div className="h-64 rounded-none overflow-hidden relative border border-slate-200/80 shadow-md">
         <img
           src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1000&h=400&fit=crop"
           alt="Luxury hotel lobby"
           className="absolute inset-0 w-full h-full object-cover filter brightness-75"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#070708] via-[#0d0d0f]/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/40 to-transparent" />
         <div className="relative h-full p-8 flex flex-col justify-between items-start text-left">
           <div>
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary text-white text-[9px] font-black uppercase tracking-widest">
@@ -73,39 +73,39 @@ const StaffOverview = ({
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-[#0f0f12] border border-neutral-900 p-6 shadow-md relative overflow-hidden flex flex-col justify-between h-28">
+        <div className="bg-white border border-slate-200/85 p-6 shadow-sm relative overflow-hidden flex flex-col justify-between h-28">
           <div className="flex justify-between items-start">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">YÊU CẦU CHECK-IN</span>
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">YÊU CẦU CHECK-IN</span>
             <span className="text-[9px] font-black tracking-widest text-primary uppercase bg-primary/10 px-2 py-0.5">ACTIVE</span>
           </div>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-3xl font-black text-white">{displayConfirmed}</span>
-            <span className="text-[10px] text-slate-500 font-bold uppercase">đơn chờ</span>
+            <span className="text-3xl font-black text-slate-800">{displayConfirmed}</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase">đơn chờ</span>
           </div>
         </div>
 
-        <div className="bg-[#0f0f12] border border-neutral-900 p-6 shadow-md relative overflow-hidden flex flex-col justify-between h-28">
+        <div className="bg-white border border-slate-200/85 p-6 shadow-sm relative overflow-hidden flex flex-col justify-between h-28">
           <div className="flex justify-between items-start">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">ĐANG LƯU TRÚ</span>
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">ĐANG LƯU TRÚ</span>
           </div>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-3xl font-black text-white">{displayCheckedIn}</span>
-            <span className="text-[10px] text-slate-500 font-bold uppercase">phòng hoạt động</span>
+            <span className="text-3xl font-black text-slate-800">{displayCheckedIn}</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase">phòng hoạt động</span>
           </div>
         </div>
 
-        <div className="bg-[#0f0f12] border border-neutral-900 p-6 shadow-md relative overflow-hidden flex flex-col justify-between h-28">
+        <div className="bg-white border border-slate-200/85 p-6 shadow-sm relative overflow-hidden flex flex-col justify-between h-28">
           <div className="flex justify-between items-start">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">TỶ LỆ LẤP ĐẦY</span>
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">TỶ LỆ LẤP ĐẦY</span>
           </div>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-3xl font-black text-white">{displayOccupancyRate}</span>
+            <span className="text-3xl font-black text-slate-800">{displayOccupancyRate}</span>
           </div>
         </div>
 
-        <div className="bg-[#0f0f12] border border-neutral-900 p-6 shadow-md relative overflow-hidden flex flex-col justify-between h-28">
+        <div className="bg-white border border-slate-200/85 p-6 shadow-sm relative overflow-hidden flex flex-col justify-between h-28">
           <div className="flex justify-between items-start">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">DOANH THU DỰ TÍNH</span>
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">DOANH THU DỰ TÍNH</span>
           </div>
           <div className="flex items-baseline gap-2 mt-2">
             <span className="text-2xl font-black text-primary">{displayExpectedRevenue}</span>
@@ -117,11 +117,11 @@ const StaffOverview = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column (Recent Bookings / Guest List) */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-[#0f0f12] border border-neutral-900 shadow-md p-6">
-            <div className="flex justify-between items-center border-b border-neutral-900 pb-4 mb-4">
+          <div className="bg-white border border-slate-200/85 shadow-sm p-6">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-4">
               <div>
-                <h4 className="text-xs font-black text-white uppercase tracking-widest">Danh sách check-in gần đây</h4>
-                <p className="text-[9px] text-slate-500 uppercase tracking-widest mt-1">Quản lý trực tiếp các đặt phòng đang diễn ra</p>
+                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Danh sách check-in gần đây</h4>
+                <p className="text-[9px] text-slate-400 uppercase tracking-widest mt-1">Quản lý trực tiếp các đặt phòng đang diễn ra</p>
               </div>
               <button
                 onClick={() => setActiveTab('operations')}
@@ -132,20 +132,20 @@ const StaffOverview = ({
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left text-xs text-slate-400">
+              <table className="w-full border-collapse text-left text-xs text-slate-600">
                 <thead>
-                  <tr className="border-b border-neutral-900 text-[9px] font-black uppercase text-slate-500 tracking-wider">
+                  <tr className="border-b border-slate-100 text-[9px] font-black uppercase text-slate-400 tracking-wider">
                     <th className="pb-3 pr-4">Khách hàng</th>
                     <th className="pb-3 px-4">Thời gian</th>
                     <th className="pb-3 px-4">Hình thức</th>
                     <th className="pb-3 pl-4 text-right">Trạng thái</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-900/60">
+                <tbody className="divide-y divide-slate-100">
                   {bookings.slice(0, 5).map((bk) => (
-                    <tr key={bk.id} className="hover:bg-white/5 transition-colors">
+                    <tr key={bk.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 pr-4">
-                        <span className="text-white font-black uppercase block">{bk.guestName}</span>
+                        <span className="text-slate-800 font-black uppercase block">{bk.guestName}</span>
                         <span className="text-[9px] text-slate-500 block mt-0.5">{bk.bookingReference} • {bk.roomType}</span>
                       </td>
                       <td className="py-4 px-4 font-medium">
@@ -158,10 +158,10 @@ const StaffOverview = ({
                       <td className="py-4 pl-4 text-right">
                         <span className={`inline-block px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${
                           bk.status === 'Checked In'
-                            ? 'bg-blue-900/30 text-blue-400 border border-blue-900/50'
+                            ? 'bg-blue-50 text-blue-600 border border-blue-200'
                             : bk.status === 'Confirmed'
-                            ? 'bg-green-900/30 text-green-400 border border-green-900/50'
-                            : 'bg-neutral-800 text-neutral-400'
+                            ? 'bg-green-50 text-green-600 border border-green-200'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200'
                         }`}>
                           {bk.status}
                         </span>
@@ -196,19 +196,19 @@ const StaffOverview = ({
           </div>
 
           {/* Quick Actions Panel */}
-          <div className="bg-[#0f0f12] border border-neutral-900 shadow-md p-6">
-            <h4 className="text-xs font-black uppercase tracking-widest text-white border-b border-neutral-900 pb-3 mb-4">Lối tắt thao tác</h4>
+          <div className="bg-white border border-slate-200/85 shadow-sm p-6">
+            <h4 className="text-xs font-black uppercase tracking-widest text-slate-800 border-b border-slate-100 pb-3 mb-4">Lối tắt thao tác</h4>
             <div className="space-y-3">
               <button
                 onClick={handleOpenWalkIn}
-                className="w-full py-3.5 bg-neutral-900 hover:bg-primary text-white text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border border-neutral-850 flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-slate-50 hover:bg-primary text-slate-800 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border border-slate-200 flex items-center justify-center gap-2"
               >
                 Đặt phòng Walk-in
               </button>
               {isManager && (
                 <button
                   onClick={handleOpenAddRoom}
-                  className="w-full py-3.5 bg-neutral-900 hover:bg-primary text-white text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border border-neutral-850 flex items-center justify-center gap-2"
+                  className="w-full py-3.5 bg-slate-50 hover:bg-primary text-slate-800 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border border-slate-200 flex items-center justify-center gap-2"
                 >
                   Thêm loại phòng mới
                 </button>
@@ -220,22 +220,22 @@ const StaffOverview = ({
 
       {/* Curated Room Types carousel */}
       {roomTypes.length > 0 && (
-        <div className="bg-[#0f0f12] border border-neutral-900 p-6 shadow-md">
-          <div className="flex justify-between items-center border-b border-neutral-900 pb-4 mb-6">
+        <div className="bg-white border border-slate-200/85 p-6 shadow-sm">
+          <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-6">
             <div>
-              <h4 className="text-xs font-black text-white uppercase tracking-widest">Danh mục hạng phòng hiện có</h4>
-              <p className="text-[9px] text-slate-500 uppercase tracking-widest mt-1">Cấu hình loại phòng lưu trú cao cấp tại hệ thống</p>
+              <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Danh mục hạng phòng hiện có</h4>
+              <p className="text-[9px] text-slate-400 uppercase tracking-widest mt-1">Cấu hình loại phòng lưu trú cao cấp tại hệ thống</p>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={prevCarousel}
-                className="p-1.5 bg-neutral-900 hover:bg-primary text-white transition-colors cursor-pointer border border-neutral-800"
+                className="p-1.5 bg-slate-50 hover:bg-primary text-slate-800 hover:text-white transition-colors cursor-pointer border border-slate-200"
               >
                 <ChevronLeft size={16} />
               </button>
               <button
                 onClick={nextCarousel}
-                className="p-1.5 bg-neutral-900 hover:bg-primary text-white transition-colors cursor-pointer border border-neutral-800"
+                className="p-1.5 bg-slate-50 hover:bg-primary text-slate-800 hover:text-white transition-colors cursor-pointer border border-slate-200"
               >
                 <ChevronRight size={16} />
               </button>
@@ -246,21 +246,21 @@ const StaffOverview = ({
             {roomTypes.slice(carouselIndex, carouselIndex + 3).concat(
               roomTypes.slice(0, Math.max(0, 3 - (roomTypes.length - carouselIndex)))
             ).slice(0, Math.min(3, roomTypes.length)).map((room) => (
-              <div key={room.id} className="bg-neutral-950 border border-neutral-900 overflow-hidden flex flex-col justify-between">
+              <div key={room.id} className="bg-slate-50 border border-slate-200/80 overflow-hidden flex flex-col justify-between">
                 <img
                   src={room.primaryImageUrl || 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=600&q=80'}
                   alt={room.name}
-                  className="w-full h-40 object-cover border-b border-neutral-900 filter brightness-90"
+                  className="w-full h-40 object-cover border-b border-slate-200 filter brightness-95"
                 />
                 <div className="p-4 space-y-2">
                   <span className="text-[9px] text-primary font-black uppercase tracking-widest">ELYSIAN SUITE</span>
-                  <h5 className="text-sm font-black text-white uppercase tracking-wider">{room.name}</h5>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                  <h5 className="text-sm font-black text-slate-800 uppercase tracking-wider">{room.name}</h5>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                     {room.bedType || 'King Bed'} • {room.roomSize || room.roomsize || 35} m²
                   </p>
-                  <div className="flex justify-between items-end pt-3 border-t border-neutral-900">
+                  <div className="flex justify-between items-end pt-3 border-t border-slate-150">
                     <div>
-                      <span className="text-[8px] text-slate-500 font-bold uppercase block">Đơn giá cơ bản</span>
+                      <span className="text-[8px] text-slate-400 font-bold uppercase block">Đơn giá cơ bản</span>
                       <span className="text-xs font-black text-primary">
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(room.basePrice || room.baseprice || 0)}
                       </span>
@@ -274,6 +274,6 @@ const StaffOverview = ({
       )}
     </div>
   );
-};
+}
 
 export default StaffOverview;

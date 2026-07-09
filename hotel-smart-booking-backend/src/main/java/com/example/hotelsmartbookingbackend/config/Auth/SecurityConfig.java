@@ -56,8 +56,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/statistics/**").hasAnyRole("MANAGER", "RECEPTIONIST")
                         .requestMatchers(
                                 HttpMethod.POST,
-                                "/api/bookings/*/face-check-in",
-                                "/api/bookings/face-readiness"
+                                "/api/checkin/*/face",
+                                "/api/checkin/face-readiness"
                         ).hasRole("MANAGER")
                         .requestMatchers(HttpMethod.GET,
                                 "/api/rooms/status",

@@ -3,6 +3,7 @@ package com.example.hotelsmartbookingbackend.service.impl;
 import com.example.hotelsmartbookingbackend.dto.request.RoomChangeRequest;
 import com.example.hotelsmartbookingbackend.dto.response.RoomChangeResponse;
 import com.example.hotelsmartbookingbackend.entity.Booking;
+import com.example.hotelsmartbookingbackend.enums.BookingStatus;
 import com.example.hotelsmartbookingbackend.entity.BookingRoomAccess;
 import com.example.hotelsmartbookingbackend.entity.Bookingdetail;
 import com.example.hotelsmartbookingbackend.entity.Room;
@@ -222,10 +223,8 @@ public class RoomChangeServiceImpl implements RoomChangeService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng với ID: " + bookingId));
 
-        String status = booking.getStatus();
-        boolean isCheckedIn = BOOKING_STATUS_CHECKED_IN.equalsIgnoreCase(status)
-                || "Checked In".equalsIgnoreCase(status)
-                || "Checked-In".equalsIgnoreCase(status);
+        BookingStatus status = booking.getStatus();
+        boolean isCheckedIn = (status == BookingStatus.CHECKED_IN);
 
         if (!isCheckedIn) {
             throw new RuntimeException(String.format(
@@ -631,7 +630,7 @@ public class RoomChangeServiceImpl implements RoomChangeService {
                 // Thông tin booking
                 .bookingId(booking.getId())
                 .bookingReference(booking.getBookingreference())
-                .bookingStatus(booking.getStatus())
+                .bookingStatus(booking.getStatus() != null ? booking.getStatus().getValue() : null)
                 // Phòng cũ
                 .oldRoomId(oldRoom.getId())
                 .oldRoomNumber(oldRoom.getRoomnumber())
@@ -743,10 +742,8 @@ public class RoomChangeServiceImpl implements RoomChangeService {
         }
 
         // Validate booking đang check-in
-        String status = booking.getStatus();
-        boolean isCheckedIn = BOOKING_STATUS_CHECKED_IN.equalsIgnoreCase(status)
-                || "Checked In".equalsIgnoreCase(status)
-                || "Checked-In".equalsIgnoreCase(status);
+        BookingStatus status = booking.getStatus();
+        boolean isCheckedIn = (status == BookingStatus.CHECKED_IN);
 
         if (!isCheckedIn) {
             throw new RuntimeException("Chỉ có thể gửi yêu cầu chuyển phòng khi đang lưu trú (Đã Check-in).");
@@ -949,7 +946,7 @@ public class RoomChangeServiceImpl implements RoomChangeService {
                     roomtype.getId(),
                     periodStart,
                     periodEnd,
-                    List.of("Confirmed", "Checked In", "Checked-in", "Staying", "Paid", "Partially Paid"),
+                    List.of(BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN, BookingStatus.STAYING, BookingStatus.PAID, BookingStatus.PARTIALLY_PAID),
                     List.of("Active", "Checked In", "Checked-in", "Staying"));
 
             int availableRooms = totalRooms - Math.toIntExact(bookedRooms);
@@ -1030,7 +1027,7 @@ public class RoomChangeServiceImpl implements RoomChangeService {
             throw new RuntimeException("Bạn không có quyền gửi yêu cầu cho đơn đặt phòng này");
         }
 
-        if (!"Checked-in".equalsIgnoreCase(booking.getStatus()) && !"Checked In".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() != BookingStatus.CHECKED_IN) {
             throw new RuntimeException("Chỉ đơn đặt phòng đang lưu trú (Checked In) mới được phép yêu cầu gia hạn");
         }
 
@@ -1232,7 +1229,7 @@ public class RoomChangeServiceImpl implements RoomChangeService {
             throw new RuntimeException("Bạn không có quyền gửi yêu cầu cho đơn đặt phòng này");
         }
 
-        if (!"Checked-in".equalsIgnoreCase(booking.getStatus()) && !"Checked In".equalsIgnoreCase(booking.getStatus())) {
+        if (booking.getStatus() != BookingStatus.CHECKED_IN) {
             throw new RuntimeException("Chỉ đơn đặt phòng đang lưu trú (Checked In) mới được phép yêu cầu check-out sớm");
         }
 

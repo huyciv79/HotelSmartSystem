@@ -30,7 +30,7 @@ public class RefundController {
             @PathVariable Integer bookingId,
             @Valid @RequestBody RefundRequest request,
             Authentication authentication) {
-        String customerEmail = resolveEmail(authentication);
+        String customerEmail = authentication.getName();
         CustomerRequestResponse response = refundService.submitRefundRequest(bookingId, request, customerEmail);
         return ResponseEntity.ok(ApiResponse.success("Gửi yêu cầu hoàn tiền thành công", response));
     }
@@ -40,7 +40,7 @@ public class RefundController {
             @PathVariable Integer requestId,
             @Valid @RequestBody(required = false) ApproveRefundRequest request,
             Authentication authentication) {
-        String staffEmail = resolveEmail(authentication);
+        String staffEmail = authentication.getName();
         ApproveRefundRequest body = request != null ? request : new ApproveRefundRequest();
         CustomerRequestResponse response = refundService.approveRefundRequest(requestId, body, staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Phê duyệt yêu cầu hoàn tiền thành công", response));
@@ -51,23 +51,15 @@ public class RefundController {
             @PathVariable Integer requestId,
             @Valid @RequestBody RejectRefundRequest request,
             Authentication authentication) {
-        String staffEmail = resolveEmail(authentication);
+        String staffEmail = authentication.getName();
         CustomerRequestResponse response = refundService.rejectRefundRequest(requestId, request, staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Từ chối yêu cầu hoàn tiền thành công", response));
     }
 
     @GetMapping("/refund-requests/pending")
     public ResponseEntity<ApiResponse<List<CustomerRequestResponse>>> getPendingRefundRequests(Authentication authentication) {
-        String staffEmail = resolveEmail(authentication);
+        String staffEmail = authentication.getName();
         List<CustomerRequestResponse> response = refundService.getPendingRefundRequests(staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách yêu cầu hoàn tiền thành công", response));
-    }
-
-    private String resolveEmail(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()
-                || "anonymousUser".equals(authentication.getPrincipal())) {
-            throw new RuntimeException("Bạn cần đăng nhập để thực hiện chức năng này");
-        }
-        return authentication.getName();
     }
 }

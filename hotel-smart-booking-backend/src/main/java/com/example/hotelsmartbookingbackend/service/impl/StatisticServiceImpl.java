@@ -3,6 +3,7 @@ package com.example.hotelsmartbookingbackend.service.impl;
 import com.example.hotelsmartbookingbackend.dto.response.DashboardStatsResponse;
 import com.example.hotelsmartbookingbackend.dto.response.MonthlyRevenueDto;
 import com.example.hotelsmartbookingbackend.entity.Booking;
+import com.example.hotelsmartbookingbackend.enums.BookingStatus;
 import com.example.hotelsmartbookingbackend.repository.BookingRepository;
 import com.example.hotelsmartbookingbackend.repository.RoomRepository;
 import com.example.hotelsmartbookingbackend.service.StatisticService;
@@ -121,16 +122,12 @@ public class StatisticServiceImpl implements StatisticService {
         Map<Integer, Integer> userBookingCounts = new HashMap<>();
 
         for (Booking b : allBookings) {
-            String status = b.getStatus();
+            BookingStatus status = b.getStatus();
             if (status != null) {
-                String statusLower = status.toLowerCase();
-                if (statusLower.contains("checked-in") || statusLower.contains("checked in") 
-                        || statusLower.equals("staying") || statusLower.contains("checked-out") 
-                        || statusLower.contains("checked out") || statusLower.equals("completed")) {
+                if (status == BookingStatus.CHECKED_IN || status == BookingStatus.STAYING || status == BookingStatus.COMPLETED) {
                     totalCheckIns++;
                 }
-                if (statusLower.contains("checked-out") || statusLower.contains("checked out") 
-                        || statusLower.equals("completed")) {
+                if (status == BookingStatus.COMPLETED) {
                     totalCheckOuts++;
                 }
             }

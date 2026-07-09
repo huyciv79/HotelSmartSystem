@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import com.example.hotelsmartbookingbackend.enums.BookingStatus;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -31,7 +33,7 @@ public class BookingResponse {
     private BigDecimal finalAmount;
     private BigDecimal paidAmount;
     private BigDecimal depositAmount;
-    private String status;
+    private BookingStatus status;
     private String specialRequests;
     private Instant actualCheckIn;
     private Instant actualCheckOut;
