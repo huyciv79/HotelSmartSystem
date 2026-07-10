@@ -63,32 +63,7 @@ export default function Home({ setActivePage }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const offers = [
-    {
-      id: 1,
-      image: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&q=80',
-      badge: 'SAVE UP TO 15%',
-      title: t('offer1_title'),
-      description: t('offer1_desc'),
-      highlight: null,
-    },
-    {
-      id: 2,
-      image: 'https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=800&q=80',
-      badge: null,
-      title: t('offer2_title'),
-      description: t('offer2_desc'),
-      highlight: null,
-    },
-    {
-      id: 3,
-      image: 'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=800&q=80',
-      badge: null,
-      title: t('offer3_title'),
-      description: t('offer3_desc'),
-      highlight: t('offer3_highlight'),
-    },
-  ];
+
 
   return (
     <div className="w-full text-left">
@@ -192,77 +167,7 @@ export default function Home({ setActivePage }) {
         </div>
       </section>
 
-      {/* ── ƯU ĐÃI ───────────────────────────────────────────────────────── */}
-      <section className="bg-surface-container-low py-20 px-4 md:px-16">
-        {/* Heading */}
-        <div className="text-center mb-4 scroll-reveal">
-          <h2 className="font-bold text-[28px] md:text-[36px] text-on-surface mb-0">{t('offers_title')}</h2>
-        </div>
-        <div className="flex flex-col md:flex-row justify-between items-center max-w-5xl mx-auto border-t border-outline-variant pt-5 mb-12">
-          <p className="text-secondary text-base text-center md:text-left">
-            {t('offers_sub')}
-          </p>
-          <div className="flex items-center gap-4 mt-4 md:mt-0">
-            <button
-              onClick={() => setActivePage('offers')}
-              className="flex items-center gap-1 text-xs text-on-surface uppercase tracking-widest hover:text-primary cursor-pointer bg-transparent border-none transition-colors"
-            >
-              <span className="material-symbols-outlined text-sm">chevron_left</span> {t('offers_prev')}
-            </button>
-            <span className="text-sm font-bold text-on-surface">3/7</span>
-            <button
-              onClick={() => setActivePage('offers')}
-              className="flex items-center gap-1 text-xs text-on-surface uppercase tracking-widest hover:text-primary cursor-pointer bg-transparent border-none transition-colors"
-            >
-              {t('offers_next')} <span className="material-symbols-outlined text-sm">chevron_right</span>
-            </button>
-          </div>
-        </div>
 
-        {/* 3 Offer Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto scroll-reveal">
-          {offers.map((offer) => (
-            <div key={offer.id} className="group cursor-pointer" onClick={() => setActivePage('offers')}>
-              <div className="relative overflow-hidden aspect-[4/3] bg-surface-container-highest mb-4">
-                <img
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  alt={offer.title}
-                  src={offer.image}
-                />
-                {offer.badge && (
-                  <div className="absolute inset-0 bg-black/40 flex items-end p-4">
-                    <span className="font-black text-white text-2xl md:text-3xl uppercase leading-tight">
-                      {offer.badge}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <h3 className="font-bold text-base text-on-surface mb-2 group-hover:text-primary transition-colors">
-                {offer.title}
-              </h3>
-              {offer.highlight ? (
-                <p className="text-sm text-secondary leading-relaxed">
-                  <span className="text-primary font-bold">{offer.highlight}</span>
-                  {offer.description.replace(offer.highlight, '')}
-                </p>
-              ) : (
-                <p className="text-sm text-secondary leading-relaxed">{offer.description}</p>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* XEM TẤT CẢ link */}
-        <div className="max-w-5xl mx-auto mt-10">
-          <button
-            onClick={() => setActivePage('offers')}
-            className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-sm cursor-pointer bg-transparent border-none p-0 hover:underline"
-          >
-            <span className="text-primary text-xl font-black">/</span>
-            {t('offers_view_all')}
-          </button>
-        </div>
-      </section>
 
 
 

@@ -73,6 +73,8 @@ class BookingState:
     chat_history: list             = field(default_factory=list)
     # Cache danh sách bookings để tránh gọi API lại trong cùng một phiên
     cached_bookings: list          = field(default_factory=list)
+    # Số lượng phòng muốn đặt (mặc định là 1 phòng, >=2 là đặt phòng nhóm)
+    quantity: int                  = 1
 
     @property
     def nights(self) -> int:
@@ -85,7 +87,7 @@ class BookingState:
         if not self.hotel:
             return 0.0
         price = self.hotel.get("price_per_night_vnd", 0)
-        return price * self.nights
+        return price * self.nights * self.quantity
 
     def step_label(self) -> str:
         labels = {
@@ -113,15 +115,16 @@ Ngày hôm nay (hiện tại) là: {date.today().isoformat()}
 
 Nhiệm vụ:
 1. Tư vấn và thu thập thông tin đặt phòng qua hội thoại tự nhiên.
-2. Để đặt phòng, bạn cần hỏi khách hàng ĐỦ 5 THÔNG TIN sau:
+2. Để đặt phòng, bạn cần hỏi khách hàng ĐỦ CÁC THÔNG TIN sau (nếu khách hàng muốn đặt từ 2 phòng trở lên, đây được xem là Đặt phòng nhóm/Group booking):
    - Tên loại phòng muốn đặt (ví dụ: Standard, Deluxe, Suite)
    - Ngày Check-in (Ngày nhận phòng, định dạng YYYY-MM-DD)
    - Ngày Check-out (Ngày trả phòng, định dạng YYYY-MM-DD)
-   - Số lượng khách (Người lớn và Trẻ em)
+   - Số lượng phòng muốn đặt (Mặc định là 1 phòng nếu khách không đề cập. Đặt >= 2 phòng là đặt phòng nhóm)
+   - Số lượng khách (Người lớn và Trẻ em cho tổng số phòng)
    - Hình thức Check-in mong muốn (FaceID, QR Code, hoặc Manual)
-3. Hãy chủ động đặt câu hỏi cho những thông tin còn thiếu. Riêng đối với Hình thức check-in, BẮT BUỘC gợi ý các tùy chọn cho khách bằng cú pháp thẻ hành động sau (mỗi thẻ cách nhau bởi dấu gạch đứng, phải nằm riêng trên một dòng): `[ACTIONS: Tùy chọn 1 | Tùy chọn 2 | ...]`. Ví dụ: `[ACTIONS: FaceID | QR Code | Tại quầy]`. Tuyệt đối KHÔNG dùng cú pháp `[ACTIONS]` cho Ngày tháng hay Số lượng người.
+3. Hãy chủ động đặt câu hỏi cho những thông tin còn thiếu. Riêng đối với Hình thức check-in, BẮT BUỘC gợi ý các tùy chọn cho khách bằng cú pháp thẻ hành động sau (mỗi thẻ cách nhau bởi dấu gạch đứng, phải nằm riêng trên một dòng): `[ACTIONS: Tùy chọn 1 | Tùy chọn 2 | ...]`. Ví dụ: `[ACTIONS: FaceID | QR Code | Tại quầy]`. Tuyệt đối KHÔNG dùng cú pháp `[ACTIONS]` cho Ngày tháng hay Số lượng người/phòng.
 4. Khi giới thiệu các loại phòng, bạn BẮT BUỘC sử dụng ĐÚNG định dạng thẻ giao diện sau để khách dễ chọn (chỉ thay thế thông tin, tuyệt đối không sửa ngoặc vuông): `[ROOM_CARD: Tên phòng | Giá | Sức chứa | URL_ảnh]`. Không dùng gạch đầu dòng cho danh sách phòng.
-5. KHI VÀ CHỈ KHI ĐÃ CÓ ĐỦ CẢ 5 THÔNG TIN TRÊN, bạn BẮT BUỘC PHẢI GỌI HÀM (Function Call) `create_booking_summary` để tạo tóm tắt đặt phòng. KHÔNG tự trả lời bằng văn bản khi đã đủ thông tin.
+5. KHI VÀ CHỈ KHI ĐÃ CÓ ĐỦ CÁC THÔNG TIN TRÊN, bạn BẮT BUỘC PHẢI GỌI HÀM (Function Call) `create_booking_summary` để tạo tóm tắt đặt phòng. KHÔNG tự trả lời bằng văn bản khi đã đủ thông tin.
 6. SAU KHI ĐÃ TẠO TÓM TẮT ĐẶT Phòng, hãy chờ khách hàng xác nhận. NẾU khách hàng đồng ý (ví dụ: "ok", "xác nhận"), BẮT BUỘC GỌI HÀM `submit_final_booking` để chốt đơn. NẾU khách hàng từ chối hoặc muốn hủy, BẮT BUỘC GỌI HÀM `cancel_booking`.
 7. Hỗ trợ khách hàng KIỂM TRA thông tin cá nhân và lịch sử đặt phòng nếu họ hỏi (dựa trên Ngữ Cảnh Hệ Thống).
 8. Hệ thống CHỈ HỖ TRỢ THANH TOÁN TRỰC TUYẾN QUA CỔNG PAYPAL.
@@ -144,6 +147,7 @@ class ChatAgentResponse(BaseModel):
     extracted_adults: Optional[int] = Field(None, description="Số người lớn nếu khách hàng vừa cung cấp hoặc thay đổi.")
     extracted_children: Optional[int] = Field(None, description="Số trẻ em nếu khách hàng vừa cung cấp hoặc thay đổi.")
     extracted_checkin_method: Optional[str] = Field(None, description="Hình thức check-in (FaceID, QR Code, Tại quầy) nếu khách hàng vừa cung cấp hoặc thay đổi.")
+    extracted_quantity: Optional[int] = Field(None, description="Số lượng phòng nếu khách hàng vừa cung cấp hoặc thay đổi (ví dụ: đặt 2 phòng).")
 
 
 # ── Native Python Tools definitions ───────────────────────────────────────────
@@ -153,7 +157,8 @@ def create_booking_summary(
     check_out_date: str, 
     adults: int, 
     children: int = 0, 
-    checkin_method: str = "Manual"
+    checkin_method: str = "Manual",
+    quantity: int = 1
 ) -> str:
     """
     Tạo tóm tắt đặt phòng để khách hàng xác nhận. Chỉ gọi hàm này SAU KHI đã thu thập ĐỦ thông tin từ khách.
@@ -165,6 +170,7 @@ def create_booking_summary(
         adults: Số lượng người lớn
         children: Số lượng trẻ em
         checkin_method: Hình thức check-in mong muốn (FaceID, QR Code, Tại quầy)
+        quantity: Số lượng phòng muốn đặt (mặc định là 1 phòng, từ 2 phòng trở lên là đặt phòng nhóm)
     """
     return "create_booking_summary"
 
@@ -327,6 +333,7 @@ class BookingAgent:
         state.adults = int(args.get("adults", 1))
         state.children = int(args.get("children", 0))
         state.check_in_method = args.get("checkin_method", "Manual")
+        state.quantity = int(args.get("quantity", 1))
         
         # 2. Lấy giá từ DB
         db_rooms = _get_backend_room_types()
@@ -353,14 +360,19 @@ class BookingAgent:
         ci = state.check_in.strftime("%d/%m/%Y") if state.check_in else "N/A"
         co = state.check_out.strftime("%d/%m/%Y") if state.check_out else "N/A"
         amt = state.total_amount / 1_000_000
+        
+        room_desc = f"{state.room_type_name or 'Standard'}"
+        if state.quantity > 1:
+            room_desc += f" (x{state.quantity} phòng - Đặt phòng Nhóm)"
+
         return (
             f"**Tóm tắt đặt phòng:**\n\n"
             f"- **Khách sạn:** {hotel_name}\n"
-            f"- **Phòng:** {state.room_type_name or 'Standard'}\n"
+            f"- **Phòng:** {room_desc}\n"
             f"- **Thời gian:** {ci} → {co} ({state.nights} đêm)\n"
             f"- **Khách:** {state.adults} người lớn, {state.children} trẻ em\n"
             f"- **Check-in:** {state.check_in_method}\n"
-            f"- **Ước tính:** **{amt:.1f}M ₫** (chưa thuế)\n\n"
+            f"- **Ước tính:** **{amt:.2f}M ₫** (chưa thuế)\n\n"
             f"Bạn có đồng ý với thông tin trên không? Hãy phản hồi để mình chốt đơn cho bạn nhé!"
         )
 
@@ -375,30 +387,49 @@ class BookingAgent:
                 "bookingReference": ref,
                 "status": "Confirmed (Demo)",
             }
+            booking_type_demo = "Đặt phòng nhóm" if state.quantity >= 2 else "Đặt phòng đơn"
             return (
-            f"**Đặt phòng thành công! (Chế độ Demo)**\n\n"
-            f"- Mã đặt phòng: **`{ref}`**\n"
-            f"- Trạng thái: Confirmed\n\n"
-            f"_Lưu ý: Để đặt phòng thực tế, vui lòng **đăng nhập** qua sidebar._",
-            state,
-        )
+                f"**Đặt phòng thành công! (Chế độ Demo)**\n\n"
+                f"- Mã đặt phòng: **`{ref}`**\n"
+                f"- Loại đặt phòng: **{booking_type_demo}**\n"
+                f"- Số lượng: {state.quantity} phòng\n"
+                f"- Trạng thái: Confirmed\n\n"
+                f"_Lưu ý: Để đặt phòng thực tế, vui lòng **đăng nhập** qua sidebar._",
+                state,
+            )
 
         try:
-            payload = {
-                "roomTypeId":     state.room_type_id or 1,
-                "checkInDate":    state.check_in.isoformat() if state.check_in else None,
-                "checkOutDate":   state.check_out.isoformat() if state.check_out else None,
-                "checkInMethod":  state.check_in_method,
-                "numberOfAdults": state.adults,
-                "numberOfChildren": state.children,
-                "specialRequests": state.special_requests,
-            }
+            is_group = state.quantity >= 2
+            if is_group:
+                payload = {
+                    "roomTypeId":     state.room_type_id or 1,
+                    "checkInDate":    state.check_in.isoformat() if state.check_in else None,
+                    "checkOutDate":   state.check_out.isoformat() if state.check_out else None,
+                    "checkInMethod":  state.check_in_method,
+                    "quantity":       state.quantity,
+                    "numberOfAdults": state.adults,
+                    "numberOfChildren": state.children,
+                    "specialRequests": state.special_requests,
+                }
+                api_endpoint = f"{_BACKEND_URL}/bookings/group"
+            else:
+                payload = {
+                    "roomTypeId":     state.room_type_id or 1,
+                    "checkInDate":    state.check_in.isoformat() if state.check_in else None,
+                    "checkOutDate":   state.check_out.isoformat() if state.check_out else None,
+                    "checkInMethod":  state.check_in_method,
+                    "numberOfAdults": state.adults,
+                    "numberOfChildren": state.children,
+                    "specialRequests": state.special_requests,
+                }
+                api_endpoint = f"{_BACKEND_URL}/bookings"
+
             headers = {
                 "Authorization": f"Bearer {state.access_token}",
                 "Content-Type":  "application/json",
             }
             resp = requests.post(
-                f"{_BACKEND_URL}/bookings",
+                api_endpoint,
                 json=payload,
                 headers=headers,
                 timeout=15,
@@ -409,9 +440,13 @@ class BookingAgent:
             state.booking_result = booking_data
             ref = booking_data.get("bookingReference", "N/A")
 
+            booking_type_str = "Đặt phòng nhóm" if is_group else "Đặt phòng đơn"
+
             return (
                 f"**Đặt phòng thành công!**\n\n"
                 f"- Mã đặt phòng: **`{ref}`**\n"
+                f"- Loại đặt phòng: **{booking_type_str}**\n"
+                f"- Số lượng: **{state.quantity} phòng**\n"
                 f"- Trạng thái: {booking_data.get('status', 'Confirmed')}\n"
                 f"- Tổng tiền: **{float(booking_data.get('finalAmount', 0))/1_000_000:.2f}M ₫**\n\n"
                 f"Vui lòng kiểm tra email để nhận xác nhận và hướng dẫn check-in!",
@@ -568,6 +603,8 @@ class BookingAgent:
                             state.children = int(data["extracted_children"])
                         if data.get("extracted_checkin_method"):
                             state.check_in_method = data["extracted_checkin_method"]
+                        if data.get("extracted_quantity"):
+                            state.quantity = int(data["extracted_quantity"])
                         return data.get("reply_message", "Xác nhận yêu cầu.")
                 except Exception:
                     pass

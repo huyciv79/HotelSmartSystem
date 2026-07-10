@@ -51,11 +51,6 @@ export default function Footer({ setActivePage }) {
             <p className="font-label-bold text-label-bold text-white uppercase">{t('footer_explore')}</p>
             <ul className="space-y-2 list-none p-0">
               <li>
-                <button onClick={() => handleNavClick('offers')} className="font-label-bold text-label-bold text-on-tertiary-container hover:text-primary-fixed transition-colors bg-transparent border-none p-0 cursor-pointer uppercase">
-                  {t('footer_offers')}
-                </button>
-              </li>
-              <li>
                 <a className="font-label-bold text-label-bold text-on-tertiary-container hover:text-primary-fixed transition-colors no-underline block uppercase" href="#">
                   {t('footer_blogs')}
                 </a>

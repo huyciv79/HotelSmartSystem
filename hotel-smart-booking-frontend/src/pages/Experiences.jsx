@@ -152,7 +152,7 @@ export default function Experiences({ setActivePage }) {
             <div className="relative z-20 text-center px-4">
               <h2 className="font-headline-xl text-headline-xl text-white uppercase italic mb-stack-md">{t('exp_ready_title')}</h2>
               <button 
-                onClick={() => setActivePage('offers')}
+                onClick={() => setActivePage('booking')}
                 className="bg-primary hover:bg-surface-tint text-white px-12 py-5 font-label-bold text-label-bold uppercase tracking-[0.2em] transition-all duration-300 transform hover:skew-x-[-12deg] cursor-pointer border-none"
               >
                 {t('exp_btn_discover')}

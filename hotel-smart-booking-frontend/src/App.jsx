@@ -11,9 +11,7 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import Experiences from './pages/Experiences';
 import Rewards from './pages/Rewards';
-import Offers from './pages/Offers';
 import Residences from './pages/Residences';
-import Events from './pages/Events';
 import Register from './pages/Register';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
@@ -103,10 +101,6 @@ function MainSite() {
         return <Residences />;
       case 'experiences':
         return <Experiences setActivePage={setActivePage} />;
-      case 'events':
-        return <Events />;
-      case 'offers':
-        return <Offers />;
       case 'register':
         return <Register setActivePage={setActivePage} />;
       case 'login':

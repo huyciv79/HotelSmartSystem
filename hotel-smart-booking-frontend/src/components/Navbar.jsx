@@ -13,8 +13,6 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
   const { language, setLanguage, t } = useLanguage();
   const [menuState, setMenuState] = useState('idle'); // 'idle' | 'open' | 'closed'
   const [isScrolled, setIsScrolled] = useState(false);
-  const [hoveredId, setHoveredId] = useState(null);
-  const [underlineStyle, setUnderlineStyle] = useState({ left: 0, width: 0, opacity: 0 });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null); // 'profile' | null
   const [roomTypes, setRoomTypes] = useState([]);
@@ -24,11 +22,10 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
   const [slideDirection, setSlideDirection] = useState('right'); // 'left' | 'right'
   const [roomDetailData, setRoomDetailData] = useState(null);
   const [isLoadingRoomDetail, setIsLoadingRoomDetail] = useState(false);
-
+ 
   const navContainerRef = useRef(null);
   const dropdownRef = useRef(null);
   const langDropdownRef = useRef(null);
-  const itemRefs = useRef({});
   const navigate = useNavigate();
   const { toasts, showToast, dismissToast } = useToast();
 
@@ -159,8 +156,6 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
     { id: 'home', label: t('nav_hotels') },
     { id: 'residences', label: t('nav_residences') },
     { id: 'experiences', label: t('nav_experiences') },
-    { id: 'events', label: t('nav_events') },
-    { id: 'offers', label: t('nav_offers') },
     { id: 'ai-assistant', label: t('nav_ai_assistant', 'TRỢ LÝ AI') }
   ];
 
@@ -198,43 +193,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
     };
   }, []);
 
-  useEffect(() => {
-    const activeElement = itemRefs.current[activePage];
-    if (activeElement) {
-      setUnderlineStyle({
-        left: activeElement.offsetLeft,
-        width: activeElement.offsetWidth,
-        opacity: 0
-      });
-    }
-  }, [activePage]);
 
-  useEffect(() => {
-    const updateUnderline = () => {
-      if (hoveredId) {
-        const hoveredElement = itemRefs.current[hoveredId];
-        if (hoveredElement) {
-          setUnderlineStyle({
-            left: hoveredElement.offsetLeft,
-            width: hoveredElement.offsetWidth,
-            opacity: 1
-          });
-        }
-      } else {
-        setUnderlineStyle(prev => ({ ...prev, opacity: 0 }));
-      }
-    };
-
-    updateUnderline();
-
-    window.addEventListener('resize', updateUnderline);
-    const timer = setTimeout(updateUnderline, 50);
-
-    return () => {
-      window.removeEventListener('resize', updateUnderline);
-      clearTimeout(timer);
-    };
-  }, [hoveredId]);
 
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -334,34 +293,16 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
           {navItems.map((item) => (
             <button
               key={item.id}
-              ref={(el) => { itemRefs.current[item.id] = el; }}
               onClick={() => handleNavClick(item.id)}
-              onMouseEnter={() => setHoveredId(item.id)}
-              onMouseLeave={() => setHoveredId(null)}
-              className={`uppercase transition-colors duration-300 h-full cursor-pointer bg-transparent border-none font-bold text-[10.5px] tracking-tight flex items-center relative ${
+              className={`uppercase transition-colors duration-300 h-full cursor-pointer bg-transparent border-none font-bold text-[10.5px] tracking-tight flex items-center relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-primary after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-200 ${
                 activePage === item.id 
-                  ? 'text-primary' 
+                  ? 'text-primary after:scale-x-100' 
                   : 'text-on-surface hover:text-primary'
               }`}
             >
               {item.label}
-              {/* Static Underline for Active Item */}
-              {activePage === item.id && (
-                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary" />
-              )}
             </button>
           ))}
-          {/* Sliding Underline */}
-          <div 
-            className="absolute bottom-0 h-[3px] bg-primary pointer-events-none left-0 origin-left"
-            style={{
-              width: '1px',
-              transform: `translateX(${underlineStyle.left}px) scaleX(${underlineStyle.width})`,
-              opacity: underlineStyle.opacity,
-              transformOrigin: 'left',
-              transition: 'transform 140ms cubic-bezier(0.25, 1, 0.5, 1), opacity 140ms ease-out'
-            }}
-          />
         </nav>
 
         {/* Book Now / Profile Dropdown */}
@@ -542,7 +483,6 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
               <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_about')}</button>
               <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_careers')}</button>
               <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_environment')}</button>
-              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_offers')}</button>
               <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_blogs')}</button>
               <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_contact')}</button>
             </div>
