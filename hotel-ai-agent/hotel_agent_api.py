@@ -62,6 +62,7 @@ class BookingStateSchema(BaseModel):
     booking_result: Optional[dict] = None
     error: str = ""
     chat_history: List[dict] = []
+    cached_bookings: List[dict] = []  # Cache danh sách booking để tránh gọi lại API
 
 class ChatRequest(BaseModel):
     message: str
@@ -125,7 +126,8 @@ def schema_to_state(s: BookingStateSchema) -> BookingState:
         access_token=s.access_token,
         booking_result=s.booking_result,
         error=s.error,
-        chat_history=s.chat_history
+        chat_history=s.chat_history,
+        cached_bookings=s.cached_bookings
     )
 
 def state_to_schema(st: BookingState) -> BookingStateSchema:
@@ -145,7 +147,8 @@ def state_to_schema(st: BookingState) -> BookingStateSchema:
         access_token=st.access_token,
         booking_result=st.booking_result,
         error=st.error,
-        chat_history=st.chat_history
+        chat_history=st.chat_history,
+        cached_bookings=st.cached_bookings
     )
 
 # ── API Endpoints ─────────────────────────────────────────────────────────────

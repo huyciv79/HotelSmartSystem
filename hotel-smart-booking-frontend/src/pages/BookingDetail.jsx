@@ -777,17 +777,11 @@ export default function BookingDetail({ setActivePage }) {
                 {/* Request button (available when Checked-in) */}
                 {booking.status !== 'Cancelled' && currentStatusIdx === 2 && (
                   <>
-                    <button
-                      onClick={handleRequestService}
-                      className="bg-slate-900 hover:bg-primary text-white text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-1.5 h-11"
-                    >
-                      <span className="material-symbols-outlined text-lg">room_service</span>
-                      {t('bd_btn_service', 'Yêu cầu Dịch vụ phòng')}
-                    </button>
+
 
                     {/* Room Move buttons / labels */}
                     {isRoomChangePending ? (
-                      <div className="bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold px-4 py-2.5 flex items-center gap-2 h-11">
+                      <div className="bg-blue-500/10 border border-blue-500/20 text-blue-700 backdrop-blur-md rounded-xl text-xs font-bold px-6 py-2.5 flex items-center gap-2 h-11 shadow-sm">
                         <span className="material-symbols-outlined text-base animate-pulse">hourglass_empty</span>
                         Yêu cầu đổi phòng đang chờ phê duyệt
                       </div>
@@ -799,7 +793,7 @@ export default function BookingDetail({ setActivePage }) {
                           setSelectedRoomType(null);
                           setRoomChangeOption('same_type');
                         }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-1.5 h-11"
+                        className="bg-blue-500/10 border border-blue-500/20 text-blue-600 hover:bg-blue-500/20 text-xs font-black uppercase tracking-widest px-6 py-3.5 active:scale-98 transition-all cursor-pointer rounded-xl flex items-center gap-1.5 h-11 shadow-sm backdrop-blur-md"
                       >
                         <span className="material-symbols-outlined text-lg">autorenew</span>
                         Yêu cầu đổi phòng
@@ -808,7 +802,7 @@ export default function BookingDetail({ setActivePage }) {
 
                     {/* Stay Extension buttons / labels */}
                     {isStayExtensionPending ? (
-                      <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold px-4 py-2.5 flex items-center gap-2 h-11">
+                      <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 backdrop-blur-md rounded-xl text-xs font-bold px-6 py-2.5 flex items-center gap-2 h-11 shadow-sm">
                         <span className="material-symbols-outlined text-base animate-pulse">hourglass_empty</span>
                         Yêu cầu gia hạn đang chờ phê duyệt
                       </div>
@@ -819,7 +813,7 @@ export default function BookingDetail({ setActivePage }) {
                           setNewCheckOutDate('');
                           setExtensionReason('');
                         }}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-1.5 h-11"
+                        className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/20 text-xs font-black uppercase tracking-widest px-6 py-3.5 active:scale-98 transition-all cursor-pointer rounded-xl flex items-center gap-1.5 h-11 shadow-sm backdrop-blur-md"
                       >
                         <span className="material-symbols-outlined text-lg">calendar_add_on</span>
                         Yêu cầu gia hạn
@@ -828,7 +822,7 @@ export default function BookingDetail({ setActivePage }) {
 
                     {/* Early Check-out buttons / labels */}
                     {isEarlyCheckOutPending ? (
-                      <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold px-4 py-2.5 flex items-center gap-2 h-11">
+                      <div className="bg-amber-500/10 border border-amber-500/20 text-amber-700 backdrop-blur-md rounded-xl text-xs font-bold px-6 py-2.5 flex items-center gap-2 h-11 shadow-sm">
                         <span className="material-symbols-outlined text-base animate-pulse">hourglass_empty</span>
                         Yêu cầu check-out sớm đang chờ phê duyệt
                       </div>
@@ -839,7 +833,7 @@ export default function BookingDetail({ setActivePage }) {
                           setNewEarlyCheckOutDate('');
                           setEarlyCheckOutReason('');
                         }}
-                        className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-widest px-8 py-3.5 active:scale-98 transition-all cursor-pointer border-none flex items-center gap-1.5 h-11"
+                        className="bg-amber-500/10 border border-amber-500/20 text-amber-600 hover:bg-amber-500/20 text-xs font-black uppercase tracking-widest px-6 py-3.5 active:scale-98 transition-all cursor-pointer rounded-xl flex items-center gap-1.5 h-11 shadow-sm backdrop-blur-md"
                       >
                         <span className="material-symbols-outlined text-lg">history</span>
                         Yêu cầu Checkout sớm

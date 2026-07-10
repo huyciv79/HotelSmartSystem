@@ -104,45 +104,10 @@ export default function Home({ setActivePage }) {
           <div className="absolute inset-0 bg-black/20"></div>
         </div>
 
-        <div className="relative z-10 h-full flex flex-col justify-end items-center text-center px-4 pb-60">
+        <div className="relative z-10 h-full flex flex-col justify-end items-center text-center px-4 pb-32">
           <h1 className="font-bold text-[22px] md:text-[32px] text-white max-w-4xl drop-shadow-lg leading-snug tracking-wider uppercase whitespace-pre-line">
             {t('hero_title')}
           </h1>
-        </div>
-
-        {/* Booking Bar */}
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 w-full max-w-6xl px-4 z-20">
-          <div className="bg-white border border-outline-variant shadow-2xl py-4 px-6 md:py-5 md:px-8 flex flex-col md:flex-row gap-6 items-end text-left">
-            <div className="flex-1 w-full space-y-2">
-              <label className="block font-bold text-xs text-secondary uppercase">{t('label_hotel')}</label>
-              <div className="flex items-center justify-between border-b border-on-surface py-2">
-                <select value={selectedHotel} onChange={(e) => setSelectedHotel(e.target.value)}
-                  className="w-full bg-transparent border-none focus:ring-0 font-bold text-sm p-0 outline-none cursor-pointer">
-                  <option>Elysian Hotel Can Tho</option>
-                </select>
-                <span className="material-symbols-outlined text-secondary ml-2">location_on</span>
-              </div>
-            </div>
-            <div className="flex-1 w-full space-y-2">
-              <label className="block font-bold text-xs text-secondary uppercase">{t('label_date')}</label>
-              <div className="flex items-center justify-between border-b border-on-surface py-2">
-                <input className="w-full bg-transparent border-none focus:ring-0 font-bold text-sm p-0 outline-none"
-                  type="text" value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} />
-                <span className="material-symbols-outlined text-secondary ml-2">calendar_month</span>
-              </div>
-            </div>
-            <div className="flex-1 w-full space-y-2">
-              <label className="block font-bold text-xs text-secondary uppercase">{t('label_guests')}</label>
-              <div className="flex items-center justify-between border-b border-on-surface py-2">
-                <input className="w-full bg-transparent border-none focus:ring-0 font-bold text-sm p-0 outline-none"
-                  type="text" value={guests} onChange={(e) => setGuests(e.target.value)} />
-                <span className="material-symbols-outlined text-secondary ml-2">group</span>
-              </div>
-            </div>
-            <button className="w-full md:w-auto bg-primary text-on-primary font-bold py-4 px-12 uppercase tracking-widest hover:brightness-110 transition-all cursor-pointer border-none text-xs h-[52px] flex items-center justify-center">
-              {t('btn_search')}
-            </button>
-          </div>
         </div>
       </section>
 

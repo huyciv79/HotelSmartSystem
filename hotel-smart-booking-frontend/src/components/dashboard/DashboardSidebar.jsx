@@ -82,13 +82,20 @@ const DashboardSidebar = ({
         })}
       </nav>
 
-      <div className="p-5 border-t border-neutral-900/30">
+      <div className="p-5 border-t border-neutral-900/30 flex flex-col gap-3">
         <button
           onClick={() => setActivePage?.("booking")}
           className="w-full py-4 bg-primary text-white font-black uppercase text-[10.5px] tracking-[0.15em] transition-all duration-300 cursor-pointer hover:bg-white hover:text-black hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] flex items-center justify-center gap-2 parallelogram-btn border-none transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98"
         >
           <Plus size={16} />
-          <span>{t('db_sidebar_book_new', 'ĐẶT PHÒNG MỚI')}</span>
+          <span>{t('db_sidebar_book_individual', 'ĐẶT CÁ NHÂN')}</span>
+        </button>
+        <button
+          onClick={() => setActivePage?.("group-booking")}
+          className="w-full py-4 bg-zinc-800 hover:bg-primary border border-zinc-700 hover:border-primary text-white font-black uppercase text-[10.5px] tracking-[0.15em] transition-all duration-300 cursor-pointer hover:shadow-[0_0_20px_rgba(162,5,19,0.15)] flex items-center justify-center gap-2 parallelogram-btn transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98"
+        >
+          <Plus size={16} />
+          <span>{t('db_sidebar_book_group', 'ĐẶT PHÒNG ĐOÀN')}</span>
         </button>
       </div>
 

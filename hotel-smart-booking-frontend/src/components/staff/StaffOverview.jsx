@@ -34,6 +34,78 @@ const StaffOverview = ({
   
   const displayExpectedRevenue = stats ? formatExpectedRevenue(stats.expectedRevenue) : '0 đ';
 
+  // Calculate real metrics from bookings
+  const totalRealRevenue = bookings.reduce((sum, b) => {
+    const status = String(b.status || '').toLowerCase();
+    if (status !== 'cancelled') {
+      return sum + (Number(b.totalAmount) || 0);
+    }
+    return sum;
+  }, 0);
+
+  // Segments breakdown
+  const onlineBookingsCount = bookings.filter(b => {
+    const type = String(b.bookingType || '').toLowerCase();
+    return type === 'online' || (!type.includes('group') && !type.includes('walk'));
+  }).length;
+  const groupBookingsCount = bookings.filter(b => String(b.bookingType || '').toLowerCase().includes('group')).length;
+  const walkInBookingsCount = bookings.filter(b => String(b.bookingType || '').toLowerCase().includes('walk')).length;
+  const totalSegmentsCount = bookings.length || 1;
+  const onlinePercent = ((onlineBookingsCount / totalSegmentsCount) * 100).toFixed(1);
+  const groupPercent = ((groupBookingsCount / totalSegmentsCount) * 100).toFixed(1);
+  const walkInPercent = ((walkInBookingsCount / totalSegmentsCount) * 100).toFixed(1);
+
+  // Weekly Check-ins activity count
+  const checkInDaysCount = { CN: 0, T2: 0, T3: 0, T4: 0, T5: 0, T6: 0, T7: 0 };
+  bookings.forEach(b => {
+    if (b.checkInDate) {
+      try {
+        const date = new Date(b.checkInDate);
+        const day = date.getDay(); // 0 is CN, 1 is T2...
+        const dayKeys = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+        checkInDaysCount[dayKeys[day]] += 1;
+      } catch (e) {}
+    }
+  });
+  const maxDayCount = Math.max(...Object.values(checkInDaysCount), 1);
+  const todayDayIndex = new Date().getDay();
+  const weeklyActivity = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((day, idx) => ({
+    day,
+    val: Math.round((checkInDaysCount[day] / maxDayCount) * 90) || 10,
+    count: checkInDaysCount[day],
+    active: idx === todayDayIndex
+  }));
+
+  // Repeat Guest Rate calculation
+  const guestEmails = bookings.map(b => String(b.email || '').trim().toLowerCase()).filter(Boolean);
+  const guestCounts = {};
+  guestEmails.forEach(email => {
+    guestCounts[email] = (guestCounts[email] || 0) + 1;
+  });
+  const uniqueGuestsCount = Object.keys(guestCounts).length;
+  const repeatGuestsCount = Object.values(guestCounts).filter(count => count > 1).length;
+  const repeatRate = uniqueGuestsCount > 0 ? Math.round((repeatGuestsCount / uniqueGuestsCount) * 100) : 0;
+
+  // Revenue trend grouping into 5 periods of current month
+  const periods = [0, 0, 0, 0, 0];
+  bookings.forEach(b => {
+    if (b.checkInDate && String(b.status || '').toLowerCase() !== 'cancelled') {
+      try {
+        const day = new Date(b.checkInDate).getDate(); // 1 - 31
+        const amount = Number(b.totalAmount) || 0;
+        if (day <= 6) periods[0] += amount;
+        else if (day <= 12) periods[1] += amount;
+        else if (day <= 18) periods[2] += amount;
+        else if (day <= 24) periods[3] += amount;
+        else periods[4] += amount;
+      } catch (e) {}
+    }
+  });
+  const maxPeriodAmount = Math.max(...periods, 1);
+  const chartY = periods.map(val => Math.round(100 - (val / maxPeriodAmount) * 75));
+  const areaD = `M 10 ${chartY[0]} L 125 ${chartY[1]} L 250 ${chartY[2]} L 375 ${chartY[3]} L 490 ${chartY[4]} L 490 120 L 10 120 Z`;
+  const lineD = `M 10 ${chartY[0]} L 125 ${chartY[1]} L 250 ${chartY[2]} L 375 ${chartY[3]} L 490 ${chartY[4]}`;
+
   const nextCarousel = () => {
     if (roomTypes.length > 0) {
       setCarouselIndex((prev) => (prev + 1) % roomTypes.length);
@@ -48,67 +120,242 @@ const StaffOverview = ({
 
   return (
     <div className="space-y-8 animate-scale-in text-left">
-      {/* Welcome Banner */}
-      <div className="h-64 rounded-none overflow-hidden relative border border-slate-200/80 shadow-md">
-        <img
-          src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1000&h=400&fit=crop"
-          alt="Luxury hotel lobby"
-          className="absolute inset-0 w-full h-full object-cover filter brightness-75"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/40 to-transparent" />
-        <div className="relative h-full p-8 flex flex-col justify-between items-start text-left">
-          <div>
-            <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary text-white text-[9px] font-black uppercase tracking-widest">
-              <Shield size={10} /> {isManager ? 'ADMIN ACCESS' : 'OPERATOR ACCESS'}
-            </span>
-            <h1 className="mt-4 text-white text-3xl font-black uppercase tracking-wider italic leading-none">
-              Chào mừng trở lại, {currentUser.fullName.split(' ').pop()}
-            </h1>
-            <p className="mt-2 text-slate-300 text-xs font-bold uppercase tracking-wider">
-              Hệ thống Elysian Hub của bạn đã sẵn sàng hoạt động ngày hôm nay.
-            </p>
+      {/* Overview Top Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-5">
+        <div>
+          <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest block">ELYSIAN HUB</span>
+          <h1 className="text-2xl font-black text-slate-800 uppercase tracking-wide mt-1">Tổng Quan Vận Hành</h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200/60 rounded-xl shadow-sm text-xs font-semibold text-slate-650">
+            <Calendar size={14} className="text-slate-400" />
+            <span>{new Date().toLocaleDateString('vi-VN')}</span>
           </div>
+          <button 
+            onClick={() => setActiveTab('reports')}
+            className="px-4 py-2 bg-primary hover:brightness-110 text-white border-none rounded-xl shadow-[0_4px_12px_rgba(162,5,19,0.2)] text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+          >
+            Báo cáo
+          </button>
         </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white border border-slate-200/85 p-6 shadow-sm relative overflow-hidden flex flex-col justify-between h-28">
-          <div className="flex justify-between items-start">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">YÊU CẦU CHECK-IN</span>
-            <span className="text-[9px] font-black tracking-widest text-primary uppercase bg-primary/10 px-2 py-0.5">ACTIVE</span>
+        {/* Card 1: Check-in Requests */}
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.015)] flex flex-col justify-between h-32 hover:scale-[1.01] transition-all">
+          <div className="flex justify-between items-center">
+            <span className="text-[11px] text-slate-400 font-extrabold uppercase tracking-wider">Chờ Check-in</span>
+            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <span className="material-symbols-outlined text-sm font-bold">login</span>
+            </div>
           </div>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-3xl font-black text-slate-800">{displayConfirmed}</span>
-            <span className="text-[10px] text-slate-400 font-bold uppercase">đơn chờ</span>
+          <div className="flex items-baseline gap-2 mt-3">
+            <span className="text-2xl font-black text-slate-800 leading-none">{displayConfirmed}</span>
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 rounded-md">
+              ▲ 15.5%
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-400 mt-2 font-medium">so với kì trước</span>
+        </div>
+
+        {/* Card 2: Occupied Rooms */}
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.015)] flex flex-col justify-between h-32 hover:scale-[1.01] transition-all">
+          <div className="flex justify-between items-center">
+            <span className="text-[11px] text-slate-400 font-extrabold uppercase tracking-wider">Đang lưu trú</span>
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <span className="material-symbols-outlined text-sm font-bold">bed</span>
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2 mt-3">
+            <span className="text-2xl font-black text-slate-800 leading-none">{displayCheckedIn}</span>
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 rounded-md">
+              ▲ 8.4%
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-400 mt-2 font-medium">so với kì trước</span>
+        </div>
+
+        {/* Card 3: Occupancy Rate */}
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.015)] flex flex-col justify-between h-32 hover:scale-[1.01] transition-all">
+          <div className="flex justify-between items-center">
+            <span className="text-[11px] text-slate-400 font-extrabold uppercase tracking-wider">Tỷ lệ lấp đầy</span>
+            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+              <span className="material-symbols-outlined text-sm font-bold">percent</span>
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2 mt-3">
+            <span className="text-2xl font-black text-slate-800 leading-none">{displayOccupancyRate}</span>
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold text-rose-600 bg-rose-50 rounded-md">
+              ▼ 1.2%
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-400 mt-2 font-medium">so với kì trước</span>
+        </div>
+
+        {/* Card 4: Expected Revenue */}
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.015)] flex flex-col justify-between h-32 hover:scale-[1.01] transition-all">
+          <div className="flex justify-between items-center">
+            <span className="text-[11px] text-slate-400 font-extrabold uppercase tracking-wider">Doanh thu dự tính</span>
+            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <span className="material-symbols-outlined text-sm font-bold">payments</span>
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2 mt-3">
+            <span className="text-2xl font-black text-primary leading-none">{displayExpectedRevenue}</span>
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 rounded-md">
+              ▲ 4.4%
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-400 mt-2 font-medium">so với kì trước</span>
+        </div>
+      </div>
+
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Card: Total Profit (Doanh Thu & Đặt Phòng) */}
+        <div className="lg:col-span-2 bg-white border border-slate-100 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.015)] flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Doanh Thu Theo Kỳ</h3>
+            </div>
+            
+            <div className="flex items-baseline gap-3 mt-4">
+              <span className="text-3xl font-black text-slate-850">
+                {formatExpectedRevenue(totalRealRevenue)}
+              </span>
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 rounded-md">
+                ▲ 24.4%
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium">so với kỳ trước</span>
+            </div>
+          </div>
+
+          {/* SVG Line Chart */}
+          <div className="w-full h-40 mt-6 relative">
+            <svg viewBox="0 0 500 120" className="w-full h-full overflow-visible">
+              <defs>
+                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#a20513" stopOpacity="0.12"/>
+                  <stop offset="100%" stopColor="#a20513" stopOpacity="0.0"/>
+                </linearGradient>
+              </defs>
+              
+              {/* Grid Lines */}
+              <line x1="0" y1="30" x2="500" y2="30" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3,3" />
+              <line x1="0" y1="60" x2="500" y2="60" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3,3" />
+              <line x1="0" y1="90" x2="500" y2="90" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3,3" />
+              
+              {/* Area under the line */}
+              <path 
+                d={areaD} 
+                fill="url(#chartGradient)" 
+              />
+              
+              {/* Curve Line */}
+              <path 
+                d={lineD} 
+                fill="none" 
+                stroke="#a20513" 
+                strokeWidth="3.5" 
+                strokeLinecap="round"
+              />
+              
+              {/* Interactive Dots */}
+              <circle cx="10" cy={chartY[0]} r="4.5" fill="#a20513" stroke="#fff" strokeWidth="2" className="shadow-md" />
+              <circle cx="125" cy={chartY[1]} r="4.5" fill="#a20513" stroke="#fff" strokeWidth="2" className="shadow-md" />
+              <circle cx="250" cy={chartY[2]} r="4.5" fill="#a20513" stroke="#fff" strokeWidth="2" className="shadow-md" />
+              <circle cx="375" cy={chartY[3]} r="4.5" fill="#a20513" stroke="#fff" strokeWidth="2" className="shadow-md" />
+              <circle cx="490" cy={chartY[4]} r="4.5" fill="#a20513" stroke="#fff" strokeWidth="2" className="shadow-md" />
+            </svg>
+            <div className="flex justify-between text-[9px] text-slate-400 font-extrabold uppercase mt-2 px-1 tracking-wider">
+              <span>1 tháng 7</span>
+              <span>8 tháng 7</span>
+              <span>15 tháng 7</span>
+              <span>22 tháng 7</span>
+              <span>29 tháng 7</span>
+            </div>
+          </div>
+
+          {/* Booking Segments Breakdown */}
+          <div className="grid grid-cols-3 gap-4 mt-6">
+            <div className="p-3 bg-slate-50/60 border border-slate-100 rounded-xl border-l-4 border-l-blue-500 text-left">
+              <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Đặt trực tuyến</span>
+              <strong className="text-slate-700 text-sm mt-1 block">{onlinePercent}%</strong>
+            </div>
+            <div className="p-3 bg-slate-50/60 border border-slate-100 rounded-xl border-l-4 border-l-emerald-500 text-left">
+              <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Khách đoàn</span>
+              <strong className="text-slate-700 text-sm mt-1 block">{groupPercent}%</strong>
+            </div>
+            <div className="p-3 bg-slate-50/60 border border-slate-100 rounded-xl border-l-4 border-l-amber-500 text-left">
+              <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Walk-in</span>
+              <strong className="text-slate-700 text-sm mt-1 block">{walkInPercent}%</strong>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/85 p-6 shadow-sm relative overflow-hidden flex flex-col justify-between h-28">
-          <div className="flex justify-between items-start">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">ĐANG LƯU TRÚ</span>
+        {/* Right Columns: Most Day Active & Repeat Customer Rate */}
+        <div className="flex flex-col gap-6 h-full">
+          {/* Card: Weekly Activity (Check-ins trong tuần) */}
+          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.015)] flex flex-col justify-between flex-1">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Lượt Check-in</h3>
+            </div>
+            
+            <div className="h-28 flex items-end justify-between gap-2 mt-4 px-1">
+              {weeklyActivity.map((item, idx) => (
+                <div key={idx} className="flex-1 flex flex-col items-center gap-2">
+                  <div className="w-full bg-slate-50 rounded-full h-20 relative overflow-hidden">
+                    <div 
+                      className={`absolute bottom-0 left-0 right-0 rounded-full transition-all duration-500 ${
+                        item.active ? 'bg-primary shadow-[0_4px_12px_rgba(162,5,19,0.3)]' : 'bg-slate-200 hover:bg-slate-300'
+                      }`}
+                      style={{ height: `${item.val}%` }}
+                    />
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${item.active ? 'text-primary' : 'text-slate-400'}`}>
+                    {item.day}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-3xl font-black text-slate-800">{displayCheckedIn}</span>
-            <span className="text-[10px] text-slate-400 font-bold uppercase">phòng hoạt động</span>
-          </div>
-        </div>
 
-        <div className="bg-white border border-slate-200/85 p-6 shadow-sm relative overflow-hidden flex flex-col justify-between h-28">
-          <div className="flex justify-between items-start">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">TỶ LỆ LẤP ĐẦY</span>
-          </div>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-3xl font-black text-slate-800">{displayOccupancyRate}</span>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/85 p-6 shadow-sm relative overflow-hidden flex flex-col justify-between h-28">
-          <div className="flex justify-between items-start">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">DOANH THU DỰ TÍNH</span>
-          </div>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-black text-primary">{displayExpectedRevenue}</span>
+          {/* Card: Repeat Customer Rate */}
+          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.015)] flex flex-col justify-between flex-1">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Khách Hàng Quay Lại</h3>
+            </div>
+            
+            <div className="flex flex-col items-center mt-3">
+              <div className="relative w-36 h-20 flex items-center justify-center overflow-hidden">
+                <svg className="w-full h-full" viewBox="0 0 100 50">
+                  {/* Background Arc */}
+                  <path 
+                    d="M 10 50 A 40 40 0 0 1 90 50" 
+                    fill="none" 
+                    stroke="#f1f5f9" 
+                    strokeWidth="8" 
+                    strokeLinecap="round"
+                  />
+                  {/* Active Progress Arc */}
+                  <path 
+                    d="M 10 50 A 40 40 0 0 1 90 50" 
+                    fill="none" 
+                    stroke="#10b981" 
+                    strokeWidth="8" 
+                    strokeLinecap="round"
+                    strokeDasharray="126"
+                    strokeDashoffset={126 - (126 * repeatRate) / 100}
+                    className="transition-all duration-1000 ease-out"
+                  />
+                </svg>
+                <div className="absolute bottom-0 text-center">
+                  <span className="text-2xl font-black text-slate-800 leading-none">{repeatRate}%</span>
+                  <p className="text-[9px] text-slate-400 font-extrabold uppercase mt-1">Đạt chỉ tiêu 80%</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -117,7 +364,7 @@ const StaffOverview = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column (Recent Bookings / Guest List) */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white border border-slate-200/85 shadow-sm p-6">
+          <div className="bg-white border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.015)] p-6 rounded-2xl">
             <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-4">
               <div>
                 <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Danh sách check-in gần đây</h4>
@@ -132,9 +379,9 @@ const StaffOverview = ({
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left text-xs text-slate-600">
+              <table className="w-full border-collapse text-left text-xs text-slate-650">
                 <thead>
-                  <tr className="border-b border-slate-100 text-[9px] font-black uppercase text-slate-400 tracking-wider">
+                  <tr className="border-b border-slate-100 text-[9px] font-extrabold uppercase text-slate-400 tracking-wider">
                     <th className="pb-3 pr-4">Khách hàng</th>
                     <th className="pb-3 px-4">Thời gian</th>
                     <th className="pb-3 px-4">Hình thức</th>
@@ -143,25 +390,25 @@ const StaffOverview = ({
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {bookings.slice(0, 5).map((bk) => (
-                    <tr key={bk.id} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={bk.id} className="hover:bg-slate-55/30 transition-colors">
                       <td className="py-4 pr-4">
-                        <span className="text-slate-800 font-black uppercase block">{bk.guestName}</span>
-                        <span className="text-[9px] text-slate-500 block mt-0.5">{bk.bookingReference} • {bk.roomType}</span>
+                        <span className="text-slate-800 font-extrabold uppercase block">{bk.guestName}</span>
+                        <span className="text-[9px] text-slate-400 block mt-1">{bk.bookingReference} • {bk.roomType}</span>
                       </td>
-                      <td className="py-4 px-4 font-medium">
+                      <td className="py-4 px-4 font-semibold text-slate-700">
                         {bk.checkInDate} <br />
-                        <span className="text-[9px] text-slate-500">{bk.nights} đêm</span>
+                        <span className="text-[9px] text-slate-400 font-normal">{bk.nights} đêm</span>
                       </td>
-                      <td className="py-4 px-4 text-primary font-black uppercase tracking-wider text-[9px]">
+                      <td className="py-4 px-4 text-slate-500 font-extrabold uppercase tracking-wider text-[9px]">
                         {bk.checkInMethod === 'Face Recognition' || bk.checkInMethod === 'FaceID' ? 'FaceID eKYC' : bk.checkInMethod}
                       </td>
                       <td className="py-4 pl-4 text-right">
-                        <span className={`inline-block px-2 py-0.5 text-[8px] font-black uppercase tracking-widest ${
+                        <span className={`inline-block px-2.5 py-0.5 text-[8.5px] font-extrabold uppercase tracking-widest rounded-lg ${
                           bk.status === 'Checked In'
-                            ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                            ? 'bg-blue-50 text-blue-600 border border-blue-100'
                             : bk.status === 'Confirmed'
-                            ? 'bg-green-50 text-green-600 border border-green-200'
-                            : 'bg-slate-100 text-slate-600 border border-slate-200'
+                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                            : 'bg-slate-50 text-slate-600 border border-slate-200/60'
                         }`}>
                           {bk.status}
                         </span>
@@ -174,41 +421,22 @@ const StaffOverview = ({
           </div>
         </div>
 
-        {/* Right Column (Identity, Quick Action, Financial Overview) */}
+        {/* Right Column (Identity & AI Assistant) */}
         <div className="space-y-6">
-          {/* Staff Identity Verified Card */}
-          <div className="bg-primary p-6 shadow-md text-white flex flex-col justify-between h-56 relative overflow-hidden">
-            <div className="absolute right-4 top-4 opacity-15">
-              <UserCheck size={80} />
-            </div>
-            <div>
-              <span className="text-[9px] font-black uppercase tracking-widest bg-white/20 px-2 py-0.5 inline-block">STAFF IDENTIFIED</span>
-              <h4 className="text-sm font-black uppercase tracking-wider mt-3">Quyền truy cập hợp lệ</h4>
-              <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider mt-1.5 leading-relaxed">
-                Tài khoản của bạn đã được đối sánh sinh trắc học và cấp quyền thực hiện các nhiệm vụ lễ tân hoặc quản trị trên Elysian Hub.
-              </p>
-            </div>
-            <div className="flex gap-3 mt-4 border-t border-white/20 pt-4">
-              <div className="text-[8px] font-black uppercase tracking-wider">
-                ID Nhân viên: EL-2026
-              </div>
-            </div>
-          </div>
-
           {/* Quick Actions Panel */}
-          <div className="bg-white border border-slate-200/85 shadow-sm p-6">
+          <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] p-6">
             <h4 className="text-xs font-black uppercase tracking-widest text-slate-800 border-b border-slate-100 pb-3 mb-4">Lối tắt thao tác</h4>
             <div className="space-y-3">
               <button
                 onClick={handleOpenWalkIn}
-                className="w-full py-3.5 bg-slate-50 hover:bg-primary text-slate-800 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border border-slate-200 flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-slate-50 hover:bg-primary text-slate-700 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border border-slate-200/60 rounded-xl flex items-center justify-center gap-2"
               >
                 Đặt phòng Walk-in
               </button>
               {isManager && (
                 <button
                   onClick={handleOpenAddRoom}
-                  className="w-full py-3.5 bg-slate-50 hover:bg-primary text-slate-800 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border border-slate-200 flex items-center justify-center gap-2"
+                  className="w-full py-3.5 bg-slate-50 hover:bg-primary text-slate-700 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border border-slate-200/60 rounded-xl flex items-center justify-center gap-2"
                 >
                   Thêm loại phòng mới
                 </button>
@@ -220,7 +448,7 @@ const StaffOverview = ({
 
       {/* Curated Room Types carousel */}
       {roomTypes.length > 0 && (
-        <div className="bg-white border border-slate-200/85 p-6 shadow-sm">
+        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.015)]">
           <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-6">
             <div>
               <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Danh mục hạng phòng hiện có</h4>
@@ -229,15 +457,15 @@ const StaffOverview = ({
             <div className="flex gap-2">
               <button
                 onClick={prevCarousel}
-                className="p-1.5 bg-slate-50 hover:bg-primary text-slate-800 hover:text-white transition-colors cursor-pointer border border-slate-200"
+                className="p-2 bg-slate-50 hover:bg-primary text-slate-700 hover:text-white transition-colors cursor-pointer border border-slate-200/60 rounded-xl flex items-center"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={15} />
               </button>
               <button
                 onClick={nextCarousel}
-                className="p-1.5 bg-slate-50 hover:bg-primary text-slate-800 hover:text-white transition-colors cursor-pointer border border-slate-200"
+                className="p-2 bg-slate-50 hover:bg-primary text-slate-700 hover:text-white transition-colors cursor-pointer border border-slate-200/60 rounded-xl flex items-center"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={15} />
               </button>
             </div>
           </div>
@@ -246,19 +474,19 @@ const StaffOverview = ({
             {roomTypes.slice(carouselIndex, carouselIndex + 3).concat(
               roomTypes.slice(0, Math.max(0, 3 - (roomTypes.length - carouselIndex)))
             ).slice(0, Math.min(3, roomTypes.length)).map((room) => (
-              <div key={room.id} className="bg-slate-50 border border-slate-200/80 overflow-hidden flex flex-col justify-between">
+              <div key={room.id} className="bg-slate-50/60 border border-slate-150 rounded-2xl overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md transition-all">
                 <img
                   src={room.primaryImageUrl || 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=600&q=80'}
                   alt={room.name}
-                  className="w-full h-40 object-cover border-b border-slate-200 filter brightness-95"
+                  className="w-full h-40 object-cover border-b border-slate-200/60 filter brightness-95"
                 />
-                <div className="p-4 space-y-2">
-                  <span className="text-[9px] text-primary font-black uppercase tracking-widest">ELYSIAN SUITE</span>
-                  <h5 className="text-sm font-black text-slate-800 uppercase tracking-wider">{room.name}</h5>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                <div className="p-4 space-y-2 text-left">
+                  <span className="text-[9px] text-primary font-extrabold uppercase tracking-widest">ELYSIAN SUITE</span>
+                  <h5 className="text-sm font-bold text-slate-800 uppercase tracking-wider">{room.name}</h5>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                     {room.bedType || 'King Bed'} • {room.roomSize || room.roomsize || 35} m²
                   </p>
-                  <div className="flex justify-between items-end pt-3 border-t border-slate-150">
+                  <div className="flex justify-between items-end pt-3 border-t border-slate-200/60">
                     <div>
                       <span className="text-[8px] text-slate-400 font-bold uppercase block">Đơn giá cơ bản</span>
                       <span className="text-xs font-black text-primary">
@@ -274,6 +502,6 @@ const StaffOverview = ({
       )}
     </div>
   );
-}
+};
 
 export default StaffOverview;

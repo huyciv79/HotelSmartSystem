@@ -12,7 +12,9 @@ import {
   processManualPayment,
   getAllServices,
   addServiceToBooking,
-  cancelBooking
+  cancelBooking,
+  getBookingDetail,
+  updateBooking
 } from '../services/bookingService';
 import {
   getPendingRefundRequests,
@@ -124,6 +126,20 @@ export default function StaffDashboard({ setActivePage }) {
   // Walk-in booking modal states
   const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
   const [isSubmittingWalkIn, setIsSubmittingWalkIn] = useState(false);
+
+  // Edit booking modal states
+  const [isEditBookingModalOpen, setIsEditBookingModalOpen] = useState(false);
+  const [isSubmittingEditBooking, setIsSubmittingEditBooking] = useState(false);
+  const [editBookingFormData, setEditBookingFormData] = useState({
+    roomTypeId: '',
+    checkInDate: '',
+    checkOutDate: '',
+    quantity: 1,
+    numberOfAdults: 1,
+    numberOfChildren: 0,
+    specialRequests: '',
+    discountAmount: 0
+  });
   const [walkInFormData, setWalkInFormData] = useState({
     roomTypeId: '',
     checkInDate: '',
@@ -381,6 +397,54 @@ export default function StaffDashboard({ setActivePage }) {
       showToast(err.response?.data?.message || 'Lỗi khi thực hiện đặt phòng Walk-in.', 'error');
     } finally {
       setIsSubmittingWalkIn(false);
+    }
+  };
+
+  const handleEditBookingSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmittingEditBooking(true);
+    try {
+      const response = await updateBooking(selectedBooking.id, {
+        roomTypeId: editBookingFormData.roomTypeId ? parseInt(editBookingFormData.roomTypeId) : null,
+        checkInDate: editBookingFormData.checkInDate,
+        checkOutDate: editBookingFormData.checkOutDate,
+        quantity: editBookingFormData.quantity ? parseInt(editBookingFormData.quantity) : null,
+        numberOfAdults: editBookingFormData.numberOfAdults ? parseInt(editBookingFormData.numberOfAdults) : null,
+        numberOfChildren: editBookingFormData.numberOfChildren !== undefined ? parseInt(editBookingFormData.numberOfChildren) : 0,
+        specialRequests: editBookingFormData.specialRequests,
+        discountAmount: editBookingFormData.discountAmount ? parseFloat(editBookingFormData.discountAmount) : 0,
+      });
+      if (response && response.success) {
+        showToast('Cập nhật đơn đặt phòng thành công!', 'success');
+        setIsEditBookingModalOpen(false);
+        const updated = response.data;
+        setSelectedBooking(prev => ({
+          ...prev,
+          ...updated,
+          id: updated.bookingId,
+          bookingReference: updated.bookingNumber || updated.bookingReference || prev.bookingReference,
+          roomType: updated.roomTypeName || prev.roomType,
+          roomTypeId: updated.roomTypeId || prev.roomTypeId,
+          checkInDate: updated.checkInDate || prev.checkInDate,
+          checkOutDate: updated.checkOutDate || prev.checkOutDate,
+          nights: updated.nights || prev.nights,
+          totalAmount: updated.totalAmount || prev.totalAmount,
+          finalAmount: updated.finalAmount || prev.finalAmount,
+          paidAmount: updated.paidAmount || prev.paidAmount,
+          taxAmount: updated.taxAmount || prev.taxAmount,
+          specialRequests: updated.specialRequests || prev.specialRequests,
+          numberOfAdults: updated.numberOfAdults || prev.numberOfAdults,
+          numberOfChildren: updated.numberOfChildren || prev.numberOfChildren,
+          quantity: updated.quantity || prev.quantity,
+          discountAmount: updated.discountAmount || prev.discountAmount,
+        }));
+        fetchRealBookings();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Không thể cập nhật đơn đặt phòng.', 'error');
+    } finally {
+      setIsSubmittingEditBooking(false);
     }
   };
 
@@ -725,6 +789,7 @@ export default function StaffDashboard({ setActivePage }) {
             guestName: bk.guestName || 'Khách hàng Elysian',
             email: bk.guestEmail || bk.email || '',
             roomType: bk.roomType || bk.roomTypeName,
+            roomTypeId: bk.roomTypeId || '',
             quantity: bk.quantity || 1,
             checkInDate: bk.checkInDate,
             checkOutDate: bk.checkOutDate,
@@ -763,6 +828,11 @@ export default function StaffDashboard({ setActivePage }) {
         });
 
         setBookings(realMapped);
+        setSelectedBooking(prev => {
+          if (!prev) return null;
+          const fresh = realMapped.find(b => b.id === prev.id);
+          return fresh ? { ...prev, ...fresh } : prev;
+        });
       } else {
         setBookings([]);
       }
@@ -830,10 +900,10 @@ export default function StaffDashboard({ setActivePage }) {
   const fetchAvailableRoomsForStaff = async (roomTypeId) => {
     setIsLoadingAvailableRooms(true);
     try {
-      const response = await getRooms({ status: 'Available' });
+      const response = await getRooms({ status: 'Available', roomTypeId: roomTypeId, size: 1000 });
       if (response && response.success && response.data) {
         const list = response.data.content || response.data || [];
-        // Lọc các phòng có roomtypeid khớp
+        // Lọc các phòng có roomtypeid khớp (để đề phòng fallback)
         const filtered = list.filter(r => {
           const typeId = r.roomtypeid?.id || r.roomtypeid || (r.roomType && r.roomType.roomTypeId);
           return String(typeId) === String(roomTypeId);
@@ -860,13 +930,7 @@ export default function StaffDashboard({ setActivePage }) {
         showToast('Phê duyệt yêu cầu chuyển phòng thành công!', 'success');
         // Reload dữ liệu
         fetchPendingRoomChanges();
-        if (selectedBooking && selectedBooking.bookingId === req.bookingId) {
-          // Lấy lại chi tiết đặt phòng
-          const detailRes = await getBookingDetail(req.bookingId, selectedBooking.email);
-          if (detailRes && detailRes.success) {
-            setSelectedBooking(prev => ({ ...prev, ...detailRes.data }));
-          }
-        }
+        fetchRealBookings();
       }
     } catch (err) {
       console.error(err);
@@ -889,6 +953,7 @@ export default function StaffDashboard({ setActivePage }) {
         setIsRejectRoomChangeOpen(false);
         setRoomChangeRejectionReason('');
         fetchPendingRoomChanges();
+        fetchRealBookings();
       }
     } catch (err) {
       console.error(err);
@@ -906,13 +971,7 @@ export default function StaffDashboard({ setActivePage }) {
       if (response && response.success) {
         showToast('Phê duyệt yêu cầu gia hạn lưu trú thành công!', 'success');
         fetchPendingStayExtensions();
-        if (selectedBooking && selectedBooking.bookingId === req.bookingId) {
-          // Reload chi tiết booking và tài chính
-          const detailRes = await getBookingDetail(req.bookingId, selectedBooking.email || req.bookingReference);
-          if (detailRes && detailRes.success) {
-            setSelectedBooking(prev => ({ ...prev, ...detailRes.data }));
-          }
-        }
+        fetchRealBookings();
       }
     } catch (err) {
       console.error(err);
@@ -935,6 +994,7 @@ export default function StaffDashboard({ setActivePage }) {
         setIsRejectStayExtensionOpen(false);
         setStayExtensionRejectionReason('');
         fetchPendingStayExtensions();
+        fetchRealBookings();
       }
     } catch (err) {
       console.error(err);
@@ -952,13 +1012,7 @@ export default function StaffDashboard({ setActivePage }) {
       if (response && response.success) {
         showToast('Phê duyệt yêu cầu check-out sớm thành công!', 'success');
         fetchPendingEarlyCheckOuts();
-        if (selectedBooking && selectedBooking.bookingId === req.bookingId) {
-          // Reload chi tiết booking và tài chính
-          const detailRes = await getBookingDetail(req.bookingId, selectedBooking.email || req.bookingReference);
-          if (detailRes && detailRes.success) {
-            setSelectedBooking(prev => ({ ...prev, ...detailRes.data }));
-          }
-        }
+        fetchRealBookings();
       }
     } catch (err) {
       console.error(err);
@@ -981,6 +1035,7 @@ export default function StaffDashboard({ setActivePage }) {
         setIsRejectEarlyCheckOutOpen(false);
         setEarlyCheckOutRejectionReason('');
         fetchPendingEarlyCheckOuts();
+        fetchRealBookings();
       }
     } catch (err) {
       console.error(err);
@@ -1316,18 +1371,6 @@ export default function StaffDashboard({ setActivePage }) {
                   </div>
                 </div>
 
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('qr-check-in')}
-                    className="h-11 bg-primary px-5 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:brightness-110 border-none cursor-pointer inline-flex items-center justify-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-base">qr_code_scanner</span>
-                    QR check-in
-                  </button>
-                </div>
-
-                {/* Simulated Scanning Modal popup */}
                 {isScanning && scanningBooking && (
                   <div className="bg-white border border-slate-200/80 p-6 text-slate-800 text-center shadow-xl relative animate-scale-in">
                     <div className="flex flex-col items-center justify-center gap-4 py-6">
@@ -1351,7 +1394,7 @@ export default function StaffDashboard({ setActivePage }) {
                     Danh sách đặt phòng cần xử lý trong ngày
                   </div>
 
-                  <div className="divide-y divide-neutral-900/60">
+                  <div className="divide-y divide-slate-100">
                     {filteredBookings.length === 0 ? (
                       <div className="py-12 text-center text-slate-500 font-bold text-xs uppercase tracking-widest">
                         Không tìm thấy lịch trình đặt phòng nào phù hợp
@@ -1361,6 +1404,7 @@ export default function StaffDashboard({ setActivePage }) {
                         const normalizedStatus = String(bk.status || '').toLowerCase().replace('-', ' ');
                         const isConfirmed = ['confirmed', 'paid', 'partially paid'].includes(normalizedStatus);
                         const isCheckedIn = normalizedStatus === 'checked in';
+                        const isCancelled = normalizedStatus === 'cancelled';
                         const normalizedMethod = String(bk.checkInMethod || '').toLowerCase();
                         const usesFaceId =
                           normalizedMethod === 'face recognition' ||
@@ -1368,16 +1412,25 @@ export default function StaffDashboard({ setActivePage }) {
                           normalizedMethod === 'face id';
                         const usesQrCode = normalizedMethod === 'qr code' || normalizedMethod === 'qr';
 
+                        let statusBadgeClass = 'bg-slate-400 text-white border-none';
+                        if (isCancelled) {
+                          statusBadgeClass = 'bg-rose-500 text-white border-none';
+                        } else if (isCheckedIn) {
+                          statusBadgeClass = 'bg-blue-600 text-white border-none';
+                        } else if (isConfirmed) {
+                          statusBadgeClass = 'bg-green-600 text-white border-none';
+                        }
+
                         return (
-                          <div key={bk.id} className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:bg-white/5 transition-colors">
+                          <div key={bk.id} className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:bg-slate-50/50 transition-colors">
                             <div className="space-y-1">
-                              <span className="inline-block px-2 py-0.5 text-[8px] font-black tracking-widest text-slate-400 bg-neutral-900 border border-neutral-800 uppercase mb-1">
+                              <span className="inline-block px-2 py-0.5 text-[8px] font-black tracking-widest text-slate-500 bg-slate-100 border border-slate-200 uppercase mb-1 rounded-sm">
                                 {bk.bookingType && bk.bookingType.toLowerCase() === 'group' ? 'ĐOÀN (GROUP)' : 'ĐƠN LẺ'}
                               </span>
-                              <h5 className="text-sm font-black text-white uppercase tracking-wider m-0">
+                              <h5 className="text-sm font-black text-slate-800 uppercase tracking-wider m-0">
                                 {bk.guestName}
                               </h5>
-                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                              <p className="text-[10px] text-slate-650 font-bold uppercase tracking-wider">
                                 Mã: {bk.bookingReference} • {bk.roomType}
                               </p>
                               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
@@ -1385,13 +1438,7 @@ export default function StaffDashboard({ setActivePage }) {
                               </p>
                             </div>
                             <div className="flex flex-col items-end gap-2">
-                              <span className={`px-2.5 py-1 text-[8px] font-black uppercase tracking-widest ${
-                                isCheckedIn 
-                                  ? 'bg-blue-900/30 text-blue-400 border border-blue-900/50' 
-                                  : isConfirmed 
-                                  ? 'bg-green-900/30 text-green-400 border border-green-900/50' 
-                                  : 'bg-neutral-800 text-neutral-400 border border-neutral-700/50'
-                              }`}>
+                              <span className={`px-2.5 py-1 text-[8.5px] font-black uppercase tracking-widest rounded-full ${statusBadgeClass}`}>
                                 {bk.status}
                               </span>
 
@@ -1467,10 +1514,6 @@ export default function StaffDashboard({ setActivePage }) {
             {/* QUẢN LÝ ĐẶT PHÒNG (BOOKINGS MANAGEMENT TABLE) */}
             {activeTab === 'bookings' && (
               <div className="space-y-6 animate-scale-in text-left">
-                <div className="border-b border-neutral-900 pb-4">
-                  <h3 className="text-white font-black text-base uppercase tracking-wider m-0">QUẢN LÝ ĐƠN ĐẶT PHÒNG</h3>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Quản lý và tra cứu toàn bộ danh sách đơn đặt phòng từ hệ thống</p>
-                </div>
                 <BookingsTable
                   showToast={showToast}
                   setSelectedBooking={(bk) => handleViewDetail(bk, 'bookings')}
@@ -1485,6 +1528,7 @@ export default function StaffDashboard({ setActivePage }) {
                     setActiveTab('face-check-in');
                   }}
                   triggerCustomConfirm={triggerCustomConfirm}
+                  handleOpenWalkIn={() => setIsWalkInModalOpen(true)}
                 />
               </div>
             )}
@@ -1579,18 +1623,18 @@ export default function StaffDashboard({ setActivePage }) {
               const associatedRefund = pendingRefunds.find(req => req.bookingReference === selectedBooking.bookingReference);
               return (
                 <div className="animate-scale-in text-left space-y-6">
-                  <div className="flex justify-between items-center border-b border-neutral-900 pb-4">
+                  <div className="flex justify-between items-center pb-2">
                     <div>
                       <button
                         onClick={() => {
                           setActiveTab(selectedBooking.prevTab || 'bookings');
                         }}
-                        className="text-primary hover:underline font-black text-[10px] uppercase tracking-widest border-none bg-transparent cursor-pointer flex items-center gap-1 mb-2"
+                        className="text-primary hover:underline font-black text-[10px] uppercase tracking-widest border-none bg-transparent cursor-pointer flex items-center gap-1 mb-3"
                       >
                         <span className="material-symbols-outlined text-xs">arrow_back</span> Quay lại danh sách
                       </button>
-                      <h3 className="text-slate-800 font-black text-lg uppercase tracking-wider m-0">CHI TIẾT ĐƠN ĐẶT PHÒNG</h3>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">
+                      <h3 className="text-slate-800 font-black text-base uppercase tracking-wider m-0">Chi tiết đơn đặt phòng</h3>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
                         Mã đặt phòng: {selectedBooking.bookingReference}
                       </p>
                     </div>
@@ -1602,11 +1646,11 @@ export default function StaffDashboard({ setActivePage }) {
                       
                       {/* Refund Request Block */}
                       {associatedRefund && (
-                        <div className="bg-rose-50/70 border border-rose-100 p-6 rounded-sm flex flex-col gap-4 animate-scale-in">
-                          <div className="flex items-center gap-2 border-b border-rose-200 pb-3">
-                            <span className="material-symbols-outlined text-rose-600 text-base">payments</span>
+                        <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-6 flex flex-col gap-4 animate-scale-in">
+                          <div className="flex items-center gap-2 border-b border-rose-100 pb-3">
+                            <span className="material-symbols-outlined text-rose-500 text-base">payments</span>
                             <h4 className="text-xs font-black text-rose-700 uppercase tracking-widest m-0">Yêu cầu hoàn tiền chờ xử lý</h4>
-                            <span className="ml-auto px-2 py-0.5 text-[8px] font-black text-rose-600 bg-rose-50 border border-rose-200 uppercase tracking-widest rounded-sm">Pending</span>
+                            <span className="ml-auto px-2.5 py-1 text-[8.5px] font-extrabold text-rose-600 bg-rose-100 uppercase tracking-widest rounded-lg">Pending</span>
                           </div>
                           
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
@@ -1621,26 +1665,26 @@ export default function StaffDashboard({ setActivePage }) {
                               </div>
                             </div>
 
-                            <div className="bg-white p-4 border border-rose-100/80 space-y-2 rounded-sm font-semibold">
+                            <div className="bg-white p-4 border border-rose-100 space-y-2 rounded-xl font-semibold">
                               <div className="flex justify-between text-[11px]">
                                 <span className="text-slate-500">Số tiền ban đầu:</span>
                                 <span className="text-slate-800 font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(associatedRefund.oldValue))}</span>
                               </div>
-                              <div className="flex justify-between text-[11px] border-t border-rose-100/50 pt-1.5">
+                              <div className="flex justify-between text-[11px] border-t border-rose-100 pt-1.5">
                                 <span className="text-rose-600">Hoàn tiền dự kiến:</span>
                                 <strong className="text-rose-600 font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(associatedRefund.newValue))}</strong>
                               </div>
                             </div>
                           </div>
 
-                          <div className="flex gap-3 justify-end border-t border-rose-100/50 pt-3">
+                          <div className="flex gap-3 justify-end border-t border-rose-100 pt-3">
                             <button
                               onClick={() => {
                                 setSelectedRefund(associatedRefund);
                                 setRefundOverrideAmount(associatedRefund.newValue);
                                 setIsApproveRefundOpen(true);
                               }}
-                              className="bg-green-600 hover:bg-green-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded-sm transition-all"
+                              className="bg-white border border-emerald-250 text-emerald-600 hover:bg-emerald-50 text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer rounded-xl transition-all"
                             >
                               Phê duyệt hoàn tiền
                             </button>
@@ -1650,7 +1694,7 @@ export default function StaffDashboard({ setActivePage }) {
                                 setRefundRejectionReason('');
                                 setIsRejectRefundOpen(true);
                               }}
-                              className="bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded-sm transition-all"
+                              className="bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer rounded-xl transition-all"
                             >
                               Từ chối yêu cầu
                             </button>
@@ -1663,11 +1707,11 @@ export default function StaffDashboard({ setActivePage }) {
                         const associatedRoomChange = pendingRoomChanges.find(req => req.bookingId === selectedBooking.bookingId || req.bookingReference === selectedBooking.bookingReference);
                         if (!associatedRoomChange) return null;
                         return (
-                          <div className="bg-blue-50/70 border border-blue-100 p-6 rounded-sm flex flex-col gap-4 animate-scale-in">
-                            <div className="flex items-center gap-2 border-b border-blue-200 pb-3">
-                              <span className="material-symbols-outlined text-blue-600 text-base">autorenew</span>
+                          <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-6 flex flex-col gap-4 animate-scale-in">
+                            <div className="flex items-center gap-2 border-b border-blue-100 pb-3">
+                              <span className="material-symbols-outlined text-blue-500 text-base">autorenew</span>
                               <h4 className="text-xs font-black text-blue-700 uppercase tracking-widest m-0">Yêu cầu đổi phòng chờ xử lý</h4>
-                              <span className="ml-auto px-2 py-0.5 text-[8px] font-black text-blue-600 bg-blue-50 border border-blue-200 uppercase tracking-widest rounded-sm">Pending</span>
+                              <span className="ml-auto px-2.5 py-1 text-[8.5px] font-extrabold text-blue-600 bg-blue-100 uppercase tracking-widest rounded-lg">Pending</span>
                             </div>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
@@ -1682,7 +1726,7 @@ export default function StaffDashboard({ setActivePage }) {
                                 </div>
                               </div>
 
-                              <div className="bg-white p-4 border border-blue-100/80 space-y-3 rounded-sm font-semibold">
+                              <div className="bg-white p-4 border border-blue-100 space-y-3 rounded-xl font-semibold">
                                 <div className="flex justify-between text-[11px]">
                                   <span className="text-slate-500">Hạng phòng đích:</span>
                                   <span className="text-slate-800 font-bold">{associatedRoomChange.newValue === String(selectedBooking.roomTypeId) ? 'Cùng hạng phòng hiện tại' : 'Hạng phòng khác'}</span>
@@ -1710,38 +1754,40 @@ export default function StaffDashboard({ setActivePage }) {
                               </div>
                             </div>
 
-                            <div className="flex gap-3 justify-end border-t border-blue-100/50 pt-3">
+                            <div className="flex gap-3 justify-end border-t border-blue-100 pt-3">
                               <button
                                 onClick={() => handleApproveRoomChange(associatedRoomChange)}
                                 disabled={isSubmittingRoomChangeAction}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded shadow-sm transition-all"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer border-none rounded-xl shadow-sm transition-all"
                               >
                                 {isSubmittingRoomChangeAction ? 'Đang duyệt...' : 'Duyệt chuyển phòng'}
                               </button>
-                               <button
-                                 onClick={() => {
-                                   setSelectedRoomChange(associatedRoomChange);
-                                   setRoomChangeRejectionReason('');
-                                   setIsRejectRoomChangeOpen(true);
-                                 }}
-                                 disabled={isSubmittingRoomChangeAction}
-                                 className="bg-rose-600 hover:bg-rose-750 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded shadow-sm transition-all"
-                               >
-                                 Từ chối
-                               </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedRoomChange(associatedRoomChange);
+                                  setRoomChangeRejectionReason('');
+                                  setIsRejectRoomChangeOpen(true);
+                                }}
+                                disabled={isSubmittingRoomChangeAction}
+                                className="bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer border-none rounded-xl shadow-sm transition-all"
+                              >
+                                Từ chối
+                              </button>
                             </div>
                           </div>
                         );
-                      })()}                           {/* Stay Extension Request Block */}
+                      })()}
+
+                      {/* Stay Extension Request Block */}
                       {(() => {
                         const associatedStayExtension = pendingStayExtensions.find(req => req.bookingId === selectedBooking.bookingId || req.bookingReference === selectedBooking.bookingReference);
                         if (!associatedStayExtension) return null;
                         return (
-                          <div className="bg-emerald-50/70 border border-emerald-100 p-6 rounded-sm flex flex-col gap-4 animate-scale-in">
-                            <div className="flex items-center gap-2 border-b border-emerald-200 pb-3">
-                              <span className="material-symbols-outlined text-emerald-600 text-base">calendar_add_on</span>
-                              <h4 className="text-xs font-black text-emerald-400 uppercase tracking-widest m-0">Yêu cầu gia hạn lưu trú chờ xử lý</h4>
-                              <span className="ml-auto px-2 py-0.5 text-[8px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 uppercase tracking-widest rounded-sm">Pending</span>
+                          <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-6 flex flex-col gap-4 animate-scale-in">
+                            <div className="flex items-center gap-2 border-b border-emerald-100 pb-3">
+                              <span className="material-symbols-outlined text-emerald-500 text-base">calendar_add_on</span>
+                              <h4 className="text-xs font-black text-emerald-700 uppercase tracking-widest m-0">Yêu cầu gia hạn lưu trú chờ xử lý</h4>
+                              <span className="ml-auto px-2.5 py-1 text-[8.5px] font-extrabold text-emerald-600 bg-emerald-100 uppercase tracking-widest rounded-lg">Pending</span>
                             </div>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
@@ -1756,7 +1802,7 @@ export default function StaffDashboard({ setActivePage }) {
                                 </div>
                               </div>
 
-                              <div className="bg-white p-4 border border-emerald-100/80 space-y-2 rounded-sm font-semibold">
+                              <div className="bg-white p-4 border border-emerald-100 space-y-2 rounded-xl font-semibold">
                                 <div className="flex justify-between text-[11px]">
                                   <span className="text-slate-500">Ngày check-out hiện tại:</span>
                                   <span className="text-slate-800 font-mono">{associatedStayExtension.oldValue}</span>
@@ -1768,11 +1814,11 @@ export default function StaffDashboard({ setActivePage }) {
                               </div>
                             </div>
 
-                            <div className="flex gap-3 justify-end border-t border-emerald-100/50 pt-3">
+                            <div className="flex gap-3 justify-end border-t border-emerald-100 pt-3">
                               <button
                                 onClick={() => handleApproveStayExtension(associatedStayExtension)}
                                 disabled={isSubmittingStayExtensionAction}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded shadow-sm transition-all"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer border-none rounded-xl shadow-sm transition-all"
                               >
                                 {isSubmittingStayExtensionAction ? 'Đang duyệt...' : 'Duyệt gia hạn'}
                               </button>
@@ -1783,7 +1829,7 @@ export default function StaffDashboard({ setActivePage }) {
                                   setIsRejectStayExtensionOpen(true);
                                 }}
                                 disabled={isSubmittingStayExtensionAction}
-                                className="bg-rose-600 hover:bg-rose-750 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded shadow-sm transition-all"
+                                className="bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer border-none rounded-xl shadow-sm transition-all"
                               >
                                 Từ chối
                               </button>
@@ -1797,11 +1843,11 @@ export default function StaffDashboard({ setActivePage }) {
                         const associatedEarlyCheckOut = pendingEarlyCheckOuts.find(req => req.bookingId === selectedBooking.bookingId || req.bookingReference === selectedBooking.bookingReference);
                         if (!associatedEarlyCheckOut) return null;
                         return (
-                          <div className="bg-amber-50/70 border border-amber-100 p-6 rounded-sm flex flex-col gap-4 animate-scale-in">
-                            <div className="flex items-center gap-2 border-b border-amber-200 pb-3">
-                              <span className="material-symbols-outlined text-amber-600 text-base">history</span>
+                          <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-6 flex flex-col gap-4 animate-scale-in">
+                            <div className="flex items-center gap-2 border-b border-amber-100 pb-3">
+                              <span className="material-symbols-outlined text-amber-500 text-base">history</span>
                               <h4 className="text-xs font-black text-amber-700 uppercase tracking-widest m-0">Yêu cầu Checkout sớm chờ xử lý</h4>
-                              <span className="ml-auto px-2 py-0.5 text-[8px] font-black text-amber-600 bg-amber-50 border border-amber-200 uppercase tracking-widest rounded-sm">Pending</span>
+                              <span className="ml-auto px-2.5 py-1 text-[8.5px] font-extrabold text-amber-600 bg-amber-100 uppercase tracking-widest rounded-lg">Pending</span>
                             </div>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
@@ -1816,7 +1862,7 @@ export default function StaffDashboard({ setActivePage }) {
                                 </div>
                               </div>
 
-                              <div className="bg-white p-4 border border-amber-100/80 space-y-2 rounded-sm font-semibold">
+                              <div className="bg-white p-4 border border-amber-100 space-y-2 rounded-xl font-semibold">
                                 <div className="flex justify-between text-[11px]">
                                   <span className="text-slate-500">Ngày check-out dự kiến gốc:</span>
                                   <span className="text-slate-800 font-mono">{associatedEarlyCheckOut.oldValue}</span>
@@ -1828,11 +1874,11 @@ export default function StaffDashboard({ setActivePage }) {
                               </div>
                             </div>
 
-                            <div className="flex gap-3 justify-end border-t border-amber-100/50 pt-3">
+                            <div className="flex gap-3 justify-end border-t border-amber-100 pt-3">
                               <button
                                 onClick={() => handleApproveEarlyCheckOut(associatedEarlyCheckOut)}
                                 disabled={isSubmittingEarlyCheckOutAction}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded shadow-sm transition-all"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer border-none rounded-xl shadow-sm transition-all"
                               >
                                 {isSubmittingEarlyCheckOutAction ? 'Đang duyệt...' : 'Duyệt rút ngắn ngày'}
                               </button>
@@ -1843,7 +1889,7 @@ export default function StaffDashboard({ setActivePage }) {
                                   setIsRejectEarlyCheckOutOpen(true);
                                 }}
                                 disabled={isSubmittingEarlyCheckOutAction}
-                                className="bg-rose-600 hover:bg-rose-750 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2 cursor-pointer border-none rounded shadow-sm transition-all"
+                                className="bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer border-none rounded-xl shadow-sm transition-all"
                               >
                                 Từ chối
                               </button>
@@ -1853,7 +1899,7 @@ export default function StaffDashboard({ setActivePage }) {
                       })()}
 
                       {/* Unified Info Card */}
-                      <div className="bg-white border border-slate-200/80 p-6 md:p-8 rounded-sm space-y-6">
+                      <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] p-6 md:p-8 space-y-6">
                         <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                           <span className="material-symbols-outlined text-primary text-base">info</span>
                           <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest m-0">Thông tin chi tiết lưu trú</h4>
@@ -1862,55 +1908,55 @@ export default function StaffDashboard({ setActivePage }) {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6 text-xs">
                           {/* Col 1 */}
                           <div className="space-y-4">
-                            <div className="flex flex-col gap-1.5 bg-slate-50 p-4 border border-slate-200/55 rounded-sm shadow-sm">
-                              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Khách hàng</span>
+                            <div className="flex flex-col gap-1.5 bg-slate-50 p-4 border border-slate-100 rounded-xl">
+                              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Khách hàng</span>
                               <strong className="text-slate-800 text-sm uppercase">{selectedBooking.guestName}</strong>
-                              <span className="text-slate-600 text-[10px] mt-0.5">{selectedBooking.email || selectedBooking.guestEmail || 'N/A'} • {selectedBooking.guestPhone || 'N/A'}</span>
+                              <span className="text-slate-500 text-[10px] mt-0.5">{selectedBooking.email || selectedBooking.guestEmail || 'N/A'} • {selectedBooking.guestPhone || 'N/A'}</span>
                             </div>
 
-                            <div className="flex flex-col gap-1.5 bg-slate-50 p-4 border border-slate-200/55 rounded-sm shadow-sm">
-                              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Thời gian lưu trú</span>
-                              <strong className="text-slate-800 text-[11px]">{selectedBooking.checkInDate} đến {selectedBooking.checkOutDate}</strong>
+                            <div className="flex flex-col gap-1.5 bg-slate-50 p-4 border border-slate-100 rounded-xl">
+                              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Thời gian lưu trú</span>
+                              <strong className="text-slate-800 text-[11px]">{selectedBooking.checkInDate} → {selectedBooking.checkOutDate}</strong>
                               <span className="text-primary text-[10px] font-black uppercase tracking-wider mt-0.5">{selectedBooking.nights} đêm lưu trú</span>
                             </div>
                           </div>
 
                           {/* Col 2 */}
                           <div className="space-y-4">
-                            <div className="flex flex-col gap-1.5 bg-slate-50 p-4 border border-slate-200/55 rounded-sm shadow-sm">
-                              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Phòng & Hạng phòng</span>
+                            <div className="flex flex-col gap-1.5 bg-slate-50 p-4 border border-slate-100 rounded-xl">
+                              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Phòng & Hạng phòng</span>
                               <strong className="text-slate-800 text-sm uppercase">{selectedBooking.roomType || 'N/A'}</strong>
                               <div className="mt-1">
                                 {selectedBooking.roomNumber ? (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-black text-primary bg-primary/10 border border-primary/20 rounded-sm">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[8.5px] font-extrabold text-primary bg-primary/10 border border-primary/20 rounded-lg">
                                     PHÒNG ASSIGNED: {selectedBooking.roomNumber}
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-black text-rose-500 bg-rose-50 border border-rose-200 rounded-sm uppercase tracking-wider">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[8.5px] font-extrabold text-rose-500 bg-rose-50 border border-rose-100 rounded-lg uppercase tracking-wider">
                                     Chưa gán phòng
                                   </span>
                                 )}
                               </div>
                             </div>
 
-                            <div className="flex flex-col gap-1.5 bg-slate-50 p-4 border border-slate-200/55 rounded-sm shadow-sm">
-                              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Trạng thái & Check-in</span>
-                              <div>
-                                <span className={`inline-block px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest mr-2 rounded-sm ${
+                            <div className="flex flex-col gap-1.5 bg-slate-50 p-4 border border-slate-100 rounded-xl">
+                              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Trạng thái & Check-in</span>
+                              <div className="flex flex-wrap gap-1.5 mt-0.5">
+                                <span className={`inline-block px-2.5 py-1 text-[8.5px] font-extrabold uppercase tracking-widest rounded-lg ${
                                   isCheckedIn 
-                                    ? 'bg-blue-50 text-blue-600 border border-blue-200' 
+                                    ? 'bg-blue-50 text-blue-600 border border-blue-100' 
                                     : isConfirmed 
-                                    ? 'bg-green-50 text-green-600 border border-green-200' 
+                                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
                                     : 'bg-slate-100 text-slate-600 border border-slate-200'
                                 }`}>
                                   {selectedBooking.status}
                                 </span>
                                 {selectedBooking.checkInMethod === 'FaceID' || selectedBooking.checkInMethod === 'Face Recognition' ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-black text-primary bg-primary/10 border border-primary/20 uppercase tracking-widest rounded-sm">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[8.5px] font-extrabold text-primary bg-primary/10 border border-primary/20 uppercase tracking-widest rounded-lg">
                                     FaceID eKYC
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-black text-slate-500 bg-slate-100 border border-slate-200 uppercase tracking-widest rounded-sm">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[8.5px] font-extrabold text-slate-500 bg-slate-100 border border-slate-200 uppercase tracking-widest rounded-lg">
                                     {selectedBooking.checkInMethod || 'Manual'}
                                   </span>
                                 )}
@@ -1925,25 +1971,25 @@ export default function StaffDashboard({ setActivePage }) {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                           {/* Digital Keys Column */}
                           {selectedBooking.roomAccesses?.length > 0 && (
-                            <div className="bg-white border border-slate-200/80 p-6 rounded-sm flex flex-col gap-4">
+                            <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] p-6 flex flex-col gap-4">
                               <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                                 <span className="material-symbols-outlined text-primary text-base">vpn_key</span>
                                 <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest m-0">Khóa phòng số</h4>
                               </div>
                               <div className="space-y-3">
                                 {selectedBooking.roomAccesses.map((access) => (
-                                  <div key={access.roomId || access.roomNumber} className="border border-slate-200 bg-slate-50 p-4 flex justify-between items-center rounded-sm font-semibold">
+                                  <div key={access.roomId || access.roomNumber} className="border border-slate-100 bg-slate-50 p-4 flex justify-between items-center rounded-xl font-semibold">
                                     <div>
                                       <span className="block text-xs text-slate-800 font-black">Phòng {access.roomNumber}</span>
-                                      <span className="block text-[8px] text-slate-500 font-bold uppercase mt-0.5">Tầng {access.floorNumber ?? 'N/A'}</span>
+                                      <span className="block text-[8px] text-slate-400 font-bold uppercase mt-0.5">Tầng {access.floorNumber ?? 'N/A'}</span>
                                     </div>
                                     <div className="text-right">
                                       {access.roomPassword ? (
-                                        <strong className="block font-mono text-xs text-primary tracking-[0.12em] bg-white border border-primary/20 px-2 py-0.5 rounded-sm">
+                                        <strong className="block font-mono text-xs text-primary tracking-[0.12em] bg-white border border-primary/20 px-2.5 py-1 rounded-lg">
                                           {access.roomPassword}
                                         </strong>
                                       ) : (
-                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-black text-rose-600 bg-rose-50 border border-rose-200 uppercase tracking-wider rounded-sm">
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[8.5px] font-extrabold text-rose-600 bg-rose-50 border border-rose-100 uppercase tracking-wider rounded-lg">
                                           Đã khóa
                                         </span>
                                       )}
@@ -1956,12 +2002,12 @@ export default function StaffDashboard({ setActivePage }) {
 
                           {/* Special Requests Column */}
                           {selectedBooking.specialRequests && (
-                            <div className="bg-white border border-slate-200/80 p-6 rounded-sm flex flex-col gap-4">
+                            <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] p-6 flex flex-col gap-4">
                               <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                                 <span className="material-symbols-outlined text-primary text-base">rate_review</span>
                                 <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest m-0">Yêu cầu đặc biệt</h4>
                               </div>
-                              <p className="text-xs text-slate-700 font-semibold bg-slate-50 p-4 border border-slate-200/55 rounded-sm m-0 italic flex-1 flex items-center justify-center text-center">
+                              <p className="text-xs text-slate-600 font-semibold bg-slate-50 p-4 border border-slate-100 rounded-xl m-0 italic flex-1 flex items-center justify-center text-center">
                                 "{selectedBooking.specialRequests}"
                               </p>
                             </div>
@@ -1973,7 +2019,7 @@ export default function StaffDashboard({ setActivePage }) {
 
 
                     {/* Right column - Invoice summary */}
-                    <div className="bg-white border border-slate-200/80 shadow-md p-6 md:p-8 flex flex-col justify-between h-fit space-y-6">
+                    <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] p-6 md:p-8 flex flex-col justify-between h-fit space-y-6">
                       <div>
                         <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest border-b border-slate-100 pb-3 mb-4">Chi tiết hóa đơn</h4>
                         <div className="space-y-3 text-xs text-slate-600 font-semibold">
@@ -1989,15 +2035,15 @@ export default function StaffDashboard({ setActivePage }) {
                             <span>Thuế VAT (10%):</span>
                             <span className="text-slate-800 font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.taxAmount || 0)}</span>
                           </div>
-                          <div className="flex justify-between border-t border-slate-100 pt-3 text-sm font-bold">
-                            <span className="text-slate-800">TỔNG CỘNG:</span>
+                          <div className="flex justify-between border-t border-slate-100 pt-3 text-sm font-black">
+                            <span className="text-slate-800">Tổng cộng:</span>
                             <span className="text-primary font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.finalAmount || selectedBooking.totalAmount || 0)}</span>
                           </div>
                           <div className="flex justify-between text-emerald-600 border-t border-slate-100 pt-2">
                             <span>Đã thanh toán:</span>
                             <span className="font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBooking.paidAmount || 0)}</span>
                           </div>
-                          <div className="flex justify-between text-rose-600 font-bold">
+                          <div className="flex justify-between text-rose-500 font-bold">
                             <span>Còn lại cần thu:</span>
                             <span className="font-mono">
                               {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
@@ -2009,17 +2055,37 @@ export default function StaffDashboard({ setActivePage }) {
                       </div>
 
                       <div className="space-y-3">
-                        <span className="block text-[9px] text-slate-500 uppercase font-black">Thao tác nghiệp vụ:</span>
+                        <span className="block text-[9px] text-slate-400 uppercase font-black tracking-widest">Thao tác nghiệp vụ:</span>
                         <div className="flex flex-col gap-2">
+                          {selectedBooking.status !== 'Cancelled' && selectedBooking.status !== 'Completed' && selectedBooking.status !== 'Checked Out' && selectedBooking.status !== 'Checked-out' && (
+                            <button
+                              onClick={() => {
+                                setEditBookingFormData({
+                                  roomTypeId: selectedBooking.roomTypeId || '',
+                                  checkInDate: selectedBooking.checkInDate || '',
+                                  checkOutDate: selectedBooking.checkOutDate || '',
+                                  quantity: selectedBooking.quantity || 1,
+                                  numberOfAdults: selectedBooking.numberOfAdults || 1,
+                                  numberOfChildren: selectedBooking.numberOfChildren || 0,
+                                  specialRequests: selectedBooking.specialRequests || '',
+                                  discountAmount: selectedBooking.discountAmount || 0,
+                                });
+                                setIsEditBookingModalOpen(true);
+                              }}
+                              className="w-full py-3 bg-blue-500/10 border border-blue-500/20 text-blue-600 hover:bg-blue-500/20 text-[10px] font-black uppercase tracking-widest cursor-pointer flex items-center justify-center gap-1.5 rounded-xl transition-all shadow-sm backdrop-blur-md"
+                            >
+                              <span className="material-symbols-outlined text-sm">edit</span> Chỉnh sửa đặt phòng
+                            </button>
+                          )}
                           <button
                             onClick={() => handleViewInvoice(selectedBooking.id)}
-                            className="w-full py-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-800 text-[10px] font-black uppercase tracking-widest cursor-pointer flex items-center justify-center gap-1.5"
+                            className="w-full py-3 bg-slate-50 border border-slate-200/60 hover:bg-slate-100 text-slate-700 text-[10px] font-black uppercase tracking-widest cursor-pointer flex items-center justify-center gap-1.5 rounded-xl transition-all"
                           >
                             <span className="material-symbols-outlined text-sm">receipt_long</span> Xem hóa đơn chi tiết
                           </button>
                           <button
                             onClick={() => handleDownloadPdf(selectedBooking.id, selectedBooking.bookingReference)}
-                            className="w-full py-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-800 text-[10px] font-black uppercase tracking-widest cursor-pointer flex items-center justify-center gap-1.5"
+                            className="w-full py-3 bg-slate-50 border border-slate-200/60 hover:bg-slate-100 text-slate-700 text-[10px] font-black uppercase tracking-widest cursor-pointer flex items-center justify-center gap-1.5 rounded-xl transition-all"
                           >
                             <span className="material-symbols-outlined text-sm">download</span> Xuất file PDF bảng kê
                           </button>
@@ -2139,16 +2205,16 @@ export default function StaffDashboard({ setActivePage }) {
 
       {/* WALK-IN BOOKING FORM MODAL */}
       {isWalkInModalOpen && (
-        <div className="fixed inset-0 bg-neutral-950/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0f0f12] border border-neutral-900 max-w-2xl w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-white text-left font-['Montserrat'] my-8">
-            <div className="flex justify-between items-center border-b border-neutral-850 pb-3">
+        <div className="fixed inset-0 bg-neutral-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-slate-100 max-w-2xl w-full p-6 md:p-8 flex flex-col gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-2xl animate-scale-in text-slate-800 text-left">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
-                <span className="text-[9px] font-black tracking-widest text-primary uppercase">HỆ THỐNG LỄ TÂN</span>
-                <h4 className="text-sm font-black uppercase text-white m-0 mt-0.5">Đặt phòng Walk-in trực tiếp</h4>
+                <span className="text-[9px] font-black tracking-widest text-primary uppercase">Hệ thống lễ tân</span>
+                <h4 className="text-sm font-black uppercase text-slate-800 m-0 mt-0.5">Đặt phòng Walk-in trực tiếp</h4>
               </div>
               <button
                 onClick={() => setIsWalkInModalOpen(false)}
-                className="text-slate-400 hover:text-white border-none bg-transparent cursor-pointer flex items-center"
+                className="text-slate-400 hover:text-slate-600 border-none bg-transparent cursor-pointer flex items-center transition-colors"
               >
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
@@ -2157,12 +2223,12 @@ export default function StaffDashboard({ setActivePage }) {
             <form onSubmit={handleWalkInSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Room type selection */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Loại phòng *</label>
                   <select
                     value={walkInFormData.roomTypeId}
                     onChange={(e) => setWalkInFormData(prev => ({ ...prev, roomTypeId: e.target.value }))}
-                    className="w-full bg-transparent border-b border-neutral-850 py-2 font-bold text-xs outline-none text-white focus:border-primary [&>option]:bg-neutral-900 [&>option]:text-white"
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all [&>option]:bg-white [&>option]:text-slate-800"
                     required
                   >
                     <option value="">Chọn loại phòng</option>
@@ -2172,109 +2238,109 @@ export default function StaffDashboard({ setActivePage }) {
                   </select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Số lượng phòng *</label>
                   <input
                     type="number"
                     min="1"
                     value={walkInFormData.quantity || 1}
                     onChange={(e) => setWalkInFormData(prev => ({ ...prev, quantity: e.target.value }))}
-                    className="w-full bg-transparent border-b border-neutral-850 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
                     required
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Ngày nhận phòng (Check-in) *</label>
                   <input
                     type="date"
                     value={walkInFormData.checkInDate}
                     onChange={(e) => setWalkInFormData(prev => ({ ...prev, checkInDate: e.target.value }))}
-                    className="w-full bg-transparent border-b border-neutral-855 py-2 font-bold text-xs outline-none text-white focus:border-primary [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert"
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
                     required
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Ngày trả phòng (Check-out) *</label>
                   <input
                     type="date"
                     value={walkInFormData.checkOutDate}
                     onChange={(e) => setWalkInFormData(prev => ({ ...prev, checkOutDate: e.target.value }))}
-                    className="w-full bg-transparent border-b border-neutral-855 py-2 font-bold text-xs outline-none text-white focus:border-primary [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert"
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
                     required
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Người lớn *</label>
                   <input
                     type="number"
                     min="1"
                     value={walkInFormData.numberOfAdults || 1}
                     onChange={(e) => setWalkInFormData(prev => ({ ...prev, numberOfAdults: e.target.value }))}
-                    className="w-full bg-transparent border-b border-neutral-855 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
                     required
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Trẻ em</label>
                   <input
                     type="number"
                     min="0"
                     value={walkInFormData.numberOfChildren || 0}
                     onChange={(e) => setWalkInFormData(prev => ({ ...prev, numberOfChildren: e.target.value }))}
-                    className="w-full bg-transparent border-b border-neutral-855 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
                   />
                 </div>
               </div>
 
-              <div className="border-t border-neutral-900/60 pt-4">
+              <div className="border-t border-slate-100 pt-4">
                 <span className="text-[10px] font-black tracking-widest text-primary uppercase block mb-3">Thông tin khách hàng</span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Họ và tên *</label>
                     <input
                       type="text"
                       value={walkInFormData.customerFullname}
                       onChange={(e) => setWalkInFormData(prev => ({ ...prev, customerFullname: e.target.value }))}
                       placeholder="Nguyễn Văn A"
-                      className="w-full bg-transparent border-b border-neutral-855 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                      className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
                       required
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Email *</label>
                     <input
                       type="email"
                       value={walkInFormData.customerEmail}
                       onChange={(e) => setWalkInFormData(prev => ({ ...prev, customerEmail: e.target.value }))}
                       placeholder="email@example.com"
-                      className="w-full bg-transparent border-b border-neutral-855 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                      className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
                       required
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Số điện thoại *</label>
                     <input
                       type="tel"
                       value={walkInFormData.customerPhonenumber}
                       onChange={(e) => setWalkInFormData(prev => ({ ...prev, customerPhonenumber: e.target.value }))}
                       placeholder="0901234567"
-                      className="w-full bg-transparent border-b border-neutral-855 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                      className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
                       required
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">So CCCD *</label>
+                  <div className="space-y-1.5">
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Số CCCD *</label>
                     <input
                       type="text"
                       inputMode="numeric"
@@ -2282,31 +2348,31 @@ export default function StaffDashboard({ setActivePage }) {
                       value={walkInFormData.customerIdCardNumber}
                       onChange={(e) => setWalkInFormData(prev => ({ ...prev, customerIdCardNumber: e.target.value }))}
                       placeholder="012345678901"
-                      className="w-full bg-transparent border-b border-neutral-855 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                      className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
                       required
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-neutral-900/60 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
+              <div className="border-t border-slate-100 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Số tiền đóng trước (đ)</label>
                   <input
                     type="number"
                     value={walkInFormData.paidAmount}
                     onChange={(e) => setWalkInFormData(prev => ({ ...prev, paidAmount: e.target.value }))}
                     placeholder="0"
-                    className="w-full bg-transparent border-b border-neutral-855 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Phương thức thanh toán</label>
                   <select
                     value={walkInFormData.paymentMethod}
                     onChange={(e) => setWalkInFormData(prev => ({ ...prev, paymentMethod: e.target.value }))}
-                    className="w-full bg-transparent border-b border-neutral-855 py-2 font-bold text-xs outline-none text-white focus:border-primary [&>option]:bg-neutral-900 [&>option]:text-white"
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all [&>option]:bg-white [&>option]:text-slate-800"
                   >
                     <option value="Cash">Tiền mặt (Cash)</option>
                     <option value="Card">Thẻ (Card)</option>
@@ -2315,29 +2381,169 @@ export default function StaffDashboard({ setActivePage }) {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Yêu cầu đặc biệt</label>
                 <textarea
                   value={walkInFormData.specialRequests}
                   onChange={(e) => setWalkInFormData(prev => ({ ...prev, specialRequests: e.target.value }))}
                   placeholder="Yêu cầu khác..."
                   rows="2"
-                  className="w-full bg-transparent border border-neutral-855 p-2 font-bold text-xs outline-none text-white focus:border-primary resize-none"
+                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl p-3 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all resize-none placeholder:text-slate-400"
                 />
               </div>
 
-              <div className="flex gap-4 pt-4 border-t border-neutral-900">
+              <div className="flex gap-4 pt-4 border-t border-slate-100">
                 <button
                   type="submit"
                   disabled={isSubmittingWalkIn}
-                  className="bg-primary text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest hover:brightness-110 transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1"
+                  className="bg-primary text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest hover:brightness-110 transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 rounded-xl flex-1 shadow-[0_4px_12px_rgba(162,5,19,0.2)]"
                 >
                   {isSubmittingWalkIn ? 'Đang đặt phòng...' : 'Xác nhận Đặt & Check-in'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsWalkInModalOpen(false)}
-                  className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1"
+                  className="bg-slate-100 hover:bg-slate-200 border border-slate-200/60 text-slate-700 font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer rounded-xl flex-1 transition-all"
+                >
+                  Hủy bỏ
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT BOOKING FORM MODAL */}
+      {isEditBookingModalOpen && (
+        <div className="fixed inset-0 bg-neutral-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-slate-100 max-w-2xl w-full p-6 md:p-8 flex flex-col gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-2xl animate-scale-in text-slate-800 text-left">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <span className="text-[9px] font-black tracking-widest text-primary uppercase">Chi tiết lưu trú</span>
+                <h4 className="text-sm font-black uppercase text-slate-800 m-0 mt-0.5">Chỉnh sửa đơn đặt phòng</h4>
+              </div>
+              <button
+                onClick={() => setIsEditBookingModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 border-none bg-transparent cursor-pointer flex items-center transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleEditBookingSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Room type selection */}
+                <div className="space-y-1.5">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Loại phòng *</label>
+                  <select
+                    value={editBookingFormData.roomTypeId}
+                    onChange={(e) => setEditBookingFormData(prev => ({ ...prev, roomTypeId: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all [&>option]:bg-white [&>option]:text-slate-800"
+                    required
+                  >
+                    <option value="">Chọn loại phòng</option>
+                    {roomTypes.map(type => (
+                      <option key={type.id} value={type.id}>{type.name} - {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(type.basePrice || type.baseprice)}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Số lượng phòng *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editBookingFormData.quantity || 1}
+                    onChange={(e) => setEditBookingFormData(prev => ({ ...prev, quantity: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Ngày nhận phòng (Check-in) *</label>
+                  <input
+                    type="date"
+                    value={editBookingFormData.checkInDate}
+                    onChange={(e) => setEditBookingFormData(prev => ({ ...prev, checkInDate: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Ngày trả phòng (Check-out) *</label>
+                  <input
+                    type="date"
+                    value={editBookingFormData.checkOutDate}
+                    onChange={(e) => setEditBookingFormData(prev => ({ ...prev, checkOutDate: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Người lớn *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editBookingFormData.numberOfAdults || 1}
+                    onChange={(e) => setEditBookingFormData(prev => ({ ...prev, numberOfAdults: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Trẻ em *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editBookingFormData.numberOfChildren || 0}
+                    onChange={(e) => setEditBookingFormData(prev => ({ ...prev, numberOfChildren: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Tiền giảm giá (VND)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editBookingFormData.discountAmount || 0}
+                    onChange={(e) => setEditBookingFormData(prev => ({ ...prev, discountAmount: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Yêu cầu đặc biệt</label>
+                <textarea
+                  value={editBookingFormData.specialRequests || ''}
+                  onChange={(e) => setEditBookingFormData(prev => ({ ...prev, specialRequests: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all min-h-[80px]"
+                  placeholder="Nhập yêu cầu đặc biệt..."
+                />
+              </div>
+
+              <div className="flex gap-4 pt-4 border-t border-slate-100">
+                <button
+                  type="submit"
+                  disabled={isSubmittingEditBooking}
+                  className="bg-primary text-white font-black px-8 py-3.5 uppercase text-xs tracking-widest hover:brightness-110 active:scale-98 transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1 rounded-xl shadow-[0_4px_12px_rgba(162,5,19,0.2)]"
+                >
+                  {isSubmittingEditBooking ? 'Đang lưu...' : 'Lưu thay đổi'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditBookingModalOpen(false)}
+                  className="bg-slate-50 hover:bg-slate-100 border border-slate-200/60 text-slate-700 font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1 rounded-xl transition-all"
                 >
                   Hủy bỏ
                 </button>
@@ -2350,17 +2556,17 @@ export default function StaffDashboard({ setActivePage }) {
       {/* INVOICE DETAIL MODAL */}
       {isInvoiceModalOpen && (
         <div className="fixed inset-0 bg-neutral-950/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0f0f12] border border-neutral-900 max-w-2xl w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-white text-left font-['Montserrat'] my-8">
-            <div className="flex justify-between items-center border-b border-neutral-855 pb-3">
+          <div className="bg-white border border-slate-200/80 max-w-2xl w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl rounded-2xl animate-scale-in text-slate-800 text-left font-['Montserrat'] my-8">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
                 <span className="text-[9px] font-black tracking-widest text-primary uppercase">HÓA ĐƠN CHI TIẾT</span>
-                <h4 className="text-sm font-black uppercase text-white m-0 mt-0.5">
+                <h4 className="text-sm font-black uppercase text-slate-800 m-0 mt-0.5">
                   {invoiceLoading ? 'Đang tải...' : `Mã đơn: ${invoiceData?.bookingReference}`}
                 </h4>
               </div>
               <button
                 onClick={() => setIsInvoiceModalOpen(false)}
-                className="text-slate-400 hover:text-white border-none bg-transparent cursor-pointer flex items-center"
+                className="text-slate-400 hover:text-slate-650 border-none bg-transparent cursor-pointer flex items-center transition-all"
               >
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
@@ -2372,30 +2578,30 @@ export default function StaffDashboard({ setActivePage }) {
                 <span className="text-xs uppercase tracking-widest font-bold text-slate-500">Đang tải hóa đơn...</span>
               </div>
             ) : invoiceData ? (
-              <div className="space-y-6 text-xs text-slate-300">
+              <div className="space-y-6 text-xs text-slate-650">
                 {/* Guest info */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-neutral-900 pb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-slate-100 pb-4">
                   <div>
                     <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Khách hàng</span>
-                    <strong className="text-white text-sm block mt-1 uppercase font-black">{invoiceData.customerName}</strong>
+                    <strong className="text-slate-800 text-sm block mt-1 uppercase font-black">{invoiceData.customerName}</strong>
                     <span className="block mt-0.5">{invoiceData.customerEmail} • {invoiceData.customerPhone}</span>
                   </div>
                   <div>
                     <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Thời gian lưu trú</span>
-                    <strong className="text-white block mt-1">{invoiceData.checkInDate} đến {invoiceData.checkOutDate}</strong>
+                    <strong className="text-slate-800 block mt-1">{invoiceData.checkInDate} đến {invoiceData.checkOutDate}</strong>
                     <span className="block mt-0.5">Tổng cộng: {invoiceData.nights} đêm • Hạng phòng: {invoiceData.roomTypeName}</span>
                   </div>
                 </div>
 
                 {/* Calculation details */}
                 <div className="space-y-3">
-                  <div className="flex justify-between border-b border-neutral-900 pb-2">
+                  <div className="flex justify-between border-b border-slate-100 pb-2">
                     <span className="font-bold uppercase tracking-wider text-slate-400">Diễn giải dịch vụ</span>
                     <span className="font-bold uppercase tracking-wider text-slate-400">Thành tiền</span>
                   </div>
 
                   {/* Room Charge */}
-                  <div className="flex justify-between text-white font-medium">
+                  <div className="flex justify-between text-slate-800 font-medium">
                     <div>
                       <span>Tiền phòng ({invoiceData.quantity || 1} phòng x {invoiceData.nights} đêm)</span>
                       <span className="block text-[10px] text-slate-500 font-semibold">Đơn giá: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(invoiceData.roomRate)}</span>
@@ -2405,10 +2611,10 @@ export default function StaffDashboard({ setActivePage }) {
 
                   {/* Service charges */}
                   {invoiceData.services && invoiceData.services.length > 0 && (
-                    <div className="space-y-2 border-t border-neutral-900 pt-3">
+                    <div className="space-y-2 border-t border-slate-100 pt-3">
                       <span className="block text-[9px] font-black text-slate-500 uppercase tracking-widest">Dịch vụ phụ trội</span>
                       {invoiceData.services.map((svc, idx) => (
-                        <div key={idx} className="flex justify-between font-medium">
+                        <div key={idx} className="flex justify-between font-medium text-slate-800">
                           <div>
                             <span>{svc.serviceName} (x{svc.quantity})</span>
                             {svc.note && <span className="block text-[10px] text-slate-500 italic font-semibold">{svc.note}</span>}
@@ -2421,28 +2627,28 @@ export default function StaffDashboard({ setActivePage }) {
                 </div>
 
                 {/* Summary values */}
-                <div className="border-t border-neutral-900 pt-4 space-y-2">
-                  <div className="flex justify-between text-slate-400 font-bold">
+                <div className="border-t border-slate-100 pt-4 space-y-2">
+                  <div className="flex justify-between text-slate-500 font-bold">
                     <span>Tổng chưa thuế:</span>
                     <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(invoiceData.roomTotal) + parseFloat(invoiceData.serviceTotal || 0))}</span>
                   </div>
-                  <div className="flex justify-between text-slate-400 font-bold">
+                  <div className="flex justify-between text-slate-500 font-bold">
                     <span>Thuế VAT (10%):</span>
                     <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(invoiceData.taxAmount)}</span>
                   </div>
                   {parseFloat(invoiceData.discountAmount || 0) > 0 && (
-                    <div className="flex justify-between text-rose-400 font-bold">
+                    <div className="flex justify-between text-rose-600 font-bold">
                       <span>Giảm giá:</span>
                       <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(invoiceData.discountAmount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between border-t border-neutral-900 pt-3 text-sm">
-                    <span className="font-black text-white uppercase tracking-wider">TỔNG CỘNG HÓA ĐƠN:</span>
+                  <div className="flex justify-between border-t border-slate-100 pt-3 items-center">
+                    <span className="font-black text-slate-800 uppercase tracking-wider text-xs">TỔNG CỘNG HÓA ĐƠN:</span>
                     <span className="font-black text-primary text-base">
                       {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(invoiceData.finalAmount)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-green-400 font-bold items-center">
+                  <div className="flex justify-between text-emerald-600 font-bold items-center">
                     <div className="flex items-center gap-2">
                       <span>Đã thanh toán:</span>
                       {(() => {
@@ -2455,11 +2661,11 @@ export default function StaffDashboard({ setActivePage }) {
                           return (
                             <span style={{
                               display: 'inline-flex', alignItems: 'center', gap: '4px',
-                              background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                              background: 'linear-gradient(135deg, #10b981, #059669)',
                               color: '#fff', fontSize: '9px', fontWeight: 900,
                               letterSpacing: '0.08em', padding: '2px 8px',
                               borderRadius: '3px', textTransform: 'uppercase',
-                              boxShadow: '0 0 8px rgba(22,163,74,0.5)'
+                              boxShadow: '0 0 8px rgba(16,185,129,0.3)'
                             }}>
                               ✓ Thanh toán 100%
                             </span>
@@ -2468,11 +2674,11 @@ export default function StaffDashboard({ setActivePage }) {
                           return (
                             <span style={{
                               display: 'inline-flex', alignItems: 'center', gap: '4px',
-                              background: 'linear-gradient(135deg, #d97706, #b45309)',
+                              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
                               color: '#fff', fontSize: '9px', fontWeight: 900,
                               letterSpacing: '0.08em', padding: '2px 8px',
                               borderRadius: '3px', textTransform: 'uppercase',
-                              boxShadow: '0 0 8px rgba(217,119,6,0.5)'
+                              boxShadow: '0 0 8px rgba(245,158,11,0.3)'
                             }}>
                               ⚡ Đặt cọc {Math.round(ratio * 100)}%
                             </span>
@@ -2483,9 +2689,9 @@ export default function StaffDashboard({ setActivePage }) {
                     </div>
                     <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(invoiceData.paidAmount)}</span>
                   </div>
-                  <div className="flex justify-between border-t border-neutral-900 pt-2 text-xs font-black text-white">
+                  <div className="flex justify-between border-t border-slate-100 pt-2 text-xs font-black text-slate-800">
                     <span>CÒN LẠI PHẢI THANH TOÁN (DUE):</span>
-                    <span className={parseFloat(invoiceData.dueAmount) > 0 ? "text-rose-500" : "text-green-500"}>
+                    <span className={parseFloat(invoiceData.dueAmount) > 0 ? "text-rose-600" : "text-emerald-600"}>
                       {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(invoiceData.dueAmount)}
                     </span>
                   </div>
@@ -2493,19 +2699,19 @@ export default function StaffDashboard({ setActivePage }) {
 
                 {/* Payments breakdown */}
                 {invoiceData.payments && invoiceData.payments.length > 0 && (
-                  <div className="border-t border-neutral-900 pt-4">
+                  <div className="border-t border-slate-100 pt-4">
                     <span className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Lịch sử thanh toán</span>
                     <div className="space-y-2">
                       {invoiceData.payments.map((pmt, idx) => (
-                        <div key={idx} className="bg-neutral-950 p-3 border border-neutral-855 flex justify-between items-center text-[10px]">
+                        <div key={idx} className="bg-slate-50 p-3 border border-slate-200/60 rounded-xl flex justify-between items-center text-[10px] text-slate-700">
                           <div>
-                            <span className="block font-black text-white uppercase">{pmt.paymentType === 'Advance' ? 'Đặt cọc' : 'Thanh toán'} • {pmt.paymentMethod}</span>
+                            <span className="block font-black text-slate-800 uppercase">{pmt.paymentType === 'Advance' ? 'Đặt cọc' : 'Thanh toán'} • {pmt.paymentMethod}</span>
                             <span className="block text-[9px] text-slate-500 mt-0.5">Mã giao dịch: {pmt.transactionCode || 'N/A'} • Ngày: {new Date(pmt.paymentDate).toLocaleString('vi-VN')}</span>
                           </div>
                           <div className="text-right">
-                            <span className="block font-black text-primary">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(pmt.amount)}</span>
+                            <span className="block font-black text-slate-800">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(pmt.amount)}</span>
                             {parseFloat(pmt.refundedAmount || 0) > 0 && (
-                              <span className="block text-[9px] text-rose-500 font-semibold">Đã hoàn: -{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(pmt.refundedAmount)}</span>
+                              <span className="block text-[9px] text-rose-600 font-semibold">Đã hoàn: -{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(pmt.refundedAmount)}</span>
                             )}
                           </div>
                         </div>
@@ -2513,16 +2719,17 @@ export default function StaffDashboard({ setActivePage }) {
                     </div>
                   </div>
                 )}
+                
                 {/* Inline Add Service Form */}
                 {(() => {
                   const associatedBooking = bookings.find(b => b.id === invoiceData?.bookingId);
                   const isNotCompleted = associatedBooking && associatedBooking.status !== 'Completed';
                   return isNotCompleted && (
-                    <div className="border-t border-neutral-900 pt-4 space-y-3">
+                    <div className="border-t border-slate-100 pt-4 space-y-3">
                       <span className="block text-[9px] font-black text-slate-500 uppercase tracking-widest">
                         Thêm dịch vụ phụ thu (Minibar, Spa, Concierge...)
                       </span>
-                      <form onSubmit={handleInlineServiceSubmit} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-neutral-950 p-4 border border-neutral-855">
+                      <form onSubmit={handleInlineServiceSubmit} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-50 p-4 border border-slate-200/60 rounded-xl">
                         <div className="sm:col-span-2">
                           <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                             Chọn dịch vụ
@@ -2530,7 +2737,7 @@ export default function StaffDashboard({ setActivePage }) {
                           <select
                             value={inlineServiceId}
                             onChange={(e) => setInlineServiceId(e.target.value)}
-                            className="w-full bg-[#0f0f12] border border-neutral-800 text-white text-xs px-2.5 py-2.5 focus:border-primary outline-none"
+                            className="w-full bg-white border border-slate-200 text-slate-800 text-xs px-2.5 py-2.5 rounded-xl focus:border-primary outline-none transition-all"
                             required
                           >
                             <option value="" disabled>-- Chọn dịch vụ --</option>
@@ -2550,7 +2757,7 @@ export default function StaffDashboard({ setActivePage }) {
                             min="1"
                             value={inlineServiceQuantity}
                             onChange={(e) => setInlineServiceQuantity(parseInt(e.target.value) || 1)}
-                            className="w-full bg-[#0f0f12] border border-neutral-800 text-white text-xs px-2.5 py-2 focus:border-primary outline-none"
+                            className="w-full bg-white border border-slate-200 text-slate-800 text-xs px-2.5 py-2 rounded-xl focus:border-primary outline-none transition-all"
                             required
                           />
                         </div>
@@ -2558,7 +2765,7 @@ export default function StaffDashboard({ setActivePage }) {
                           <button
                             type="submit"
                             disabled={isSubmittingInlineService}
-                            className="w-full bg-slate-900 hover:bg-neutral-850 text-white border border-neutral-800 text-[10px] font-black uppercase tracking-widest py-2.5 px-3 cursor-pointer flex items-center justify-center gap-1"
+                            className="w-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-widest py-2.5 px-3 cursor-pointer flex items-center justify-center gap-1 rounded-xl transition-all"
                           >
                             {isSubmittingInlineService ? 'Đang thêm...' : 'Thêm dịch vụ'}
                           </button>
@@ -2572,7 +2779,7 @@ export default function StaffDashboard({ setActivePage }) {
                             value={inlineServiceNote}
                             onChange={(e) => setInlineServiceNote(e.target.value)}
                             placeholder="Ví dụ: Sử dụng 2 lon Pepsi từ Minibar"
-                            className="w-full bg-[#0f0f12] border border-neutral-800 text-white text-xs px-2.5 py-2 focus:border-primary outline-none"
+                            className="w-full bg-white border border-slate-200 text-slate-800 text-xs px-2.5 py-2 rounded-xl focus:border-primary outline-none transition-all"
                           />
                         </div>
                       </form>
@@ -2582,11 +2789,11 @@ export default function StaffDashboard({ setActivePage }) {
 
                 {/* Counter Payment Form */}
                 {parseFloat(invoiceData.dueAmount) > 0 && (
-                  <div className="border-t border-neutral-900 pt-4 space-y-3">
+                  <div className="border-t border-slate-100 pt-4 space-y-3">
                     <span className="block text-[9px] font-black text-slate-500 uppercase tracking-widest">
                       Ghi nhận thanh toán tại quầy
                     </span>
-                    <form onSubmit={handleManualPaymentSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-neutral-950 p-4 border border-neutral-855">
+                    <form onSubmit={handleManualPaymentSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-4 border border-slate-200/60 rounded-xl">
                       <div>
                         <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                           Phương thức
@@ -2594,7 +2801,7 @@ export default function StaffDashboard({ setActivePage }) {
                         <select
                           value={manualPaymentMethod}
                           onChange={(e) => setManualPaymentMethod(e.target.value)}
-                          className="w-full bg-[#0f0f12] border border-neutral-800 text-white text-xs px-2.5 py-2 focus:border-primary outline-none"
+                          className="w-full bg-white border border-slate-200 text-slate-800 text-xs px-2.5 py-2.5 rounded-xl focus:border-primary outline-none transition-all"
                         >
                           <option value="Cash">Tiền mặt (Cash)</option>
                           <option value="Bank Transfer">Chuyển khoản (Bank Transfer)</option>
@@ -2610,7 +2817,7 @@ export default function StaffDashboard({ setActivePage }) {
                           value={manualPaymentAmount}
                           onChange={(e) => setManualPaymentAmount(e.target.value)}
                           placeholder="Nhập số tiền"
-                          className="w-full bg-[#0f0f12] border border-neutral-800 text-white text-xs px-2.5 py-2 focus:border-primary outline-none"
+                          className="w-full bg-white border border-slate-200 text-slate-800 text-xs px-2.5 py-2 rounded-xl focus:border-primary outline-none transition-all"
                           required
                         />
                       </div>
@@ -2618,7 +2825,7 @@ export default function StaffDashboard({ setActivePage }) {
                         <button
                           type="submit"
                           disabled={isSubmittingManualPayment}
-                          className="w-full bg-primary hover:brightness-110 disabled:bg-neutral-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-[10px] font-black uppercase tracking-widest py-2 px-3 border-none cursor-pointer flex items-center justify-center gap-1"
+                          className="w-full bg-primary hover:brightness-110 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-[10px] font-black uppercase tracking-widest py-2.5 px-3 border-none cursor-pointer flex items-center justify-center gap-1 rounded-xl transition-all shadow-[0_4px_12px_rgba(162,5,19,0.15)]"
                         >
                           {isSubmittingManualPayment ? 'Đang xử lý...' : 'Xác nhận thanh toán'}
                         </button>
@@ -2632,14 +2839,14 @@ export default function StaffDashboard({ setActivePage }) {
                           value={manualPaymentNotes}
                           onChange={(e) => setManualPaymentNotes(e.target.value)}
                           placeholder="Ví dụ: Khách thanh toán phần còn lại bằng tiền mặt"
-                          className="w-full bg-[#0f0f12] border border-neutral-800 text-white text-xs px-2.5 py-2 focus:border-primary outline-none"
+                          className="w-full bg-white border border-slate-200 text-slate-800 text-xs px-2.5 py-2 rounded-xl focus:border-primary outline-none transition-all"
                         />
                       </div>
                     </form>
                   </div>
                 )}
 
-                <div className="flex flex-wrap gap-2 justify-end pt-4 border-t border-neutral-900">
+                <div className="flex flex-wrap gap-2 justify-end pt-4 border-t border-slate-100">
                   {(() => {
                     const associatedBooking = bookings.find(b => b.id === invoiceData?.bookingId);
                     const isStaying = associatedBooking && ['Checked In', 'Checked-in', 'Staying'].includes(associatedBooking.status);
@@ -2662,7 +2869,7 @@ export default function StaffDashboard({ setActivePage }) {
                                 console.error(err);
                               }
                             }}
-                            className="bg-primary hover:brightness-110 text-white font-black px-6 py-3 uppercase text-[10px] tracking-widest cursor-pointer border-none flex items-center gap-1.5"
+                            className="bg-primary hover:brightness-110 text-white font-black px-6 py-3 uppercase text-[10px] tracking-widest cursor-pointer border-none flex items-center gap-1.5 rounded-xl transition-all shadow-[0_4px_12px_rgba(162,5,19,0.2)]"
                           >
                             <span className="material-symbols-outlined text-xs">done_all</span> Hoàn tất Checkout
                           </button>
@@ -2670,7 +2877,7 @@ export default function StaffDashboard({ setActivePage }) {
                         <button
                           type="button"
                           onClick={() => handleDownloadPdf(invoiceData.bookingId, invoiceData.bookingReference)}
-                          className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-white font-black px-6 py-3 uppercase text-[10px] tracking-widest cursor-pointer flex items-center gap-1.5"
+                          className="bg-slate-100 hover:bg-slate-200 border border-slate-200/80 text-slate-700 font-black px-6 py-3 uppercase text-[10px] tracking-widest cursor-pointer flex items-center gap-1.5 rounded-xl transition-all"
                         >
                           <span className="material-symbols-outlined text-xs">download</span> Xuất PDF
                         </button>
@@ -2680,7 +2887,7 @@ export default function StaffDashboard({ setActivePage }) {
                   })()}
                   <button
                     onClick={() => setIsInvoiceModalOpen(false)}
-                    className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-white font-bold px-6 py-3 uppercase text-[10px] tracking-widest cursor-pointer"
+                    className="bg-slate-100 hover:bg-slate-200 border border-slate-200/80 text-slate-700 font-bold px-6 py-3 uppercase text-[10px] tracking-widest cursor-pointer rounded-xl transition-all"
                   >
                     Đóng
                   </button>

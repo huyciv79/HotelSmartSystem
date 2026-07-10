@@ -71,6 +71,8 @@ class BookingState:
     error: str                     = ""
     # Lưu chat history cho Gemini (list of dicts)
     chat_history: list             = field(default_factory=list)
+    # Cache danh sách bookings để tránh gọi API lại trong cùng một phiên
+    cached_bookings: list          = field(default_factory=list)
 
     @property
     def nights(self) -> int:
@@ -224,27 +226,41 @@ def _get_backend_room_types() -> list[dict]:
         logger.error("Lỗi khi kết nối Spring Boot backend để lấy loại phòng: %s", e)
     return []
 
-def _get_user_bookings(access_token: str) -> list[dict]:
-    """Lấy danh sách thô các booking từ backend."""
+def _get_user_bookings(access_token: str, max_retries: int = 2, timeout: int = 10) -> list[dict]:
+    """Lấy danh sách thô các booking từ backend với retry khi timeout."""
     if not access_token:
         return []
-    try:
-        headers = {"Authorization": f"Bearer {access_token}"}
-        resp = requests.get(f"{_BACKEND_URL}/bookings/history", headers=headers, timeout=5)
-        if resp.status_code == 200:
-            return resp.json().get("data", [])
-    except Exception as e:
-        logger.error("Lỗi khi kết nối backend để lấy danh sách booking: %s", e)
+    headers = {"Authorization": f"Bearer {access_token}"}
+    for attempt in range(max_retries):
+        try:
+            resp = requests.get(
+                f"{_BACKEND_URL}/bookings/history",
+                headers=headers,
+                timeout=timeout
+            )
+            if resp.status_code == 200:
+                return resp.json().get("data", [])
+            logger.warning("[BOOKINGS] Backend trả về HTTP %s (attempt %d/%d)", resp.status_code, attempt + 1, max_retries)
+        except requests.exceptions.Timeout:
+            logger.warning("[BOOKINGS] Timeout lần %d/%d khi lấy danh sách booking", attempt + 1, max_retries)
+        except Exception as e:
+            logger.error("[BOOKINGS] Lỗi khi kết nối backend: %s", e)
+            break  # Lỗi không phải timeout → không retry
+    logger.error("[BOOKINGS] Không thể lấy danh sách booking sau %d lần thử.", max_retries)
     return []
 
-def _get_user_context(access_token: str) -> str:
-    """Lấy thông tin cá nhân và lịch sử đặt phòng của user từ backend."""
+def _get_user_context(access_token: str) -> tuple[str, list]:
+    """Lấy thông tin và lịch sử đặt phòng của user từ backend.
+    
+    Returns:
+        (context_str, bookings_list) – cả chuỗi context cho AI lẫn raw list để cache.
+    """
     if not access_token:
-        return "Thông tin người dùng: Khách chưa đăng nhập."
+        return "Thông tin người dùng: Khách chưa đăng nhập.", []
     
     bookings = _get_user_bookings(access_token)
     if not bookings:
-        return "Thông tin người dùng: Đã đăng nhập nhưng hiện tại chưa có booking nào (hoặc lỗi lấy dữ liệu)."
+        return "Thông tin người dùng: Đã đăng nhập nhưng hiện tại chưa có booking nào (hoặc lỗi lấy dữ liệu).", []
     
     context_str = "Thông tin người dùng: Khách đã đăng nhập.\nDanh sách các Booking của khách (Ngữ Cảnh Hệ Thống):\n"
     for b in bookings:
@@ -256,8 +272,11 @@ def _get_user_context(access_token: str) -> str:
         price = b.get('finalAmount', 0)
         price_str = f"{float(price)/1_000_000:.2f}M ₫" if price else "0₫"
         method = b.get('checkInMethod', 'N/A')
-        context_str += f"- Mã Booking: {ref} | Trạng thái: {status} | Phòng: {room} | Check-in: {ci} | Check-out: {co} | Tổng tiền: {price_str} | Phương thức: {method}\n"
-    return context_str
+        context_str += (
+            f"- Mã Booking: {ref} | Trạng thái: {status} | Phòng: {room}"
+            f" | Check-in: {ci} | Check-out: {co} | Tổng tiền: {price_str} | Phương thức: {method}\n"
+        )
+    return context_str, bookings
 
 
 class BookingAgent:
@@ -441,8 +460,10 @@ class BookingAgent:
             
             from google.genai import types
             
-            # Tiêm ngữ cảnh người dùng vào prompt
-            user_context = _get_user_context(state.access_token)
+            # Tiêm ngữ cảnh người dùng vào prompt và cache bookings vào state
+            user_context, fetched_bookings = _get_user_context(state.access_token)
+            if fetched_bookings:
+                state.cached_bookings = fetched_bookings  # Cập nhật cache
             system_instruction = f"{_BOOKING_SYSTEM}\n\n{rooms_info}\n\n{user_context}"
             
             contents = _build_contents_with_history(user_input, state.chat_history, max_history_len=6)
@@ -462,14 +483,19 @@ class BookingAgent:
             config = types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 temperature=0.7,
-                # 💡 OPTIMIZATION 1: Sử dụng trực tiếp hàm Python làm Tool
+                # 💡 Tools for function calling - NOTE: response_schema/response_mime_type
+                # cannot be used simultaneously with tools as they conflict in Gemini API.
+                # Function calling takes priority when tools are present.
+                #
+                # ⚠️ IMPORTANT: Disable Automatic Function Calling (AFC).
+                # By default the SDK auto-executes tool functions and feeds dummy results
+                # back to the model, bypassing our real _process_* handlers entirely.
+                # We intercept response.function_calls manually below instead.
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
                 tools=[create_booking_summary, submit_final_booking, cancel_booking,
                        cancel_completed_booking, get_booking_invoice, generate_qr_checkin_token,
                        submit_room_change_request, submit_stay_extension_request, submit_early_checkout_request,
                        submit_refund_request, generate_payment_link],
-                # 💡 OPTIMIZATION 2: Trả về Structured Output dưới dạng JSON khớp với Pydantic schema
-                response_mime_type="application/json",
-                response_schema=ChatAgentResponse
             )
             
             response = self._client.models.generate_content(
@@ -479,6 +505,7 @@ class BookingAgent:
             )
             
             # Xử lý Function Calling (Human-in-the-loop interception)
+            logger.info(f"[CHAT] function_calls={[fc.name for fc in response.function_calls] if response.function_calls else None}")
             if response.function_calls:
                 for function_call in response.function_calls:
                     if function_call.name == "create_booking_summary":
@@ -518,34 +545,34 @@ class BookingAgent:
                         
             text_resp = response.text
             if text_resp:
+                # Try to parse JSON if Gemini returns structured output
                 try:
-                    # Parse Structured JSON Output
                     data = json.loads(text_resp)
-                    
-                    # Tự động đồng bộ thông tin thu thập được vào state biến
-                    if data.get("extracted_room_type"):
-                        state.room_type_name = data["extracted_room_type"]
-                    if data.get("extracted_check_in"):
-                        try:
-                            state.check_in = date.fromisoformat(data["extracted_check_in"])
-                        except:
-                            pass
-                    if data.get("extracted_check_out"):
-                        try:
-                            state.check_out = date.fromisoformat(data["extracted_check_out"])
-                        except:
-                            pass
-                    if data.get("extracted_adults"):
-                        state.adults = int(data["extracted_adults"])
-                    if data.get("extracted_children"):
-                        state.children = int(data["extracted_children"])
-                    if data.get("extracted_checkin_method"):
-                        state.check_in_method = data["extracted_checkin_method"]
-                        
-                    return data.get("reply_message", "Xác nhận yêu cầu.")
-                except Exception as json_err:
-                    logger.error("Lỗi parse Structured JSON: %s. Nội dung thô: %s", json_err, text_resp)
-                    return text_resp.strip()
+                    if isinstance(data, dict) and "reply_message" in data:
+                        # Sync extracted booking state info
+                        if data.get("extracted_room_type"):
+                            state.room_type_name = data["extracted_room_type"]
+                        if data.get("extracted_check_in"):
+                            try:
+                                state.check_in = date.fromisoformat(data["extracted_check_in"])
+                            except:
+                                pass
+                        if data.get("extracted_check_out"):
+                            try:
+                                state.check_out = date.fromisoformat(data["extracted_check_out"])
+                            except:
+                                pass
+                        if data.get("extracted_adults"):
+                            state.adults = int(data["extracted_adults"])
+                        if data.get("extracted_children"):
+                            state.children = int(data["extracted_children"])
+                        if data.get("extracted_checkin_method"):
+                            state.check_in_method = data["extracted_checkin_method"]
+                        return data.get("reply_message", "Xác nhận yêu cầu.")
+                except Exception:
+                    pass
+                # Plain text response (expected when tools are enabled)
+                return text_resp.strip()
                     
             return "Xác nhận yêu cầu."
         except Exception as e:
@@ -563,10 +590,23 @@ class BookingAgent:
 
     # ── Customer Self-Service Handlers ───────────────────────────────────────
 
-    def _get_booking_id(self, booking_number: str, access_token: str) -> Optional[int]:
+    def _get_booking_id(self, booking_number: str, access_token: str, state: Optional["BookingState"] = None) -> Optional[int]:
+        """Tra cứu booking_id từ cache trước, nếu không có thì gọi API (có retry)."""
+        # 1. Thử cache trước (không tốn network)
+        if state and state.cached_bookings:
+            for b in state.cached_bookings:
+                if b.get("bookingNumber") == booking_number:
+                    logger.info("[BOOKING_ID] Tìm thấy %s trong cache.", booking_number)
+                    return b.get("bookingId")
+            logger.info("[BOOKING_ID] %s không có trong cache, thử gọi API.", booking_number)
+
+        # 2. Fallback: gọi API với retry
         bookings = _get_user_bookings(access_token)
         for b in bookings:
             if b.get("bookingNumber") == booking_number:
+                # Cập nhật cache nếu có state
+                if state:
+                    state.cached_bookings = bookings
                 return b.get("bookingId")
         return None
 
@@ -575,25 +615,56 @@ class BookingAgent:
             return "Vui lòng đăng nhập để thực hiện chức năng hủy đặt phòng."
         b_num = args.get("booking_number")
         reason = args.get("cancellation_reason", "Hủy qua trợ lý AI")
-        b_id = self._get_booking_id(b_num, state.access_token)
+        if not b_num:
+            return "Vui lòng cung cấp mã đặt phòng (dạng BK...) để tiến hành hủy."
+        # Ensure reason is at least 5 chars (backend validation)
+        if not reason or len(reason.strip()) < 5:
+            reason = "Hủy qua trợ lý AI - không có lý do"
+        b_id = self._get_booking_id(b_num, state.access_token, state)
+        logger.info(f"[CANCEL] booking_number={b_num}, booking_id={b_id}, reason={reason}")
         if not b_id:
-            return f"Không tìm thấy đơn đặt phòng nào của bạn có mã `{b_num}`."
+            return f"Không tìm thấy đơn đặt phòng nào của bạn có mã `{b_num}`. Vui lòng kiểm tra lại mã đặt phòng."
         try:
-            resp = requests.delete(f"{_BACKEND_URL}/bookings/{b_id}/cancel",
-                                   json={"cancellationReason": reason},
-                                   headers={"Authorization": f"Bearer {state.access_token}"}, timeout=10)
+            resp = requests.delete(
+                f"{_BACKEND_URL}/bookings/{b_id}/cancel",
+                json={"cancellationReason": reason},
+                headers={
+                    "Authorization": f"Bearer {state.access_token}",
+                    "Content-Type": "application/json"
+                },
+                timeout=10
+            )
+            logger.info(f"[CANCEL] Response status={resp.status_code}, body={resp.text[:300]}")
             if resp.status_code == 200:
                 data = resp.json().get("data", {})
-                return f"Đã hủy thành công đơn đặt phòng `{b_num}`. Trạng thái hiện tại: {data.get('status', 'Cancelled')}."
-            return f"Lỗi hủy phòng: {resp.json().get('message', 'Không xác định')}."
+                status_val = data.get("status", "Cancelled")
+                return (
+                    f"✅ Đã hủy thành công đơn đặt phòng **`{b_num}`**.\n"
+                    f"- Trạng thái: **{status_val}**\n"
+                    f"- Lý do hủy: {reason}\n\n"
+                    f"Nếu đơn có thanh toán, vui lòng liên hệ nhân viên khách sạn để được hoàn tiền theo chính sách."
+                )
+            # Non-200 response
+            try:
+                err_body = resp.json()
+                err_msg = err_body.get("message") or err_body.get("error") or str(err_body)
+            except Exception:
+                err_msg = resp.text[:200] if resp.text else f"HTTP {resp.status_code}"
+            logger.warning(f"[CANCEL] Backend error for booking {b_num}: {err_msg}")
+            return f"❌ Không thể hủy đặt phòng `{b_num}`: {err_msg}"
+        except requests.exceptions.ConnectionError:
+            return "❌ Không kết nối được với hệ thống. Vui lòng thử lại sau hoặc liên hệ nhân viên khách sạn."
+        except requests.exceptions.Timeout:
+            return "❌ Hệ thống phản hồi chậm. Vui lòng thử lại sau."
         except Exception as e:
-            return f"Đã xảy ra lỗi khi hủy phòng: {e}"
+            logger.error(f"[CANCEL] Unexpected error for booking {b_num}: {e}", exc_info=True)
+            return f"❌ Đã xảy ra lỗi khi hủy phòng: {e}"
 
     def _process_get_booking_invoice(self, args: dict, state: BookingState) -> str:
         if not state.access_token:
             return "Vui lòng đăng nhập để xem hóa đơn."
         b_num = args.get("booking_number")
-        b_id = self._get_booking_id(b_num, state.access_token)
+        b_id = self._get_booking_id(b_num, state.access_token, state)
         if not b_id:
             return f"Không tìm thấy đơn đặt phòng nào của bạn có mã `{b_num}`."
         try:
@@ -616,7 +687,7 @@ class BookingAgent:
         if not state.access_token:
             return "Vui lòng đăng nhập để tạo mã QR."
         b_num = args.get("booking_number")
-        b_id = self._get_booking_id(b_num, state.access_token)
+        b_id = self._get_booking_id(b_num, state.access_token, state)
         if not b_id:
             return f"Không tìm thấy đơn đặt phòng nào có mã `{b_num}`."
         try:
@@ -636,7 +707,7 @@ class BookingAgent:
         b_num = args.get("booking_number")
         new_type = args.get("new_room_type", "")
         reason = args.get("reason", "Yêu cầu đổi hạng phòng")
-        b_id = self._get_booking_id(b_num, state.access_token)
+        b_id = self._get_booking_id(b_num, state.access_token, state)
         if not b_id:
             return f"Không tìm thấy đơn đặt phòng mã `{b_num}`."
         
@@ -662,7 +733,7 @@ class BookingAgent:
         b_num = args.get("booking_number")
         new_date = args.get("new_checkout_date")
         reason = args.get("reason", "Yêu cầu gia hạn lưu trú")
-        b_id = self._get_booking_id(b_num, state.access_token)
+        b_id = self._get_booking_id(b_num, state.access_token, state)
         if not b_id:
             return f"Không tìm thấy mã `{b_num}`."
         payload = {"bookingId": b_id, "newCheckOutDate": new_date, "description": reason}
@@ -681,7 +752,7 @@ class BookingAgent:
         b_num = args.get("booking_number")
         new_date = args.get("new_checkout_date")
         reason = args.get("reason", "Yêu cầu check-out sớm")
-        b_id = self._get_booking_id(b_num, state.access_token)
+        b_id = self._get_booking_id(b_num, state.access_token, state)
         if not b_id:
             return f"Không tìm thấy mã `{b_num}`."
         payload = {"bookingId": b_id, "newCheckOutDate": new_date, "description": reason}
@@ -699,7 +770,7 @@ class BookingAgent:
             return "Vui lòng đăng nhập để yêu cầu hoàn tiền."
         b_num = args.get("booking_number")
         reason = args.get("reason", "Yêu cầu hoàn tiền")
-        b_id = self._get_booking_id(b_num, state.access_token)
+        b_id = self._get_booking_id(b_num, state.access_token, state)
         if not b_id:
             return f"Không tìm thấy mã `{b_num}`."
         
@@ -717,7 +788,7 @@ class BookingAgent:
         if not state.access_token:
             return "Vui lòng đăng nhập để thanh toán."
         b_num = args.get("booking_number")
-        b_id = self._get_booking_id(b_num, state.access_token)
+        b_id = self._get_booking_id(b_num, state.access_token, state)
         if not b_id:
             return f"Không tìm thấy mã `{b_num}`."
         

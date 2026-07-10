@@ -649,7 +649,7 @@ export default function Booking({ setActivePage }) {
           <div className="lg:col-span-5 bg-white border border-outline-variant shadow-lg p-8 flex flex-col justify-between h-fit">
             <div>
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4 border-b border-gray-100 pb-2">
-                {t('booking_summary_realtime', 'Tóm Tắt Chi Phí (Real-time)')}
+                {t('booking_summary_realtime', 'Tóm Tắt Chi Phí')}
               </h3>
 
               {selectedRoom && (

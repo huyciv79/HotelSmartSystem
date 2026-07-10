@@ -14,69 +14,52 @@ const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleL
   const hasAvatar = avatar && avatar !== 'null' && avatar !== 'undefined' && !imgError;
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-72 bg-white border-r border-slate-200 flex flex-col justify-between z-30 font-['Montserrat'] shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
-      <div>
+    <aside className="fixed left-0 top-0 bottom-0 w-72 bg-white border-r border-slate-100 flex flex-col justify-between z-30 font-['Montserrat'] shadow-[4px_0_24px_rgba(0,0,0,0.015)]">
+      <div className="flex-1 flex flex-col overflow-y-auto">
         {/* Header info */}
-        <div className="p-8 border-b border-slate-100 bg-slate-50/50">
-          <span className="text-[9px] font-black tracking-[0.25em] text-primary uppercase block mb-1">TRANG QUẢN TRỊ</span>
-          <h2 className="text-lg font-black uppercase tracking-wider text-slate-800 m-0">ELYSIAN HUB</h2>
-
-          <div className="flex items-center gap-3 mt-6">
-            {hasAvatar ? (
-              <img
-                src={avatar}
-                alt={currentUser.fullName}
-                onError={() => setImgError(true)}
-                className="w-11 h-11 rounded-full object-cover shadow-lg border border-primary/20"
-              />
-            ) : (
-              <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-primary via-primary/80 to-rose-700 text-white flex items-center justify-center font-black text-sm tracking-wider shadow-lg border border-primary/20">
-                {getInitials(currentUser.fullName)}
-              </div>
-            )}
-            <div className="min-w-0">
-              <p className="text-xs font-black text-slate-800 truncate m-0 uppercase tracking-wide">{currentUser.fullName}</p>
-              <span className="inline-block mt-1 px-2.5 py-0.5 text-[8px] font-black tracking-widest text-primary bg-primary/10 uppercase border border-primary/20">
-                {isManager ? 'QUẢN LÝ' : 'LỄ TÂN'}
-              </span>
-            </div>
+        <div className="p-6 border-b border-slate-100 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-rose-600 flex items-center justify-center text-white shadow-[0_4px_16px_rgba(162,5,19,0.2)] shrink-0">
+            <span className="material-symbols-outlined text-lg">hotel</span>
+          </div>
+          <div>
+            <h2 className="text-base font-extrabold tracking-wide text-slate-800 m-0 leading-tight">Elysian Hub</h2>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mt-0.5">Smart Booking</span>
           </div>
         </div>
 
+
         {/* Nav Menu */}
-        <nav className="p-4 pt-8 space-y-2">
+        <nav className="px-4 space-y-1">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`w-full py-3.5 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-sm ${
+            className={`w-full py-3 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-xl ${
               activeTab === 'overview'
-                ? 'bg-gradient-to-r from-primary/15 to-transparent border-l-4 border-primary text-primary font-black'
-                : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                ? 'bg-primary/10 text-primary font-extrabold shadow-[0_4px_12px_rgba(162,5,19,0.03)]'
+                : 'bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
             <span className="material-symbols-outlined text-base">dashboard</span>
             Tổng quan
           </button>
 
-
-
           <button
             onClick={() => setActiveTab('bookings')}
-            className={`w-full py-2 px-3 text-[11px] font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-sm ${activeTab === 'bookings'
-                ? 'bg-gradient-to-r from-primary/15 to-transparent border-l-4 border-primary text-primary font-black'
-                : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
+            className={`w-full py-3 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-xl ${
+              activeTab === 'bookings'
+                ? 'bg-primary/10 text-primary font-extrabold shadow-[0_4px_12px_rgba(162,5,19,0.03)]'
+                : 'bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+            }`}
           >
             <span className="material-symbols-outlined text-base">receipt_long</span>
             Quản lý đặt phòng
           </button>
 
-
           <button
             onClick={() => setActiveTab('qr-check-in')}
-            className={`w-full py-3.5 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-sm ${
+            className={`w-full py-3 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-xl ${
               activeTab === 'qr-check-in'
-                ? 'bg-gradient-to-r from-primary/15 to-transparent border-l-4 border-primary text-primary font-black'
-                : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                ? 'bg-primary/10 text-primary font-extrabold shadow-[0_4px_12px_rgba(162,5,19,0.03)]'
+                : 'bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
             <span className="material-symbols-outlined text-base">qr_code_scanner</span>
@@ -85,26 +68,24 @@ const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleL
 
           <button
             onClick={() => setActiveTab('face-check-in')}
-            className={`w-full py-3.5 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-sm ${
+            className={`w-full py-3 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-xl ${
               activeTab === 'face-check-in'
-                ? 'bg-gradient-to-r from-primary/15 to-transparent border-l-4 border-primary text-primary font-black'
-                : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                ? 'bg-primary/10 text-primary font-extrabold shadow-[0_4px_12px_rgba(162,5,19,0.03)]'
+                : 'bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
             <span className="material-symbols-outlined text-base">face</span>
             FaceID Check-in
           </button>
 
-
-
           {isManager && (
             <>
               <button
                 onClick={() => setActiveTab('rooms')}
-                className={`w-full py-3.5 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-sm ${
+                className={`w-full py-3 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-xl ${
                   activeTab === 'rooms'
-                    ? 'bg-gradient-to-r from-primary/15 to-transparent border-l-4 border-primary text-primary font-black'
-                    : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-primary/10 text-primary font-extrabold shadow-[0_4px_12px_rgba(162,5,19,0.03)]'
+                    : 'bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
                 <span className="material-symbols-outlined text-base">meeting_room</span>
@@ -113,10 +94,10 @@ const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleL
 
               <button
                 onClick={() => setActiveTab('rooms-list')}
-                className={`w-full py-3.5 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-sm ${
+                className={`w-full py-3 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-xl ${
                   activeTab === 'rooms-list'
-                    ? 'bg-gradient-to-r from-primary/15 to-transparent border-l-4 border-primary text-primary font-black'
-                    : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-primary/10 text-primary font-extrabold shadow-[0_4px_12px_rgba(162,5,19,0.03)]'
+                    : 'bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
                 <span className="material-symbols-outlined text-base">bedroom_child</span>
@@ -125,10 +106,10 @@ const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleL
 
               <button
                 onClick={() => setActiveTab('services')}
-                className={`w-full py-3.5 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-sm ${
+                className={`w-full py-3 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-xl ${
                   activeTab === 'services'
-                    ? 'bg-gradient-to-r from-primary/15 to-transparent border-l-4 border-primary text-primary font-black'
-                    : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-primary/10 text-primary font-extrabold shadow-[0_4px_12px_rgba(162,5,19,0.03)]'
+                    : 'bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
                 <span className="material-symbols-outlined text-base">room_service</span>
@@ -137,10 +118,10 @@ const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleL
 
               <button
                 onClick={() => setActiveTab('reports')}
-                className={`w-full py-3.5 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-sm ${
+                className={`w-full py-3 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-xl ${
                   activeTab === 'reports'
-                    ? 'bg-gradient-to-r from-primary/15 to-transparent border-l-4 border-primary text-primary font-black'
-                    : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-primary/10 text-primary font-extrabold shadow-[0_4px_12px_rgba(162,5,19,0.03)]'
+                    : 'bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
                 <span className="material-symbols-outlined text-base">query_stats</span>
@@ -149,29 +130,24 @@ const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleL
             </>
           )}
 
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`w-full py-3.5 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-sm ${
-              activeTab === 'settings'
-                ? 'bg-gradient-to-r from-primary/15 to-transparent border-l-4 border-primary text-primary font-black'
-                : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            <span className="material-symbols-outlined text-base">manage_accounts</span>
-            Hồ sơ cá nhân
-          </button>
+
         </nav>
       </div>
 
-      {/* Bottom logout */}
-      <div className="p-5 border-t border-slate-100">
-        <button
-          onClick={handleLogout}
-          className="w-full py-4 bg-transparent hover:bg-primary text-slate-500 hover:text-white font-black uppercase text-[10.5px] tracking-[0.15em] transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 border border-dashed border-slate-200 hover:border-solid hover:border-primary"
-        >
-          <span className="material-symbols-outlined text-base">logout</span>
-          Đăng xuất
-        </button>
+      {/* Bottom widgets */}
+      <div className="flex flex-col shrink-0">
+
+
+        {/* Logout section */}
+        <div className="p-4 border-t border-slate-100/50">
+          <button
+            onClick={handleLogout}
+            className="w-full py-3 bg-transparent hover:bg-rose-50/50 text-slate-500 hover:text-rose-600 font-extrabold uppercase text-[10px] tracking-widest transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 border border-dashed border-slate-200 hover:border-solid hover:border-rose-200 rounded-xl"
+          >
+            <span className="material-symbols-outlined text-base">logout</span>
+            Đăng xuất
+          </button>
+        </div>
       </div>
     </aside>
   );
