@@ -3,7 +3,6 @@ package com.example.hotelsmartbookingbackend.controller;
 import com.example.hotelsmartbookingbackend.dto.IdempotentRecord;
 import com.example.hotelsmartbookingbackend.dto.request.CaptureOrderRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CreateOrderRequest;
-import com.example.hotelsmartbookingbackend.dto.request.BankTransferRequest;
 import com.example.hotelsmartbookingbackend.dto.request.ManualPaymentRequest;
 import com.example.hotelsmartbookingbackend.dto.response.ApiResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PaypalCaptureResponse;
@@ -135,17 +134,6 @@ public class PaymentController {
         }
     }
 
-    @PostMapping("/bank-transfer")
-    public ResponseEntity<ApiResponse<String>> processBankTransfer(
-            @Valid @RequestBody BankTransferRequest request) {
-        try {
-            paymentService.processBankTransfer(request);
-            return ResponseEntity.ok(ApiResponse.success("Bank transfer payment processed successfully", "SUCCESS"));
-        } catch (Exception e) {
-            log.error("Error processing bank transfer payment: ", e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
-        }
-    }
 
     @SuppressWarnings("unchecked")
     private <T> ApiResponse<T> deserializeResponse(Object body, Class<T> dataType) {

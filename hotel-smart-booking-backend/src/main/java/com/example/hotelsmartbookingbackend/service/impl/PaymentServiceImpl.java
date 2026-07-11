@@ -2,7 +2,6 @@ package com.example.hotelsmartbookingbackend.service.impl;
 
 import com.example.hotelsmartbookingbackend.dto.request.CaptureOrderRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CreateOrderRequest;
-import com.example.hotelsmartbookingbackend.dto.request.BankTransferRequest;
 import com.example.hotelsmartbookingbackend.dto.response.PaypalCaptureResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PaypalOrderResponse;
 import com.example.hotelsmartbookingbackend.entity.Booking;
@@ -194,74 +193,6 @@ public class PaymentServiceImpl implements PaymentService {
         redisTemplate.delete(redisKey);
 
         return captureResponse;
-    }
-
-    @Override
-    @Transactional
-    public void processBankTransfer(BankTransferRequest request) {
-        Booking booking = bookingRepository.findById(request.getBookingId())
-                .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + request.getBookingId()));
-
-        if (booking.getStatus() == BookingStatus.PAID) {
-            throw new RuntimeException("Booking is already fully paid");
-        }
-        if (booking.getStatus() == BookingStatus.CANCELLED) {
-            throw new RuntimeException("Booking has been cancelled");
-        }
-
-        BigDecimal remainingBalance = booking.getFinalamount().subtract(booking.getPaidamount());
-        BigDecimal chargeAmount = request.getAmount();
-
-        if (chargeAmount == null || chargeAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Payment amount must be greater than zero");
-        }
-        if (chargeAmount.compareTo(remainingBalance) > 0) {
-            throw new RuntimeException("Payment amount exceeds remaining balance of " + remainingBalance);
-        }
-
-        // 1. Create Payment Record in Database
-        Payment payment = new Payment();
-        payment.setBookingid(booking);
-        payment.setAmount(chargeAmount);
-        payment.setPaymentmethod("Bank Transfer");
-
-        boolean isFirstPayment = booking.getPaidamount().compareTo(BigDecimal.ZERO) == 0;
-        boolean isPartial = chargeAmount.compareTo(booking.getFinalamount()) < 0;
-
-        payment.setPaymenttype(isFirstPayment && isPartial ? "Deposit" : "Booking Payment");
-        payment.setTransactioncode(request.getTransactionCode() != null ? request.getTransactionCode()
-                : "BANK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        payment.setStatus("Completed");
-        payment.setRefundedamount(BigDecimal.ZERO);
-        payment.setPaymentdate(Instant.now());
-        payment.setNotes("Direct Bank Transfer payment. Approved by system.");
-
-        paymentRepository.save(payment);
-
-        // 2. Update Booking paid amount and status
-        booking.setPaidamount(booking.getPaidamount().add(chargeAmount));
-        if (isFirstPayment && isPartial) {
-            booking.setDepositamount(chargeAmount);
-        }
-        booking.setUpdatedat(Instant.now());
-
-        if (booking.getStatus() != BookingStatus.CHECKED_IN && booking.getStatus() != BookingStatus.STAYING && booking.getStatus() != BookingStatus.COMPLETED) {
-            if (booking.getPaidamount().compareTo(booking.getFinalamount()) >= 0) {
-                booking.setStatus(BookingStatus.PAID);
-            } else if (booking.getPaidamount().compareTo(BigDecimal.ZERO) > 0) {
-                booking.setStatus(BookingStatus.PARTIALLY_PAID);
-            }
-        }
-
-        bookingRepository.save(booking);
-
-        try {
-            String payMsg = String.format("Thanh toán thành công số tiền %s cho đơn đặt phòng %s bằng chuyển khoản ngân hàng.", 
-                    formatCurrency(chargeAmount), booking.getBookingreference());
-            notificationService.sendNotification(booking.getUserid(), "Thanh toán thành công", payMsg, "Payment", booking.getId());
-        } catch (Exception e) {
-            log.error("Failed to send payment capture notification: ", e);
-        }
     }
 
     @Override

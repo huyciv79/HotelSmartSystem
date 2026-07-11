@@ -29,6 +29,17 @@ const RevenueReports = ({ stats }) => {
   const onlinePct = typePercentages.Online ?? 0;
   const walkinPct = typePercentages['Walk-in'] ?? 0;
 
+  // Occupancy rate calculations
+  const occupancyRate = stats && typeof stats.occupancyRate === 'number' ? stats.occupancyRate : 0;
+  const totalRooms = stats && typeof stats.totalRooms === 'number' ? stats.totalRooms : 0;
+  const occupiedRooms = stats && typeof stats.occupiedRooms === 'number' ? stats.occupiedRooms : 0;
+  const availableRooms = Math.max(0, totalRooms - occupiedRooms);
+
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (Math.min(100, Math.max(0, occupancyRate)) / 100) * circumference;
+
+
   const handleExportCSV = () => {
     if (!stats) return;
     let csvContent = '\uFEFF';
@@ -108,44 +119,83 @@ const RevenueReports = ({ stats }) => {
         {/* Occupancy card */}
         <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] p-6 flex flex-col justify-between">
           <div>
-            <h4 className="text-xs font-black uppercase tracking-widest text-slate-800 border-b border-slate-100 pb-3 mb-4">Hiệu suất phòng nghỉ</h4>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">Phân phối tỷ lệ lấp đầy giữa các phân khúc khách hàng.</p>
+            <h4 className="text-xs font-black uppercase tracking-widest text-slate-800 border-b border-slate-100 pb-3 mb-3">Tỷ lệ lấp đầy phòng</h4>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">Hiệu suất khai thác phòng vật lý hiện tại của khách sạn.</p>
           </div>
 
-          <div className="space-y-4 py-4">
+          <div className="flex flex-col items-center justify-center py-2 relative">
+            <div className="relative w-32 h-32 flex items-center justify-center">
+              <svg className="w-full h-full transform -rotate-90">
+                {/* Background Track */}
+                <circle
+                  cx="64"
+                  cy="64"
+                  r={radius}
+                  className="text-slate-100"
+                  strokeWidth="8"
+                  stroke="currentColor"
+                  fill="none"
+                />
+                {/* Progress Bar */}
+                <circle
+                  cx="64"
+                  cy="64"
+                  r={radius}
+                  className="text-primary transition-all duration-1000 ease-out"
+                  strokeWidth="8"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  stroke="currentColor"
+                  fill="none"
+                />
+              </svg>
+              {/* Text inside the circle */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-xl font-black text-slate-800 leading-none">{occupancyRate.toFixed(1)}%</span>
+                <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1">Lấp đầy</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3.5 border-t border-slate-50 pt-4 pb-1">
+            {/* Occupied Row */}
             <div>
               <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider mb-1.5 text-slate-600">
-                <span>Đoàn / Sự kiện</span>
-                <span className="text-slate-800 font-black">{groupPct.toFixed(0)}%</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-primary inline-block"></span>
+                  Đang sử dụng (Occupied)
+                </span>
+                <span className="text-slate-800 font-black">{occupiedRooms} / {totalRooms} Phòng</span>
               </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="bg-primary h-full rounded-full transition-all duration-700" style={{ width: `${groupPct}%` }} />
+              <div className="w-full h-2 bg-slate-50 border border-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className="bg-primary h-full rounded-full transition-all duration-700" 
+                  style={{ width: `${totalRooms > 0 ? (occupiedRooms / totalRooms) * 100 : 0}%` }} 
+                />
               </div>
             </div>
 
+            {/* Available Row */}
             <div>
               <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider mb-1.5 text-slate-600">
-                <span>Đặt trực tuyến</span>
-                <span className="text-slate-800 font-black">{onlinePct.toFixed(0)}%</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                  Phòng trống (Available)
+                </span>
+                <span className="text-slate-800 font-black">{availableRooms} / {totalRooms} Phòng</span>
               </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="bg-blue-500 h-full rounded-full transition-all duration-700" style={{ width: `${onlinePct}%` }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider mb-1.5 text-slate-600">
-                <span>Walk-in trực tiếp</span>
-                <span className="text-slate-800 font-black">{walkinPct.toFixed(0)}%</span>
-              </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full transition-all duration-700" style={{ width: `${walkinPct}%` }} />
+              <div className="w-full h-2 bg-slate-50 border border-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className="bg-emerald-500 h-full rounded-full transition-all duration-700" 
+                  style={{ width: `${totalRooms > 0 ? (availableRooms / totalRooms) * 100 : 0}%` }} 
+                />
               </div>
             </div>
           </div>
 
           <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider border-t border-slate-100 pt-3">
-            Dữ liệu được làm mới tự động mỗi 12 giờ.
+            Dữ liệu được cập nhật dựa trên thời gian thực.
           </div>
         </div>
       </div>

@@ -856,9 +856,9 @@ export default function StaffDashboard({ setActivePage }) {
     }
   };
 
-  const fetchRoomTypes = async () => {
+  const fetchRoomTypes = async (keyword = '') => {
     try {
-      const response = await getRoomTypes('all');
+      const response = await getRoomTypes('all', keyword);
       if (response && response.data && response.data.content) {
         setRoomTypes(response.data.content);
       }
@@ -1565,6 +1565,7 @@ export default function StaffDashboard({ setActivePage }) {
                 handleOpenEditRoom={handleOpenEditRoom}
                 handleDeleteRoom={handleDeleteRoom}
                 isSubmittingRoom={isSubmittingRoom}
+                fetchRoomTypes={fetchRoomTypes}
               />
             )}
 
@@ -2103,16 +2104,16 @@ export default function StaffDashboard({ setActivePage }) {
 
       {/* Room Edit Dialog */}
       {isRoomEditOpen && (
-        <div className="fixed inset-0 bg-neutral-950/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f0f12] border border-neutral-900 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-white text-left font-['Montserrat']">
-            <div className="flex justify-between items-center border-b border-neutral-850 pb-3">
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-100 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-slate-800 text-left font-['Montserrat'] rounded-2xl">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
                 <span className="text-[9px] font-black tracking-widest text-primary uppercase">CẬP NHẬT PHÒNG VẬT LÝ</span>
-                <h4 className="text-sm font-black uppercase text-white m-0 mt-0.5">Phòng {editingRoomItem?.roomNumber}</h4>
+                <h4 className="text-sm font-black uppercase text-slate-800 m-0 mt-0.5">Phòng {editingRoomItem?.roomNumber}</h4>
               </div>
               <button
                 onClick={() => setIsRoomEditOpen(false)}
-                className="text-slate-400 hover:text-white border-none bg-transparent cursor-pointer flex items-center"
+                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1 transition-all border-none bg-transparent cursor-pointer flex items-center"
               >
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
@@ -2125,7 +2126,7 @@ export default function StaffDashboard({ setActivePage }) {
                   type="text"
                   value={roomEditFormData.roomNumber}
                   onChange={(e) => setRoomEditFormData(prev => ({ ...prev, roomNumber: e.target.value }))}
-                  className="w-full bg-transparent border-b border-neutral-850 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
                   required
                 />
               </div>
@@ -2136,7 +2137,7 @@ export default function StaffDashboard({ setActivePage }) {
                   type="number"
                   value={roomEditFormData.floorNumber}
                   onChange={(e) => setRoomEditFormData(prev => ({ ...prev, floorNumber: e.target.value }))}
-                  className="w-full bg-transparent border-b border-neutral-850 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
                   required
                 />
               </div>
@@ -2146,7 +2147,7 @@ export default function StaffDashboard({ setActivePage }) {
                 <select
                   value={roomEditFormData.roomTypeId}
                   onChange={(e) => setRoomEditFormData(prev => ({ ...prev, roomTypeId: e.target.value }))}
-                  className="w-full bg-transparent border-b border-neutral-850 py-2 font-bold text-xs outline-none text-white focus:border-primary [&>option]:bg-neutral-900 [&>option]:text-white"
+                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all [&>option]:bg-white [&>option]:text-slate-800"
                   required
                 >
                   <option value="">Chọn loại phòng</option>
@@ -2163,7 +2164,7 @@ export default function StaffDashboard({ setActivePage }) {
                   value={roomEditFormData.adminPasscode || ''}
                   onChange={(e) => setRoomEditFormData(prev => ({ ...prev, adminPasscode: e.target.value }))}
                   placeholder="Nhập mật mã phòng..."
-                  className="w-full bg-transparent border-b border-neutral-850 py-2 font-bold text-xs outline-none text-white focus:border-primary placeholder:text-slate-600"
+                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
                 />
               </div>
 
@@ -2172,7 +2173,7 @@ export default function StaffDashboard({ setActivePage }) {
                 <select
                   value={roomEditFormData.status}
                   onChange={(e) => setRoomEditFormData(prev => ({ ...prev, status: e.target.value }))}
-                  className="w-full bg-transparent border-b border-neutral-850 py-2 font-bold text-xs outline-none text-white focus:border-primary [&>option]:bg-neutral-900 [&>option]:text-white"
+                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all [&>option]:bg-white [&>option]:text-slate-800"
                   required
                 >
                   <option value="Available">Available</option>
@@ -2182,18 +2183,18 @@ export default function StaffDashboard({ setActivePage }) {
                 </select>
               </div>
 
-              <div className="flex gap-4 pt-4 border-t border-neutral-900">
+              <div className="flex gap-4 pt-4 border-t border-slate-100">
                 <button
                   type="submit"
                   disabled={isSubmittingRoomEdit}
-                  className="bg-primary text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest hover:brightness-110 active:scale-98 transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1"
+                  className="bg-primary hover:brightness-110 text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1 rounded-xl shadow-[0_4px_12px_rgba(162,5,19,0.2)] disabled:opacity-60"
                 >
                   {isSubmittingRoomEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsRoomEditOpen(false)}
-                  className="bg-neutral-900 hover:bg-neutral-855 border border-neutral-800 text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1"
+                  className="bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold px-8 py-3.5 uppercase text-xs tracking-widest border border-slate-200/60 cursor-pointer flex-1 rounded-xl transition-all"
                 >
                   Hủy bỏ
                 </button>
@@ -2804,8 +2805,6 @@ export default function StaffDashboard({ setActivePage }) {
                           className="w-full bg-white border border-slate-200 text-slate-800 text-xs px-2.5 py-2.5 rounded-xl focus:border-primary outline-none transition-all"
                         >
                           <option value="Cash">Tiền mặt (Cash)</option>
-                          <option value="Bank Transfer">Chuyển khoản (Bank Transfer)</option>
-                          <option value="Credit Card">Thẻ tín dụng (Credit Card)</option>
                         </select>
                       </div>
                       <div>

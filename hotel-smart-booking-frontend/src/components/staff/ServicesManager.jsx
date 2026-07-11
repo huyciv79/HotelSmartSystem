@@ -7,6 +7,7 @@ const ServicesManager = ({ showToast, triggerCustomConfirm }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingService, setEditingService] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -15,6 +16,12 @@ const ServicesManager = ({ showToast, triggerCustomConfirm }) => {
     unit: 'Lượt',
     isactive: true,
   });
+
+  const filteredServices = services.filter(svc => 
+    svc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    svc.id.toString().includes(searchQuery) ||
+    (svc.description && svc.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   const fetchServices = async () => {
     setLoading(true);
@@ -110,28 +117,71 @@ const ServicesManager = ({ showToast, triggerCustomConfirm }) => {
   return (
     <div className="space-y-6 animate-scale-in text-left">
       {/* Header */}
-      <div className="flex justify-between items-end">
-        <div>
-          <h3 className="text-slate-800 font-black text-base uppercase tracking-wider m-0">Quản lý dịch vụ</h3>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Cấu hình danh mục dịch vụ phát sinh và phụ thu (Spa, minibar, giặt là...)</p>
+      {isFormOpen ? (
+        <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsFormOpen(false)}
+              className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200/60 text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-all"
+            >
+              <span className="material-symbols-outlined text-sm font-bold">arrow_back</span>
+            </button>
+            <div>
+              <h3 className="text-slate-800 font-black text-base uppercase tracking-wider m-0">
+                {editingService ? 'Chỉnh sửa dịch vụ' : 'Thêm mới dịch vụ'}
+              </h3>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                {editingService ? `Cấu hình thông tin cho: ${editingService.name}` : 'Nhập thông tin dịch vụ phát sinh và phụ thu'}
+              </p>
+            </div>
+          </div>
         </div>
+      ) : (
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div>
+            <h3 className="text-slate-800 font-black text-base uppercase tracking-wider m-0">Quản lý dịch vụ</h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Cấu hình danh mục dịch vụ phát sinh và phụ thu (Spa, minibar, giặt là...)</p>
+          </div>
 
-        <button
-          onClick={handleOpenAdd}
-          className="bg-primary hover:brightness-110 text-white font-black text-xs uppercase tracking-widest px-5 py-3 border-none cursor-pointer transition-all flex items-center gap-1.5 rounded-xl shadow-[0_4px_12px_rgba(162,5,19,0.2)]"
-        >
-          <span className="material-symbols-outlined text-sm">add</span>
-          Thêm dịch vụ
-        </button>
-      </div>
+          <div className="flex w-full md:w-auto items-center gap-3">
+            {/* Search Box */}
+            <div className="relative flex-grow md:flex-grow-0 w-full md:w-64">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm select-none">
+                search
+              </span>
+              <input
+                type="text"
+                placeholder="Tìm tên hoặc mô tả..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200/60 rounded-xl pl-9 pr-9 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 bg-transparent border-none p-0 cursor-pointer flex items-center"
+                >
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+              )}
+            </div>
 
-      {/* Service Form */}
-      {isFormOpen && (
+            <button
+              onClick={handleOpenAdd}
+              className="bg-primary hover:brightness-110 text-white font-black text-xs uppercase tracking-widest px-5 py-3 border-none cursor-pointer transition-all flex items-center gap-1.5 rounded-xl shadow-[0_4px_12px_rgba(162,5,19,0.2)] shrink-0"
+            >
+              <span className="material-symbols-outlined text-sm">add</span>
+              Thêm dịch vụ
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      {isFormOpen ? (
         <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] p-6 md:p-8">
-          <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest border-b border-slate-100 pb-3 mb-6">
-            {editingService ? `Chỉnh sửa: ${editingService.name}` : 'Thêm mới dịch vụ'}
-          </h4>
-
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -209,78 +259,86 @@ const ServicesManager = ({ showToast, triggerCustomConfirm }) => {
             </div>
           </form>
         </div>
-      )}
-
-      {/* Services Table */}
-      <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center">
-            <span className="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>
-            <span className="text-slate-400 font-bold uppercase tracking-widest text-xs">Đang tải danh sách dịch vụ...</span>
-          </div>
-        ) : services.length === 0 ? (
-          <div className="p-12 text-center">
-            <span className="material-symbols-outlined text-4xl text-slate-200 block mb-3">room_service</span>
-            <p className="text-slate-400 font-bold uppercase tracking-wider text-xs">Chưa có dịch vụ nào trong hệ thống</p>
-          </div>
-        ) : (
-          <table className="w-full border-collapse text-left text-xs text-slate-600">
-            <thead>
-              <tr className="border-b border-slate-100 text-[9px] font-black uppercase tracking-wider text-slate-400 bg-slate-50/50">
-                <th className="p-4 pl-6">ID</th>
-                <th className="p-4">Tên dịch vụ</th>
-                <th className="p-4">Mô tả</th>
-                <th className="p-4">Đơn giá</th>
-                <th className="p-4">Đơn vị tính</th>
-                <th className="p-4">Trạng thái</th>
-                <th className="p-4 pr-6 text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {services.map((svc) => (
-                <tr key={svc.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="p-4 pl-6 text-slate-400 font-bold">#{svc.id}</td>
-                  <td className="p-4">
-                    <span className="text-slate-800 font-black uppercase text-sm block">{svc.name}</span>
-                  </td>
-                  <td className="p-4 max-w-xs truncate font-medium text-slate-500">
-                    {svc.description || <span className="text-slate-300 italic">Không có mô tả</span>}
-                  </td>
-                  <td className="p-4 text-primary font-black text-sm">
-                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(svc.price || 0)}
-                  </td>
-                  <td className="p-4 font-semibold text-slate-500">{svc.unit}</td>
-                  <td className="p-4">
-                    <span className={`px-2.5 py-1 text-[8.5px] font-extrabold uppercase tracking-widest rounded-lg ${
-                      svc.isactive
-                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                        : 'bg-rose-50 text-rose-600 border border-rose-100'
-                    }`}>
-                      {svc.isactive ? 'Hoạt động' : 'Tạm ngưng'}
-                    </span>
-                  </td>
-                  <td className="p-4 pr-6 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => handleOpenEdit(svc)}
-                        className="bg-slate-50 border border-slate-200/60 text-slate-700 hover:bg-slate-100 hover:text-slate-900 text-[8.5px] font-black uppercase tracking-widest px-3 py-1.5 cursor-pointer rounded-lg transition-all"
-                      >
-                        Sửa
-                      </button>
-                      <button
-                        onClick={() => handleDelete(svc.id, svc.name)}
-                        className="bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-100 text-[8.5px] font-black uppercase tracking-widest px-3 py-1.5 cursor-pointer rounded-lg transition-all"
-                      >
-                        Xóa
-                      </button>
-                    </div>
-                  </td>
+      ) : (
+        /* Services Table */
+        <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] overflow-hidden">
+          {loading ? (
+            <div className="p-12 text-center">
+              <span className="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>
+              <span className="text-slate-400 font-bold uppercase tracking-widest text-xs">Đang tải danh sách dịch vụ...</span>
+            </div>
+          ) : services.length === 0 ? (
+            <div className="p-12 text-center">
+              <span className="material-symbols-outlined text-4xl text-slate-200 block mb-3">room_service</span>
+              <p className="text-slate-400 font-bold uppercase tracking-wider text-xs">Chưa có dịch vụ nào trong hệ thống</p>
+            </div>
+          ) : (
+            <table className="w-full border-collapse text-left text-xs text-slate-600">
+              <thead>
+                <tr className="border-b border-slate-100 text-[9px] font-black uppercase tracking-wider text-slate-400 bg-slate-50/50">
+                  <th className="p-4 pl-6">ID</th>
+                  <th className="p-4">Tên dịch vụ</th>
+                  <th className="p-4">Mô tả</th>
+                  <th className="p-4">Đơn giá</th>
+                  <th className="p-4">Đơn vị tính</th>
+                  <th className="p-4">Trạng thái</th>
+                  <th className="p-4 pr-6 text-right">Thao tác</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredServices.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="p-8 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+                      Không tìm thấy dịch vụ nào phù hợp
+                    </td>
+                  </tr>
+                ) : (
+                  filteredServices.map((svc) => (
+                    <tr key={svc.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="p-4 pl-6 text-slate-400 font-bold">#{svc.id}</td>
+                      <td className="p-4">
+                        <span className="text-slate-800 font-black uppercase text-sm block">{svc.name}</span>
+                      </td>
+                      <td className="p-4 max-w-xs truncate font-medium text-slate-500">
+                        {svc.description || <span className="text-slate-300 italic">Không có mô tả</span>}
+                      </td>
+                      <td className="p-4 text-primary font-black text-sm">
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(svc.price || 0)}
+                      </td>
+                      <td className="p-4 font-semibold text-slate-500">{svc.unit}</td>
+                      <td className="p-4">
+                        <span className={`px-2.5 py-1 text-[8.5px] font-extrabold uppercase tracking-widest rounded-lg ${
+                          svc.isactive
+                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                            : 'bg-rose-50 text-rose-600 border border-rose-100'
+                        }`}>
+                          {svc.isactive ? 'Hoạt động' : 'Tạm ngưng'}
+                        </span>
+                      </td>
+                      <td className="p-4 pr-6 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => handleOpenEdit(svc)}
+                            className="bg-slate-50 border border-slate-200/60 text-slate-700 hover:bg-slate-100 hover:text-slate-900 text-[8.5px] font-black uppercase tracking-widest px-3 py-1.5 cursor-pointer rounded-lg transition-all"
+                          >
+                            Sửa
+                          </button>
+                          <button
+                            onClick={() => handleDelete(svc.id, svc.name)}
+                            className="bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-100 text-[8.5px] font-black uppercase tracking-widest px-3 py-1.5 cursor-pointer rounded-lg transition-all"
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </div>
   );
 };
