@@ -35,9 +35,9 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setTitle(title);
         notification.setMessage(message);
         notification.setType(type);
-        notification.setReferenceid(referenceId);
-        notification.setIsread(false);
-        notification.setSentat(Instant.now());
+        notification.setReferenceId(referenceId);
+        notification.setIsRead(false);
+        notification.setSentAt(Instant.now());
 
         Notification saved = notificationRepository.save(notification);
 
@@ -59,11 +59,11 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Transactional
     public Notification createNotification(Notification notification) {
-        if (notification.getSentat() == null) {
-            notification.setSentat(Instant.now());
+        if (notification.getSentAt() == null) {
+            notification.setSentAt(Instant.now());
         }
-        if (notification.getIsread() == null) {
-            notification.setIsread(false);
+        if (notification.getIsRead() == null) {
+            notification.setIsRead(false);
         }
         return notificationRepository.save(notification);
     }
@@ -73,9 +73,9 @@ public class NotificationServiceImpl implements NotificationService {
     public Page<NotificationResponse> getNotifications(User user, boolean unreadOnly, Pageable pageable) {
         Page<Notification> page;
         if (unreadOnly) {
-            page = notificationRepository.findByUserAndIsreadOrderBySentatDesc(user, false, pageable);
+            page = notificationRepository.findByUserAndIsReadOrderBySentAtDesc(user, false, pageable);
         } else {
-            page = notificationRepository.findByUserOrderBySentatDesc(user, pageable);
+            page = notificationRepository.findByUserOrderBySentAtDesc(user, pageable);
         }
         return page.map(this::mapToResponse);
     }
@@ -88,9 +88,9 @@ public class NotificationServiceImpl implements NotificationService {
         if (!notification.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("Bạn không có quyền đánh dấu đã đọc thông báo này");
         }
-        if (!notification.getIsread()) {
-            notification.setIsread(true);
-            notification.setReadat(Instant.now());
+        if (!notification.getIsRead()) {
+            notification.setIsRead(true);
+            notification.setReadAt(Instant.now());
             notificationRepository.save(notification);
         }
     }
@@ -98,11 +98,11 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public void markAllAsRead(User user) {
-        List<Notification> unread = notificationRepository.findByUserAndIsread(user, false);
+        List<Notification> unread = notificationRepository.findByUserAndIsRead(user, false);
         Instant now = Instant.now();
         for (Notification notification : unread) {
-            notification.setIsread(true);
-            notification.setReadat(now);
+            notification.setIsRead(true);
+            notification.setReadAt(now);
         }
         notificationRepository.saveAll(unread);
     }
@@ -110,7 +110,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public long getUnreadCount(User user) {
-        return notificationRepository.countByUserAndIsread(user, false);
+        return notificationRepository.countByUserAndIsRead(user, false);
     }
 
     private NotificationResponse mapToResponse(Notification n) {
@@ -119,10 +119,10 @@ public class NotificationServiceImpl implements NotificationService {
                 .title(n.getTitle())
                 .message(n.getMessage())
                 .type(n.getType())
-                .referenceid(n.getReferenceid())
-                .isread(n.getIsread())
-                .readat(n.getReadat())
-                .sentat(n.getSentat())
+                .referenceid(n.getReferenceId())
+                .isread(n.getIsRead())
+                .readat(n.getReadAt())
+                .sentat(n.getSentAt())
                 .build();
     }
 }

@@ -15,7 +15,7 @@ import java.time.Instant;
 @Setter
 @Entity
 @Table(name = "customerrequests")
-public class Customerrequest {
+public class CustomerRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "requestid", nullable = false)
@@ -25,22 +25,22 @@ public class Customerrequest {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "bookingid", nullable = false)
-    private Booking bookingid;
+    private Booking booking;
 
     @Size(max = 50)
     @NotNull
     @Column(name = "requesttype", nullable = false, length = 50)
-    private String requesttype;
+    private String requestType;
 
     @NotNull
     @Column(name = "description", nullable = false, length = Integer.MAX_VALUE)
     private String description;
 
     @Column(name = "oldvalue", length = Integer.MAX_VALUE)
-    private String oldvalue;
+    private String oldValue;
 
     @Column(name = "newvalue", length = Integer.MAX_VALUE)
-    private String newvalue;
+    private String newValue;
 
     @Size(max = 50)
     @NotNull
@@ -49,15 +49,14 @@ public class Customerrequest {
     private String status;
 
     @Column(name = "resolvedat")
-    private Instant resolvedat;
+    private Instant resolvedAt;
 
     @Size(max = 500)
     @Column(name = "rejectionreason", length = 500)
-    private String rejectionreason;
+    private String rejectionReason;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "createdat", nullable = false)
-    private Instant createdat;
-
+    private Instant createdAt;
 }

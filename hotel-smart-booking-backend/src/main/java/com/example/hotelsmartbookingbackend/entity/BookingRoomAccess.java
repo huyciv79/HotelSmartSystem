@@ -34,38 +34,38 @@ public class BookingRoomAccess {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "bookingid", nullable = false)
-    private Booking bookingid;
+    private Booking booking;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "roomid", nullable = false)
-    private Room roomid;
+    private Room room;
 
     @Size(max = 255)
     @Column(name = "roomkeyaccess")
-    private String roomkeyaccess;
+    private String roomKeyAccess;
 
     @NotNull
     @Column(name = "roomkeygeneratedat", nullable = false)
-    private Instant roomkeygeneratedat;
+    private Instant roomKeyGeneratedAt;
 
     @NotNull
     @Column(name = "roomkeyexpiredat", nullable = false)
-    private Instant roomkeyexpiredat;
+    private Instant roomKeyExpiredAt;
 
     @Size(max = 50)
     @NotNull
     @ColumnDefault("'Active'")
     @Column(name = "roomkeystatus", nullable = false, length = 50)
-    private String roomkeystatus;
+    private String roomKeyStatus;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "createdat", nullable = false)
-    private Instant createdat;
+    private Instant createdAt;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "updatedat", nullable = false)
-    private Instant updatedat;
+    private Instant updatedAt;
 }

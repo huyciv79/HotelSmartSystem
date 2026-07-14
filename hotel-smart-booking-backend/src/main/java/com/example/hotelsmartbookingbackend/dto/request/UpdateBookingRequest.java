@@ -15,8 +15,6 @@ public class UpdateBookingRequest {
     private String specialRequests;
     
     private BigDecimal discountAmount;
-    
-
 
     private String checkInDate;
 

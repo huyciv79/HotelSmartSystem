@@ -13,7 +13,7 @@ import java.time.Instant;
 @Setter
 @Entity
 @Table(name = "feedbackimages")
-public class Feedbackimage {
+public class FeedbackImage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "feedbackimageid", nullable = false)
@@ -23,16 +23,15 @@ public class Feedbackimage {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @org.hibernate.annotations.OnDelete(action = org.hibernate.annotations.OnDeleteAction.CASCADE)
     @JoinColumn(name = "feedbackid", nullable = false)
-    private Feedback feedbackid;
+    private Feedback feedback;
 
     @Size(max = 10485760)
     @NotNull
     @Column(name = "imageurl", nullable = false, length = 10485760)
-    private String imageurl;
+    private String imageUrl;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "uploadedat", nullable = false)
-    private Instant uploadedat;
-
+    private Instant uploadedAt;
 }

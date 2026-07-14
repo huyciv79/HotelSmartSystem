@@ -29,10 +29,6 @@ public class StayAdjustmentController {
 
     private final RoomChangeService roomChangeService;
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  ROOM CHANGE (Đổi phòng)
-    // ─────────────────────────────────────────────────────────────────────────
-
     @PostMapping("/room-change")
     @Operation(
             summary = "Chuyển phòng trực tiếp (Room Move)",
@@ -105,9 +101,6 @@ public class StayAdjustmentController {
         return ResponseEntity.ok(ApiResponse.success("Đã từ chối yêu cầu chuyển phòng", response));
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  STAY EXTENSION (Gia hạn lưu trú)
-    // ─────────────────────────────────────────────────────────────────────────
 
     @PostMapping("/extension/request")
     @Operation(summary = "Khách hàng gửi yêu cầu gia hạn lưu trú")
@@ -157,9 +150,6 @@ public class StayAdjustmentController {
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách yêu cầu gia hạn lưu trú thành công", response));
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  EARLY CHECK-OUT (Check-out sớm)
-    // ─────────────────────────────────────────────────────────────────────────
 
     @PostMapping("/early-checkout/request")
     @Operation(summary = "Khách hàng gửi yêu cầu check-out sớm")

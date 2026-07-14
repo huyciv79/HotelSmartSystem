@@ -26,24 +26,24 @@ public class EkycProfile {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "userid", nullable = false)
-    private User userid;
+    private User user;
 
 
     @Size(max = 512)
     @Column(name = "idcardnumber", length = 512)
-    private String idcardnumber;
+    private String idCardNumber;
 
     @Size(max = 64)
     @Column(name = "idcardnumber_hash", length = 64, unique = true)
-    private String idcardnumberhash;
+    private String idCardNumberHash;
 
     @Size(max = 512)
     @Column(name = "fullname", length = 512)
-    private String fullname;
+    private String fullName;
 
     @Size(max = 512)
     @Column(name = "dateofbirth", length = 512)
-    private String dateofbirth;
+    private String dateOfBirth;
 
     @Size(max = 512)
     @Column(name = "gender", length = 512)
@@ -51,38 +51,38 @@ public class EkycProfile {
 
     @Size(max = 512)
     @Column(name = "hometown", length = 512)
-    private String hometown;
+    private String homeTown;
 
     @Size(max = 20)
     @Column(name = "provincecode", length = 20)
-    private String provincecode;
+    private String provinceCode;
 
     @Size(max = 512)
     @Column(name = "provincename", length = 512)
-    private String provincename;
+    private String provinceName;
 
     @Size(max = 512)
     @Column(name = "frontimage", length = 512)
-    private String frontimage;
+    private String frontImage;
 
     @Size(max = 512)
     @Column(name = "backimage", length = 512)
-    private String backimage;
+    private String backImage;
 
     @Size(max = 512)
     @Column(name = "faceimage", length = 512)
-    private String faceimage;
+    private String faceImage;
 
     @Column(name = "verifiedat")
-    private Instant verifiedat;
+    private Instant verifiedAt;
 
     @Size(max = 500)
     @Column(name = "rejectionreason", length = 500)
-    private String rejectionreason;
+    private String rejectionReason;
 
     @Size(max = 50)
     @Column(name = "verificationmethod", length = 50)
-    private String verificationmethod;
+    private String verificationMethod;
 
     @Size(max = 50)
     @NotNull
@@ -93,11 +93,11 @@ public class EkycProfile {
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "createdat", nullable = false)
-    private Instant createdat;
+    private Instant createdAt;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "updatedat", nullable = false)
-    private Instant updatedat;
+    private Instant updatedAt;
 
 }

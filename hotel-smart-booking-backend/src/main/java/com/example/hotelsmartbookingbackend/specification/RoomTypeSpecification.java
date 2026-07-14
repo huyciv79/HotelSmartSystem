@@ -1,7 +1,7 @@
 package com.example.hotelsmartbookingbackend.specification;
 
 import com.example.hotelsmartbookingbackend.dto.request.RoomTypeFilterCriteria;
-import com.example.hotelsmartbookingbackend.entity.Roomtype;
+import com.example.hotelsmartbookingbackend.entity.RoomType;
 import org.springframework.data.jpa.domain.Specification;
 
 public final class RoomTypeSpecification {
@@ -9,7 +9,7 @@ public final class RoomTypeSpecification {
     private RoomTypeSpecification() {
     }
 
-    public static Specification<Roomtype> withFilters(RoomTypeFilterCriteria criteria) {
+    public static Specification<RoomType> withFilters(RoomTypeFilterCriteria criteria) {
         return Specification.allOf(
                 hasStatus(criteria.getStatus()),
                 nameContains(criteria.getKeyword()),
@@ -20,7 +20,7 @@ public final class RoomTypeSpecification {
         );
     }
 
-    private static Specification<Roomtype> hasStatus(String status) {
+    private static Specification<RoomType> hasStatus(String status) {
         return (root, query, cb) -> {
             if ("all".equalsIgnoreCase(status)) {
                 return cb.conjunction();
@@ -34,7 +34,7 @@ public final class RoomTypeSpecification {
         };
     }
 
-    private static Specification<Roomtype> nameContains(String keyword) {
+    private static Specification<RoomType> nameContains(String keyword) {
         return (root, query, cb) -> {
             if (keyword == null || keyword.isBlank()) {
                 return cb.conjunction();
@@ -43,39 +43,39 @@ public final class RoomTypeSpecification {
         };
     }
 
-    private static Specification<Roomtype> minPrice(java.math.BigDecimal minPrice) {
+    private static Specification<RoomType> minPrice(java.math.BigDecimal minPrice) {
         return (root, query, cb) -> {
             if (minPrice == null) {
                 return cb.conjunction();
             }
-            return cb.greaterThanOrEqualTo(root.get("baseprice"), minPrice);
+            return cb.greaterThanOrEqualTo(root.get("basePrice"), minPrice);
         };
     }
 
-    private static Specification<Roomtype> maxPrice(java.math.BigDecimal maxPrice) {
+    private static Specification<RoomType> maxPrice(java.math.BigDecimal maxPrice) {
         return (root, query, cb) -> {
             if (maxPrice == null) {
                 return cb.conjunction();
             }
-            return cb.lessThanOrEqualTo(root.get("baseprice"), maxPrice);
+            return cb.lessThanOrEqualTo(root.get("basePrice"), maxPrice);
         };
     }
 
-    private static Specification<Roomtype> minAdults(Integer minAdults) {
+    private static Specification<RoomType> minAdults(Integer minAdults) {
         return (root, query, cb) -> {
             if (minAdults == null) {
                 return cb.conjunction();
             }
-            return cb.greaterThanOrEqualTo(root.get("adultcapacity"), minAdults);
+            return cb.greaterThanOrEqualTo(root.get("adultCapacity"), minAdults);
         };
     }
 
-    private static Specification<Roomtype> minTotalCapacity(Integer minTotalCapacity) {
+    private static Specification<RoomType> minTotalCapacity(Integer minTotalCapacity) {
         return (root, query, cb) -> {
             if (minTotalCapacity == null) {
                 return cb.conjunction();
             }
-            return cb.greaterThanOrEqualTo(root.get("totalcapacity"), minTotalCapacity);
+            return cb.greaterThanOrEqualTo(root.get("totalCapacity"), minTotalCapacity);
         };
     }
 }

@@ -1,6 +1,6 @@
 package com.example.hotelsmartbookingbackend.repository;
 
-import com.example.hotelsmartbookingbackend.entity.FaceembeddingAngle;
+import com.example.hotelsmartbookingbackend.entity.FaceEmbeddingAngle;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 
-public interface FaceembeddingAngleRepository extends JpaRepository<FaceembeddingAngle, Integer> {
+public interface FaceEmbeddingAngleRepository extends JpaRepository<FaceEmbeddingAngle, Integer> {
 
     @Modifying
     @Query(value = """

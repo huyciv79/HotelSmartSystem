@@ -56,7 +56,7 @@ public class PaymentServiceImpl implements PaymentService {
             throw new RuntimeException("Booking has been cancelled");
         }
 
-        BigDecimal remainingBalance = booking.getFinalamount().subtract(booking.getPaidamount());
+        BigDecimal remainingBalance = booking.getFinalAmount().subtract(booking.getPaidAmount());
         BigDecimal chargeAmount = request.getAmount();
 
         String option = request.getPaymentOption();
@@ -67,7 +67,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (chargeAmount == null) {
             if ("DEPOSIT".equalsIgnoreCase(option)) {
                 // Deposit 30% of final amount
-                chargeAmount = booking.getFinalamount().multiply(new BigDecimal("0.30")).setScale(2,
+                chargeAmount = booking.getFinalAmount().multiply(new BigDecimal("0.30")).setScale(2,
                         RoundingMode.HALF_UP);
             } else {
                 chargeAmount = remainingBalance;
@@ -152,29 +152,29 @@ public class PaymentServiceImpl implements PaymentService {
 
         // 4. Create Payment Record in Database
         Payment payment = new Payment();
-        payment.setBookingid(booking);
+        payment.setBooking(booking);
         payment.setAmount(expectedChargeAmount);
-        payment.setPaymentmethod("PayPal");
-        payment.setPaymenttype("DEPOSIT".equalsIgnoreCase(paymentOption) ? "Deposit" : "Booking Payment");
-        payment.setTransactioncode(captureResponse.getTransactionId());
+        payment.setPaymentMethod("PayPal");
+        payment.setPaymentType("DEPOSIT".equalsIgnoreCase(paymentOption) ? "Deposit" : "Booking Payment");
+        payment.setTransactionCode(captureResponse.getTransactionId());
         payment.setStatus("Completed");
-        payment.setRefundedamount(BigDecimal.ZERO);
-        payment.setPaymentdate(Instant.now());
+        payment.setRefundedAmount(BigDecimal.ZERO);
+        payment.setPaymentDate(Instant.now());
         payment.setNotes("PayPal Order ID: " + paypalOrderId + " | USD captured: " + captureResponse.getAmount());
 
         paymentRepository.save(payment);
 
         // 5. Update Booking paid amount and status
-        booking.setPaidamount(booking.getPaidamount().add(expectedChargeAmount));
+        booking.setPaidAmount(booking.getPaidAmount().add(expectedChargeAmount));
         if ("DEPOSIT".equalsIgnoreCase(paymentOption)) {
-            booking.setDepositamount(expectedChargeAmount);
+            booking.setDepositAmount(expectedChargeAmount);
         }
-        booking.setUpdatedat(Instant.now());
+        booking.setUpdatedAt(Instant.now());
 
         if (booking.getStatus() != BookingStatus.CHECKED_IN && booking.getStatus() != BookingStatus.STAYING && booking.getStatus() != BookingStatus.COMPLETED) {
-            if (booking.getPaidamount().compareTo(booking.getFinalamount()) >= 0) {
+            if (booking.getPaidAmount().compareTo(booking.getFinalAmount()) >= 0) {
                 booking.setStatus(BookingStatus.PAID);
-            } else if (booking.getPaidamount().compareTo(BigDecimal.ZERO) > 0) {
+            } else if (booking.getPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
                 booking.setStatus(BookingStatus.PARTIALLY_PAID);
             }
         }
@@ -183,8 +183,8 @@ public class PaymentServiceImpl implements PaymentService {
 
         try {
             String payMsg = String.format("Thanh toán thành công số tiền %s cho đơn đặt phòng %s bằng PayPal.", 
-                    formatCurrency(expectedChargeAmount), booking.getBookingreference());
-            notificationService.sendNotification(booking.getUserid(), "Thanh toán thành công", payMsg, "Payment", booking.getId());
+                    formatCurrency(expectedChargeAmount), booking.getBookingReference());
+            notificationService.sendNotification(booking.getUser(), "Thanh toán thành công", payMsg, "Payment", booking.getId());
         } catch (Exception e) {
             log.error("Failed to send payment capture notification: ", e);
         }
@@ -215,7 +215,7 @@ public class PaymentServiceImpl implements PaymentService {
             throw new RuntimeException("Booking has been cancelled");
         }
 
-        BigDecimal remainingBalance = booking.getFinalamount().subtract(booking.getPaidamount());
+        BigDecimal remainingBalance = booking.getFinalAmount().subtract(booking.getPaidAmount());
         BigDecimal chargeAmount = request.getAmount();
 
         if (chargeAmount == null || chargeAmount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -227,33 +227,33 @@ public class PaymentServiceImpl implements PaymentService {
 
         // 1. Create Payment Record in Database
         Payment payment = new Payment();
-        payment.setBookingid(booking);
+        payment.setBooking(booking);
         payment.setAmount(chargeAmount);
-        payment.setPaymentmethod(request.getPaymentMethod());
+        payment.setPaymentMethod(request.getPaymentMethod());
 
-        boolean isFirstPayment = booking.getPaidamount().compareTo(BigDecimal.ZERO) == 0;
-        boolean isPartial = chargeAmount.compareTo(booking.getFinalamount()) < 0;
+        boolean isFirstPayment = booking.getPaidAmount().compareTo(BigDecimal.ZERO) == 0;
+        boolean isPartial = chargeAmount.compareTo(booking.getFinalAmount()) < 0;
 
-        payment.setPaymenttype(request.getPaymentType() != null ? request.getPaymentType() : (isFirstPayment && isPartial ? "Deposit" : "Booking Payment"));
-        payment.setTransactioncode("MANUAL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        payment.setPaymentType(request.getPaymentType() != null ? request.getPaymentType() : (isFirstPayment && isPartial ? "Deposit" : "Booking Payment"));
+        payment.setTransactionCode("MANUAL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         payment.setStatus("Completed");
-        payment.setRefundedamount(BigDecimal.ZERO);
-        payment.setPaymentdate(Instant.now());
-        payment.setNotes(request.getNotes() != null ? request.getNotes() : "Counter payment approved by " + staff.getFullname());
+        payment.setRefundedAmount(BigDecimal.ZERO);
+        payment.setPaymentDate(Instant.now());
+        payment.setNotes(request.getNotes() != null ? request.getNotes() : "Counter payment approved by " + staff.getFullName());
 
         paymentRepository.save(payment);
 
         // 2. Update Booking paid amount and status
-        booking.setPaidamount(booking.getPaidamount().add(chargeAmount));
+        booking.setPaidAmount(booking.getPaidAmount().add(chargeAmount));
         if (isFirstPayment && isPartial) {
-            booking.setDepositamount(chargeAmount);
+            booking.setDepositAmount(chargeAmount);
         }
-        booking.setUpdatedat(Instant.now());
+        booking.setUpdatedAt(Instant.now());
 
         if (booking.getStatus() != BookingStatus.CHECKED_IN && booking.getStatus() != BookingStatus.STAYING && booking.getStatus() != BookingStatus.COMPLETED) {
-            if (booking.getPaidamount().compareTo(booking.getFinalamount()) >= 0) {
+            if (booking.getPaidAmount().compareTo(booking.getFinalAmount()) >= 0) {
                 booking.setStatus(BookingStatus.PAID);
-            } else if (booking.getPaidamount().compareTo(BigDecimal.ZERO) > 0) {
+            } else if (booking.getPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
                 booking.setStatus(BookingStatus.PARTIALLY_PAID);
             }
         }
@@ -262,8 +262,8 @@ public class PaymentServiceImpl implements PaymentService {
 
         try {
             String payMsg = String.format("Thanh toán thành công số tiền %s cho đơn đặt phòng %s tại quầy lễ tân (phương thức: %s).", 
-                    formatCurrency(chargeAmount), booking.getBookingreference(), payment.getPaymentmethod());
-            notificationService.sendNotification(booking.getUserid(), "Thanh toán thành công", payMsg, "Payment", booking.getId());
+                    formatCurrency(chargeAmount), booking.getBookingReference(), payment.getPaymentMethod());
+            notificationService.sendNotification(booking.getUser(), "Thanh toán thành công", payMsg, "Payment", booking.getId());
         } catch (Exception e) {
             log.error("Failed to send payment capture notification: ", e);
         }

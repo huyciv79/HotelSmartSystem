@@ -24,15 +24,15 @@ public class Feedback {
     @ManyToOne(fetch = FetchType.LAZY)
     @OnDelete(action = OnDeleteAction.SET_NULL)
     @JoinColumn(name = "bookingid")
-    private Booking bookingid;
+    private Booking booking;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "userid")
-    private User userid;
+    private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "roomtypeid")
-    private Roomtype roomtypeid;
+    private RoomType roomType;
 
     @NotNull
     @Column(name = "rating", nullable = false)
@@ -58,11 +58,11 @@ public class Feedback {
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "createdat", nullable = false)
-    private Instant createdat;
+    private Instant createdAt;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "updatedat", nullable = false)
-    private Instant updatedat;
+    private Instant updatedAt;
 
 }

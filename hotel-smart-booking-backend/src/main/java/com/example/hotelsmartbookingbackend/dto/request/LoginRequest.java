@@ -3,7 +3,9 @@ package com.example.hotelsmartbookingbackend.dto.request;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
+import lombok.Getter;
 
+@Getter
 @Data
 public class LoginRequest {
 

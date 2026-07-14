@@ -1,7 +1,6 @@
 package com.example.hotelsmartbookingbackend.repository;
 
-import com.example.hotelsmartbookingbackend.entity.Faceembedding;
-import com.example.hotelsmartbookingbackend.entity.User;
+import com.example.hotelsmartbookingbackend.entity.FaceEmbedding;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -10,12 +9,7 @@ import org.springframework.data.repository.query.Param;
 import java.time.Instant;
 import java.util.Optional;
 
-public interface FaceembeddingRepository extends JpaRepository<Faceembedding, Integer> {
-
-    /**
-     * Tìm face embedding theo user.
-     */
-    Optional<Faceembedding> findByUserid(User user);
+public interface FaceEmbeddingRepository extends JpaRepository<FaceEmbedding, Integer> {
 
     @Query(
             value = """
@@ -37,13 +31,7 @@ public interface FaceembeddingRepository extends JpaRepository<Faceembedding, In
     )
     Optional<Integer> findEmbeddingIdByUserId(@Param("userId") Integer userId);
 
-    /**
-     * Upsert embedding: cập nhật nếu đã tồn tại cho user này.
-     * Sử dụng native query với ON CONFLICT của PostgreSQL.
-     *
-     * Lưu ý: Phải dùng CAST(:embedding AS vector) hoặc :embedding::vector
-     * vì PostgreSQL không tự động cấu trúc khi nhận String param cho cột vector.
-     */
+
     @Modifying
     @Query(value = """
             INSERT INTO faceembeddings (userid, embedding, registeredat)

@@ -16,7 +16,7 @@ import java.time.Instant;
 @Setter
 @Entity
 @Table(name = "bookingdetails")
-public class Bookingdetail {
+public class BookingDetail {
     @Id
     @Column(name = "bookingid", nullable = false)
     private Integer id;
@@ -26,17 +26,17 @@ public class Bookingdetail {
     @MapsId
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "bookingid", nullable = false)
-    private Booking bookingid;
+    private Booking booking;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "roomtypeid", nullable = false)
-    private Roomtype roomtypeid;
+    private RoomType roomType;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @OnDelete(action = OnDeleteAction.SET_NULL)
     @JoinColumn(name = "roomid")
-    private Room roomid;
+    private Room room;
 
     @NotNull
     @ColumnDefault("1")
@@ -45,71 +45,71 @@ public class Bookingdetail {
 
     @NotNull
     @Column(name = "expectedcheckin", nullable = false)
-    private Instant expectedcheckin;
+    private Instant expectedCheckIn;
 
     @NotNull
     @Column(name = "expectedcheckout", nullable = false)
-    private Instant expectedcheckout;
+    private Instant expectedCheckOut;
 
     @Column(name = "actualcheckin")
-    private Instant actualcheckin;
+    private Instant actualCheckIn;
 
     @Column(name = "actualcheckout")
-    private Instant actualcheckout;
+    private Instant actualCheckOut;
 
     @NotNull
     @Column(name = "priceatbooking", nullable = false, precision = 12, scale = 2)
-    private BigDecimal priceatbooking;
+    private BigDecimal priceAtBooking;
 
     @NotNull
     @ColumnDefault("1")
     @Column(name = "numberofadults", nullable = false)
-    private Integer numberofadults;
+    private Integer numberOfAdults;
 
     @NotNull
     @ColumnDefault("0")
     @Column(name = "numberofchildren", nullable = false)
-    private Integer numberofchildren;
+    private Integer numberOfChildren;
 
     @Size(max = 255)
     @Column(name = "roomkeyaccess")
-    private String roomkeyaccess;
+    private String roomKeyAccess;
 
     @Column(name = "roomkeygeneratedat")
-    private Instant roomkeygeneratedat;
+    private Instant roomKeyGeneratedAt;
 
     @Column(name = "roomkeyexpiredat")
-    private Instant roomkeyexpiredat;
+    private Instant roomKeyExpiredAt;
 
     @Size(max = 50)
     @NotNull
     @ColumnDefault("'NotGenerated'")
     @Column(name = "roomkeystatus", nullable = false, length = 50)
-    private String roomkeystatus = "NotGenerated";
+    private String roomKeyStatus = "NotGenerated";
 
     @Size(max = 255)
     @Column(name = "qrcodevalue")
-    private String qrcodevalue;
+    private String qrCodeValue;
 
     @Column(name = "qrcodegeneratedat")
-    private Instant qrcodegeneratedat;
+    private Instant qrCodeGeneratedAt;
 
     @Column(name = "qrcodeexpiredat")
-    private Instant qrcodeexpiredat;
+    private Instant qrCodeExpiredAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "checkedinby")
-    private User checkedinby;
+    private User checkedInBy;
 
     @Column(name = "checkedinat")
-    private Instant checkedinat;
+    private Instant checkedInAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "checkedoutby")
-    private User checkedoutby;
+    private User checkedOutBy;
 
     @Column(name = "checkedoutat")
-    private Instant checkedoutat;
+    private Instant checkedOutAt;
 
     @Size(max = 50)
     @NotNull
@@ -120,11 +120,10 @@ public class Bookingdetail {
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "createdat", nullable = false)
-    private Instant createdat;
+    private Instant createdAt;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "updatedat", nullable = false)
-    private Instant updatedat;
-
+    private Instant updatedAt;
 }

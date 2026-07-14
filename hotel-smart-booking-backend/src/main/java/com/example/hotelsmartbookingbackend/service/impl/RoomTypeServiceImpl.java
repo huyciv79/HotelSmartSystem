@@ -7,10 +7,10 @@ import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
 import com.example.hotelsmartbookingbackend.dto.response.RoomTypeDetailResponse;
 import com.example.hotelsmartbookingbackend.dto.response.RoomTypeImageResponse;
 import com.example.hotelsmartbookingbackend.dto.response.RoomTypeSummaryResponse;
-import com.example.hotelsmartbookingbackend.entity.Roomtype;
-import com.example.hotelsmartbookingbackend.entity.Roomtypeimage;
-import com.example.hotelsmartbookingbackend.repository.RoomtypeRepository;
-import com.example.hotelsmartbookingbackend.repository.RoomtypeimageRepository;
+import com.example.hotelsmartbookingbackend.entity.RoomType;
+import com.example.hotelsmartbookingbackend.entity.RoomTypeImage;
+import com.example.hotelsmartbookingbackend.repository.RoomTypeRepository;
+import com.example.hotelsmartbookingbackend.repository.RoomTypeImageRepository;
 import com.example.hotelsmartbookingbackend.service.RoomTypeService;
 import com.example.hotelsmartbookingbackend.service.SupabaseStorageService;
 import com.example.hotelsmartbookingbackend.specification.RoomTypeSpecification;
@@ -46,8 +46,8 @@ public class RoomTypeServiceImpl implements RoomTypeService {
             "image/webp"
     );
 
-    private final RoomtypeRepository roomtypeRepository;
-    private final RoomtypeimageRepository roomtypeimageRepository;
+    private final RoomTypeRepository roomTypeRepository;
+    private final RoomTypeImageRepository roomTypeImageRepository;
     private final SupabaseStorageService supabaseStorageService;
     private final EntityManager entityManager;
 
@@ -57,8 +57,8 @@ public class RoomTypeServiceImpl implements RoomTypeService {
             RoomTypeFilterCriteria criteria,
             Pageable pageable) {
 
-        Specification<Roomtype> spec = RoomTypeSpecification.withFilters(criteria);
-        Page<Roomtype> page = roomtypeRepository.findAll(spec, pageable);
+        Specification<RoomType> spec = RoomTypeSpecification.withFilters(criteria);
+        Page<RoomType> page = roomTypeRepository.findAll(spec, pageable);
 
         List<RoomTypeSummaryResponse> content = page.getContent().stream()
                 .map(this::mapToSummaryResponse)
@@ -78,8 +78,8 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Override
     @Transactional(readOnly = true)
     public RoomTypeDetailResponse getRoomTypeDetail(Integer id) {
-        Roomtype roomtype = findRoomTypeById(id);
-        return mapToDetailResponse(roomtype);
+        RoomType roomType = findRoomTypeById(id);
+        return mapToDetailResponse(roomType);
     }
 
     @Override
@@ -98,40 +98,40 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         try {
             Instant now = Instant.now();
 
-            Roomtype roomtype = new Roomtype();
-            roomtype.setName(requireText(request.getName(), "Tên loại phòng không được để trống"));
-            roomtype.setDescription(request.getDescription());
-            roomtype.setBaseprice(request.getBasePrice());
-            roomtype.setAdultcapacity(request.getAdultCapacity());
-            roomtype.setChildcapacity(request.getChildCapacity());
-            roomtype.setArea(request.getArea());
-            roomtype.setBedtype(request.getBedType());
-            roomtype.setAmenities(request.getAmenities());
-            roomtype.setStatus(normalizeStatus(request.getStatus(), ACTIVE_STATUS));
-            roomtype.setCreatedat(now);
-            roomtype.setUpdatedat(now);
+            RoomType roomType = new RoomType();
+            roomType.setName(requireText(request.getName(), "Tên loại phòng không được để trống"));
+            roomType.setDescription(request.getDescription());
+            roomType.setBasePrice(request.getBasePrice());
+            roomType.setAdultCapacity(request.getAdultCapacity());
+            roomType.setChildCapacity(request.getChildCapacity());
+            roomType.setArea(request.getArea());
+            roomType.setBedType(request.getBedType());
+            roomType.setAmenities(request.getAmenities());
+            roomType.setStatus(normalizeStatus(request.getStatus(), ACTIVE_STATUS));
+            roomType.setCreatedAt(now);
+            roomType.setUpdatedAt(now);
 
-            Roomtype savedRoomtype = roomtypeRepository.save(roomtype);
+            RoomType savedRoomType = roomTypeRepository.save(roomType);
 
-            List<Roomtypeimage> images = uploadRoomTypeImages(
-                    savedRoomtype,
+            List<RoomTypeImage> images = uploadRoomTypeImages(
+                    savedRoomType,
                     imageFiles,
                     0,
                     true,
                     uploadedImageUrls
             );
 
-            roomtypeimageRepository.saveAll(images);
+            roomTypeImageRepository.saveAll(images);
 
-            savedRoomtype.setImages(images.get(0).getImageurl());
-            savedRoomtype.setUpdatedat(Instant.now());
+            savedRoomType.setImages(images.get(0).getImageUrl());
+            savedRoomType.setUpdatedAt(Instant.now());
 
-            roomtypeRepository.save(savedRoomtype);
+            roomTypeRepository.save(savedRoomType);
 
             entityManager.flush();
-            entityManager.refresh(savedRoomtype);
+            entityManager.refresh(savedRoomType);
 
-            return mapToDetailResponse(savedRoomtype);
+            return mapToDetailResponse(savedRoomType);
         } catch (RuntimeException e) {
             cleanupUploadedRoomTypeImages(uploadedImageUrls);
             throw e;
@@ -141,42 +141,42 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Override
     @Transactional
     public RoomTypeDetailResponse updateRoomType(Integer id, UpdateRoomTypeRequest request) {
-        Roomtype roomtype = findRoomTypeById(id);
+        RoomType roomType = findRoomTypeById(id);
 
         if (request.getName() != null) {
-            roomtype.setName(requireText(request.getName(), "Tên loại phòng không được để trống"));
+            roomType.setName(requireText(request.getName(), "Tên loại phòng không được để trống"));
         }
 
         if (request.getDescription() != null) {
-            roomtype.setDescription(request.getDescription());
+            roomType.setDescription(request.getDescription());
         }
 
         if (request.getBasePrice() != null) {
-            roomtype.setBaseprice(request.getBasePrice());
+            roomType.setBasePrice(request.getBasePrice());
         }
 
         if (request.getAdultCapacity() != null) {
-            roomtype.setAdultcapacity(request.getAdultCapacity());
+            roomType.setAdultCapacity(request.getAdultCapacity());
         }
 
         if (request.getChildCapacity() != null) {
-            roomtype.setChildcapacity(request.getChildCapacity());
+            roomType.setChildCapacity(request.getChildCapacity());
         }
 
         if (request.getArea() != null) {
-            roomtype.setArea(request.getArea());
+            roomType.setArea(request.getArea());
         }
 
         if (request.getBedType() != null) {
-            roomtype.setBedtype(request.getBedType());
+            roomType.setBedType(request.getBedType());
         }
 
         if (request.getAmenities() != null) {
-            roomtype.setAmenities(request.getAmenities());
+            roomType.setAmenities(request.getAmenities());
         }
 
         if (request.getStatus() != null) {
-            roomtype.setStatus(normalizeStatus(request.getStatus(), roomtype.getStatus()));
+            roomType.setStatus(normalizeStatus(request.getStatus(), roomType.getStatus()));
         }
 
         boolean replaceImages = Boolean.TRUE.equals(request.getReplaceImages());
@@ -188,44 +188,44 @@ public class RoomTypeServiceImpl implements RoomTypeService {
 
         try {
             if (replaceImages) {
-                List<Roomtypeimage> currentImages =
-                        roomtypeimageRepository.findByRoomtypeid_IdOrderByDisplayorderAsc(id);
+                List<RoomTypeImage> currentImages =
+                        roomTypeImageRepository.findByRoomType_IdOrderByDisplayOrderAsc(id);
 
-                roomtypeimageRepository.deleteAll(currentImages);
+                roomTypeImageRepository.deleteAll(currentImages);
                 entityManager.flush();
             }
 
             if (!imageFiles.isEmpty()) {
-                List<Roomtypeimage> currentImages = replaceImages
+                List<RoomTypeImage> currentImages = replaceImages
                         ? List.of()
-                        : roomtypeimageRepository.findByRoomtypeid_IdOrderByDisplayorderAsc(id);
+                        : roomTypeImageRepository.findByRoomType_IdOrderByDisplayOrderAsc(id);
 
                 int startDisplayOrder = replaceImages ? 0 : nextDisplayOrder(currentImages);
 
                 boolean shouldSetFirstNewImagePrimary = replaceImages ||
                         currentImages.stream()
-                                .noneMatch(image -> Boolean.TRUE.equals(image.getIsprimary()));
+                                .noneMatch(image -> Boolean.TRUE.equals(image.getIsPrimary()));
 
-                List<Roomtypeimage> uploadedImages = uploadRoomTypeImages(
-                        roomtype,
+                List<RoomTypeImage> uploadedImages = uploadRoomTypeImages(
+                        roomType,
                         imageFiles,
                         startDisplayOrder,
                         shouldSetFirstNewImagePrimary,
                         uploadedImageUrls
                 );
 
-                roomtypeimageRepository.saveAll(uploadedImages);
+                roomTypeImageRepository.saveAll(uploadedImages);
             }
 
-            syncPrimaryImage(roomtype);
+            syncPrimaryImage(roomType);
 
-            roomtype.setUpdatedat(Instant.now());
-            roomtypeRepository.save(roomtype);
+            roomType.setUpdatedAt(Instant.now());
+            roomTypeRepository.save(roomType);
 
             entityManager.flush();
-            entityManager.refresh(roomtype);
+            entityManager.refresh(roomType);
 
-            return mapToDetailResponse(roomtype);
+            return mapToDetailResponse(roomType);
         } catch (RuntimeException e) {
             cleanupUploadedRoomTypeImages(uploadedImageUrls);
             throw e;
@@ -235,75 +235,75 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Override
     @Transactional
     public void deleteRoomType(Integer id) {
-        Roomtype roomtype = findRoomTypeById(id);
+        RoomType roomType = findRoomTypeById(id);
 
-        roomtype.setStatus(INACTIVE_STATUS);
-        roomtype.setUpdatedat(Instant.now());
+        roomType.setStatus(INACTIVE_STATUS);
+        roomType.setUpdatedAt(Instant.now());
 
-        roomtypeRepository.save(roomtype);
+        roomTypeRepository.save(roomType);
     }
 
-    private Roomtype findRoomTypeById(Integer id) {
-        return roomtypeRepository.findById(id)
+    private RoomType findRoomTypeById(Integer id) {
+        return roomTypeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy loại phòng với mã: " + id));
     }
 
-    private RoomTypeSummaryResponse mapToSummaryResponse(Roomtype roomtype) {
+    private RoomTypeSummaryResponse mapToSummaryResponse(RoomType roomType) {
         return RoomTypeSummaryResponse.builder()
-                .id(roomtype.getId())
-                .name(roomtype.getName())
-                .description(roomtype.getDescription())
-                .basePrice(roomtype.getBaseprice())
-                .adultCapacity(roomtype.getAdultcapacity())
-                .childCapacity(roomtype.getChildcapacity())
-                .totalCapacity(roomtype.getTotalcapacity())
-                .area(roomtype.getArea())
-                .bedType(roomtype.getBedtype())
-                .primaryImageUrl(resolvePrimaryImageUrl(roomtype))
-                .status(roomtype.getStatus())
+                .id(roomType.getId())
+                .name(roomType.getName())
+                .description(roomType.getDescription())
+                .basePrice(roomType.getBasePrice())
+                .adultCapacity(roomType.getAdultCapacity())
+                .childCapacity(roomType.getChildCapacity())
+                .totalCapacity(roomType.getTotalCapacity())
+                .area(roomType.getArea())
+                .bedType(roomType.getBedType())
+                .primaryImageUrl(resolvePrimaryImageUrl(roomType))
+                .status(roomType.getStatus())
                 .build();
     }
 
-    private RoomTypeDetailResponse mapToDetailResponse(Roomtype roomtype) {
-        List<Roomtypeimage> images =
-                roomtypeimageRepository.findByRoomtypeid_IdOrderByDisplayorderAsc(roomtype.getId());
+    private RoomTypeDetailResponse mapToDetailResponse(RoomType roomType) {
+        List<RoomTypeImage> images =
+                roomTypeImageRepository.findByRoomType_IdOrderByDisplayOrderAsc(roomType.getId());
 
         return RoomTypeDetailResponse.builder()
-                .id(roomtype.getId())
-                .name(roomtype.getName())
-                .description(roomtype.getDescription())
-                .basePrice(roomtype.getBaseprice())
-                .adultCapacity(roomtype.getAdultcapacity())
-                .childCapacity(roomtype.getChildcapacity())
-                .totalCapacity(roomtype.getTotalcapacity())
-                .area(roomtype.getArea())
-                .bedType(roomtype.getBedtype())
-                .amenities(roomtype.getAmenities())
-                .status(roomtype.getStatus())
+                .id(roomType.getId())
+                .name(roomType.getName())
+                .description(roomType.getDescription())
+                .basePrice(roomType.getBasePrice())
+                .adultCapacity(roomType.getAdultCapacity())
+                .childCapacity(roomType.getChildCapacity())
+                .totalCapacity(roomType.getTotalCapacity())
+                .area(roomType.getArea())
+                .bedType(roomType.getBedType())
+                .amenities(roomType.getAmenities())
+                .status(roomType.getStatus())
                 .images(images.stream().map(this::mapToImageResponse).toList())
-                .createdAt(roomtype.getCreatedat())
-                .updatedAt(roomtype.getUpdatedat())
+                .createdAt(roomType.getCreatedAt())
+                .updatedAt(roomType.getUpdatedAt())
                 .build();
     }
 
-    private RoomTypeImageResponse mapToImageResponse(Roomtypeimage image) {
+    private RoomTypeImageResponse mapToImageResponse(RoomTypeImage image) {
         return RoomTypeImageResponse.builder()
                 .id(image.getId())
-                .imageUrl(image.getImageurl())
-                .primary(image.getIsprimary())
-                .displayOrder(image.getDisplayorder())
+                .imageUrl(image.getImageUrl())
+                .primary(image.getIsPrimary())
+                .displayOrder(image.getDisplayOrder())
                 .build();
     }
 
-    private String resolvePrimaryImageUrl(Roomtype roomtype) {
-        return roomtypeimageRepository.findFirstByRoomtypeid_IdAndIsprimaryTrue(roomtype.getId())
-                .map(Roomtypeimage::getImageurl)
-                .or(() -> roomtypeimageRepository
-                        .findByRoomtypeid_IdOrderByDisplayorderAsc(roomtype.getId())
+    private String resolvePrimaryImageUrl(RoomType roomType) {
+        return roomTypeImageRepository.findFirstByRoomType_IdAndIsPrimaryTrue(roomType.getId())
+                .map(RoomTypeImage::getImageUrl)
+                .or(() -> roomTypeImageRepository
+                        .findByRoomType_IdOrderByDisplayOrderAsc(roomType.getId())
                         .stream()
                         .findFirst()
-                        .map(Roomtypeimage::getImageurl))
-                .orElse(roomtype.getImages());
+                        .map(RoomTypeImage::getImageUrl))
+                .orElse(roomType.getImages());
     }
 
     private List<MultipartFile> getNonEmptyImages(List<MultipartFile> images) {
@@ -332,14 +332,14 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         }
     }
 
-    private List<Roomtypeimage> uploadRoomTypeImages(
-            Roomtype roomtype,
+    private List<RoomTypeImage> uploadRoomTypeImages(
+            RoomType roomType,
             List<MultipartFile> imageFiles,
             int startDisplayOrder,
             boolean firstImagePrimary,
             List<String> uploadedImageUrls) {
 
-        List<Roomtypeimage> uploadedImages = new ArrayList<>();
+        List<RoomTypeImage> uploadedImages = new ArrayList<>();
 
         for (int index = 0; index < imageFiles.size(); index++) {
             MultipartFile file = imageFiles.get(index);
@@ -353,12 +353,12 @@ public class RoomTypeServiceImpl implements RoomTypeService {
 
                 uploadedImageUrls.add(imageUrl);
 
-                Roomtypeimage image = new Roomtypeimage();
-                image.setRoomtypeid(roomtype);
-                image.setImageurl(imageUrl);
-                image.setIsprimary(firstImagePrimary && index == 0);
-                image.setDisplayorder(startDisplayOrder + index);
-                image.setCreatedat(Instant.now());
+                RoomTypeImage image = new RoomTypeImage();
+                image.setRoomType(roomType);
+                image.setImageUrl(imageUrl);
+                image.setIsPrimary(firstImagePrimary && index == 0);
+                image.setDisplayOrder(startDisplayOrder + index);
+                image.setCreatedAt(Instant.now());
 
                 uploadedImages.add(image);
             } catch (IOException e) {
@@ -369,30 +369,30 @@ public class RoomTypeServiceImpl implements RoomTypeService {
         return uploadedImages;
     }
 
-    private void syncPrimaryImage(Roomtype roomtype) {
-        List<Roomtypeimage> images =
-                roomtypeimageRepository.findByRoomtypeid_IdOrderByDisplayorderAsc(roomtype.getId());
+    private void syncPrimaryImage(RoomType roomType) {
+        List<RoomTypeImage> images =
+                roomTypeImageRepository.findByRoomType_IdOrderByDisplayOrderAsc(roomType.getId());
 
         if (images.isEmpty()) {
-            roomtype.setImages(null);
+            roomType.setImages(null);
             return;
         }
 
-        Roomtypeimage primaryImage = images.stream()
-                .filter(image -> Boolean.TRUE.equals(image.getIsprimary()))
+        RoomTypeImage primaryImage = images.stream()
+                .filter(image -> Boolean.TRUE.equals(image.getIsPrimary()))
                 .findFirst()
                 .orElseGet(() -> {
-                    Roomtypeimage firstImage = images.get(0);
-                    firstImage.setIsprimary(true);
-                    return roomtypeimageRepository.save(firstImage);
+                    RoomTypeImage firstImage = images.get(0);
+                    firstImage.setIsPrimary(true);
+                    return roomTypeImageRepository.save(firstImage);
                 });
 
-        roomtype.setImages(primaryImage.getImageurl());
+        roomType.setImages(primaryImage.getImageUrl());
     }
 
-    private int nextDisplayOrder(List<Roomtypeimage> images) {
+    private int nextDisplayOrder(List<RoomTypeImage> images) {
         return images.stream()
-                .map(Roomtypeimage::getDisplayorder)
+                .map(RoomTypeImage::getDisplayOrder)
                 .filter(displayOrder -> displayOrder != null)
                 .max(Integer::compareTo)
                 .map(displayOrder -> displayOrder + 1)

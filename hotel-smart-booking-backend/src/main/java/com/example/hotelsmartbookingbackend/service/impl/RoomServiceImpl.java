@@ -7,8 +7,8 @@ import com.example.hotelsmartbookingbackend.dto.response.RoomDetailDTO;
 import com.example.hotelsmartbookingbackend.dto.response.RoomSummaryDTO;
 import com.example.hotelsmartbookingbackend.entity.Room;
 import com.example.hotelsmartbookingbackend.repository.RoomRepository;
-import com.example.hotelsmartbookingbackend.repository.RoomtypeRepository;
-import com.example.hotelsmartbookingbackend.entity.Roomtype;
+import com.example.hotelsmartbookingbackend.repository.RoomTypeRepository;
+import com.example.hotelsmartbookingbackend.entity.RoomType;
 import com.example.hotelsmartbookingbackend.service.RoomService;
 import com.example.hotelsmartbookingbackend.service.WebSocketService;
 import com.example.hotelsmartbookingbackend.specification.RoomSpecification;
@@ -18,7 +18,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import com.example.hotelsmartbookingbackend.dto.response.RoomStatusResponse;
 
 import java.time.Instant;
@@ -30,7 +29,7 @@ import java.util.Set;
 public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
-    private final RoomtypeRepository roomtypeRepository;
+    private final RoomTypeRepository roomTypeRepository;
     private final WebSocketService webSocketService;
 
     private static final Set<String> ALLOWED_STATUSES = Set.of(
@@ -92,20 +91,20 @@ public class RoomServiceImpl implements RoomService {
         }
 
         if (request.getAdminpasscode() != null) {
-            room.setAdminpasscode(request.getAdminpasscode());
+            room.setAdminPasscode(request.getAdminpasscode());
         }
 
         if (request.getRoomtypeid() != null) {
-            Roomtype roomtype = roomtypeRepository.findById(request.getRoomtypeid())
+            RoomType roomType = roomTypeRepository.findById(request.getRoomtypeid())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy loại phòng với mã: " + request.getRoomtypeid()));
-            room.setRoomtypeid(roomtype);
+            room.setRoomType(roomType);
         }
 
-        room.setUpdatedat(Instant.now());
+        room.setUpdatedAt(Instant.now());
         Room updatedRoom = roomRepository.save(room);
 
         // Broadcast status update via WebSocket
-        webSocketService.broadcastRoomStatus(updatedRoom.getId(), updatedRoom.getRoomnumber(), updatedRoom.getStatus());
+        webSocketService.broadcastRoomStatus(updatedRoom.getId(), updatedRoom.getRoomNumber(), updatedRoom.getStatus());
 
         return mapToDetailDTO(updatedRoom);
     }
@@ -113,29 +112,29 @@ public class RoomServiceImpl implements RoomService {
     private RoomSummaryDTO mapToSummaryDTO(Room room) {
         return RoomSummaryDTO.builder()
                 .id(room.getId())
-                .roomnumber(room.getRoomnumber())
-                .floornumber(room.getFloornumber())
+                .roomnumber(room.getRoomNumber())
+                .floornumber(room.getFloorNumber())
                 .status(room.getStatus())
-                .roomtypeid(room.getRoomtypeid().getId())
-                .roomtypename(room.getRoomtypeid().getName())
-                .adminpasscode(room.getAdminpasscode())
-                .createdAt(room.getCreatedat())
-                .updatedAt(room.getUpdatedat())
+                .roomtypeid(room.getRoomType().getId())
+                .roomtypename(room.getRoomType().getName())
+                .adminpasscode(room.getAdminPasscode())
+                .createdAt(room.getCreatedAt())
+                .updatedAt(room.getUpdatedAt())
                 .build();
     }
 
     private RoomDetailDTO mapToDetailDTO(Room room) {
         return RoomDetailDTO.builder()
                 .id(room.getId())
-                .roomnumber(room.getRoomnumber())
-                .floornumber(room.getFloornumber())
+                .roomnumber(room.getRoomNumber())
+                .floornumber(room.getFloorNumber())
                 .status(room.getStatus())
                 .note(room.getNote())
-                .adminpasscode(room.getAdminpasscode())
-                .roomtypeid(room.getRoomtypeid().getId())
-                .roomtypename(room.getRoomtypeid().getName())
-                .createdAt(room.getCreatedat())
-                .updatedAt(room.getUpdatedat())
+                .adminpasscode(room.getAdminPasscode())
+                .roomtypeid(room.getRoomType().getId())
+                .roomtypename(room.getRoomType().getName())
+                .createdAt(room.getCreatedAt())
+                .updatedAt(room.getUpdatedAt())
                 .build();
     }
     @Override
@@ -147,9 +146,9 @@ public class RoomServiceImpl implements RoomService {
                 .map(room ->
                         RoomStatusResponse.builder()
                                 .roomId(room.getId())
-                                .roomNumber(room.getRoomnumber())
+                                .roomNumber(room.getRoomNumber())
                                 .status(room.getStatus())
-                                .updatedAt(room.getUpdatedat())
+                                .updatedAt(room.getUpdatedAt())
                                 .build())
                 .toList();
     }
@@ -165,9 +164,9 @@ public class RoomServiceImpl implements RoomService {
 
         return RoomStatusResponse.builder()
                 .roomId(room.getId())
-                .roomNumber(room.getRoomnumber())
+                .roomNumber(room.getRoomNumber())
                 .status(room.getStatus())
-                .updatedAt(room.getUpdatedat())
+                .updatedAt(room.getUpdatedAt())
                 .build();
     }
     @Override
@@ -212,19 +211,18 @@ public class RoomServiceImpl implements RoomService {
                 .get();
 
         room.setStatus(matched);
-        room.setUpdatedat(Instant.now());
+        room.setUpdatedAt(Instant.now());
 
         roomRepository.save(room);
 
         RoomStatusResponse response =
                 RoomStatusResponse.builder()
                         .roomId(room.getId())
-                        .roomNumber(room.getRoomnumber())
+                        .roomNumber(room.getRoomNumber())
                         .status(room.getStatus())
-                        .updatedAt(room.getUpdatedat())
+                        .updatedAt(room.getUpdatedAt())
                         .build();
 
         return response;
     }
 }
-

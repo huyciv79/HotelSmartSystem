@@ -9,8 +9,7 @@ import com.example.hotelsmartbookingbackend.dto.response.InvoiceResponse;
 import com.example.hotelsmartbookingbackend.dto.request.BookingFilter;
 import com.example.hotelsmartbookingbackend.dto.request.UpdateBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.request.CancelBookingRequest;
-import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
-import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
+
 import com.example.hotelsmartbookingbackend.dto.response.AiFaceReadinessResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
 import com.example.hotelsmartbookingbackend.dto.response.QrTokenResponse;

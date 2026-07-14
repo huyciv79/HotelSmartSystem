@@ -16,7 +16,7 @@ import java.time.Instant;
 @Setter
 @Entity
 @Table(name = "bookingservices")
-public class Bookingservice {
+public class BookingService {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "usageid", nullable = false)
@@ -26,17 +26,17 @@ public class Bookingservice {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "bookingid", nullable = false)
-    private Booking bookingid;
+    private Booking booking;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "serviceid", nullable = false)
-    private Service serviceid;
+    private Service service;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "implementedby", nullable = false)
-    private User implementedby;
+    private User implementedBy;
 
     @NotNull
     @ColumnDefault("1")
@@ -45,16 +45,16 @@ public class Bookingservice {
 
     @NotNull
     @Column(name = "unitprice", nullable = false, precision = 12, scale = 2)
-    private BigDecimal unitprice;
+    private BigDecimal unitPrice;
 
     @NotNull
     @Column(name = "totalprice", nullable = false, precision = 12, scale = 2)
-    private BigDecimal totalprice;
+    private BigDecimal totalPrice;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "implementedat", nullable = false)
-    private Instant implementedat;
+    private Instant implementedAt;
 
     @Size(max = 500)
     @Column(name = "note", length = 500)
@@ -65,5 +65,4 @@ public class Bookingservice {
     @ColumnDefault("'Active'")
     @Column(name = "status", nullable = false, length = 50)
     private String status;
-
 }

@@ -1,11 +1,6 @@
 package com.example.hotelsmartbookingbackend.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -15,7 +10,7 @@ import java.time.Instant;
 @Setter
 @Entity
 @Table(name = "faceembedding_angles")
-public class FaceembeddingAngle {
+public class FaceEmbeddingAngle {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,7 +18,7 @@ public class FaceembeddingAngle {
     private Integer id;
 
     @Column(name = "embeddingid", nullable = false)
-    private Integer embeddingid;
+    private Integer embeddingId;
 
     @Column(name = "pose", nullable = false)
     private String pose;
@@ -50,5 +45,5 @@ public class FaceembeddingAngle {
     private String failReason;
 
     @Column(name = "createdat")
-    private Instant createdat;
+    private Instant createdAt;
 }

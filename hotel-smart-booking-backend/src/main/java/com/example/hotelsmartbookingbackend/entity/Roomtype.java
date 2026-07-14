@@ -14,7 +14,7 @@ import java.time.Instant;
 @Setter
 @Entity
 @Table(name = "roomtypes")
-public class Roomtype {
+public class RoomType {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "roomtypeid", nullable = false)
@@ -30,27 +30,27 @@ public class Roomtype {
 
     @NotNull
     @Column(name = "baseprice", nullable = false, precision = 12, scale = 2)
-    private BigDecimal baseprice;
+    private BigDecimal basePrice;
 
     @NotNull
     @ColumnDefault("2")
     @Column(name = "adultcapacity", nullable = false)
-    private Integer adultcapacity;
+    private Integer adultCapacity;
 
     @NotNull
     @ColumnDefault("1")
     @Column(name = "childcapacity", nullable = false)
-    private Integer childcapacity;
+    private Integer childCapacity;
 
     @Column(name = "totalcapacity", insertable = false, updatable = false)
-    private Integer totalcapacity;
+    private Integer totalCapacity;
 
     @Column(name = "area", precision = 8, scale = 2)
     private BigDecimal area;
 
     @Size(max = 100)
     @Column(name = "bedtype", length = 100)
-    private String bedtype;
+    private String bedType;
 
     @Column(name = "amenities", length = Integer.MAX_VALUE)
     private String amenities;
@@ -67,11 +67,10 @@ public class Roomtype {
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "createdat", nullable = false)
-    private Instant createdat;
+    private Instant createdAt;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "updatedat", nullable = false)
-    private Instant updatedat;
-
+    private Instant updatedAt;
 }

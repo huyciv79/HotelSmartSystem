@@ -12,57 +12,44 @@ import java.util.Optional;
 
 public interface FeedbackRepository extends JpaRepository<Feedback, Integer> {
 
-    Optional<Feedback> findByBookingid_Id(Integer bookingId);
+    Optional<Feedback> findByBooking_Id(Integer bookingId);
 
     @Query("""
             select f
             from Feedback f
-            join fetch f.bookingid b
-            join fetch b.userid u
+            join fetch f.booking b
+            join fetch b.user u
             where f.id = :feedbackId
             """)
     Optional<Feedback> findByIdWithDetails(@Param("feedbackId") Integer feedbackId);
 
-    @Query("""
-            select f
-            from Feedback f
-            join fetch f.bookingid b
-            join fetch b.userid u
-            where b.id in (
-                select d.id
-                from Bookingdetail d
-                where d.roomtypeid.id = :roomTypeId
-            )
-              and f.status = 'Active'
-            order by f.createdat desc
-            """)
-    List<Feedback> findActiveFeedbacksByRoomType(@Param("roomTypeId") Integer roomTypeId);
+
 
     @Query(value = """
             select f
             from Feedback f
-            join fetch f.bookingid b
-            join fetch b.userid u
+            join fetch f.booking b
+            join fetch b.user u
             where (:roomTypeId is null or b.id in (
                 select d.id
-                from Bookingdetail d
-                where d.roomtypeid.id = :roomTypeId
+                from BookingDetail d
+                where d.roomType.id = :roomTypeId
             ))
               and (:rating is null or f.rating = :rating)
               and (:bookingId is null or b.id = :bookingId)
               and f.status = 'Active'
-            order by f.createdat desc
+            order by f.createdAt desc
             """,
             countQuery = """
             select count(f)
             from Feedback f
-            where (:roomTypeId is null or f.bookingid.id in (
+            where (:roomTypeId is null or f.booking.id in (
                 select d.id
-                from Bookingdetail d
-                where d.roomtypeid.id = :roomTypeId
+                from BookingDetail d
+                where d.roomType.id = :roomTypeId
             ))
               and (:rating is null or f.rating = :rating)
-              and (:bookingId is null or f.bookingid.id = :bookingId)
+              and (:bookingId is null or f.booking.id = :bookingId)
               and f.status = 'Active'
             """)
     Page<Feedback> findActiveFeedbacksFiltered(

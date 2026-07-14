@@ -6,13 +6,13 @@ import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
 import com.example.hotelsmartbookingbackend.entity.Booking;
 import com.example.hotelsmartbookingbackend.enums.BookingStatus;
 import com.example.hotelsmartbookingbackend.entity.Feedback;
-import com.example.hotelsmartbookingbackend.entity.Feedbackimage;
+import com.example.hotelsmartbookingbackend.entity.FeedbackImage;
 import com.example.hotelsmartbookingbackend.entity.User;
-import com.example.hotelsmartbookingbackend.entity.Bookingdetail;
+import com.example.hotelsmartbookingbackend.entity.BookingDetail;
 import com.example.hotelsmartbookingbackend.repository.BookingRepository;
-import com.example.hotelsmartbookingbackend.repository.BookingdetailRepository;
+import com.example.hotelsmartbookingbackend.repository.BookingDetailRepository;
 import com.example.hotelsmartbookingbackend.repository.FeedbackRepository;
-import com.example.hotelsmartbookingbackend.repository.FeedbackimageRepository;
+import com.example.hotelsmartbookingbackend.repository.FeedbackImageRepository;
 import com.example.hotelsmartbookingbackend.repository.UserRepository;
 import com.example.hotelsmartbookingbackend.service.FeedbackService;
 import lombok.RequiredArgsConstructor;
@@ -32,10 +32,10 @@ import java.util.Optional;
 public class FeedbackServiceImpl implements FeedbackService {
 
     private final FeedbackRepository feedbackRepository;
-    private final FeedbackimageRepository feedbackimageRepository;
+    private final FeedbackImageRepository feedbackImageRepository;
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
-    private final BookingdetailRepository bookingdetailRepository;
+    private final BookingDetailRepository bookingDetailRepository;
 
     @Override
     @Transactional
@@ -45,7 +45,7 @@ public class FeedbackServiceImpl implements FeedbackService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin đặt phòng"));
 
         // 2. Kiểm tra quyền sở hữu booking
-        if (!booking.getUserid().getEmail().equalsIgnoreCase(customerEmail)) {
+        if (!booking.getUser().getEmail().equalsIgnoreCase(customerEmail)) {
             throw new RuntimeException("Bạn không có quyền đánh giá đặt phòng này");
         }
 
@@ -55,26 +55,26 @@ public class FeedbackServiceImpl implements FeedbackService {
         }
 
         // 3. Kiểm tra xem booking đã được đánh giá chưa
-        Optional<Feedback> existing = feedbackRepository.findByBookingid_Id(request.getBookingId());
+        Optional<Feedback> existing = feedbackRepository.findByBooking_Id(request.getBookingId());
         if (existing.isPresent()) {
             throw new RuntimeException("Đặt phòng này đã được gửi đánh giá trước đó");
         }
 
         // 4. Tạo bản ghi Feedback
-        Bookingdetail detail = bookingdetailRepository.findByBookingid_Id(booking.getId())
+        BookingDetail detail = bookingDetailRepository.findByBooking_Id(booking.getId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chi tiết đặt phòng"));
 
         Feedback feedback = new Feedback();
-        feedback.setBookingid(booking);
-        feedback.setUserid(booking.getUserid());
-        feedback.setRoomtypeid(detail.getRoomtypeid());
+        feedback.setBooking(booking);
+        feedback.setUser(booking.getUser());
+        feedback.setRoomType(detail.getRoomType());
         feedback.setRating(request.getRating());
         feedback.setComment(request.getComment());
         feedback.setPros(request.getPros());
         feedback.setCons(request.getCons());
         feedback.setStatus("Active");
-        feedback.setCreatedat(Instant.now());
-        feedback.setUpdatedat(Instant.now());
+        feedback.setCreatedAt(Instant.now());
+        feedback.setUpdatedAt(Instant.now());
 
         Feedback savedFeedback = feedbackRepository.save(feedback);
 
@@ -83,17 +83,17 @@ public class FeedbackServiceImpl implements FeedbackService {
         if (request.getImages() != null && !request.getImages().isEmpty()) {
             for (String url : request.getImages()) {
                 if (url != null && !url.isBlank()) {
-                    Feedbackimage img = new Feedbackimage();
-                    img.setFeedbackid(savedFeedback);
-                    img.setImageurl(url);
-                    img.setUploadedat(Instant.now());
-                    feedbackimageRepository.save(img);
+                    FeedbackImage img = new FeedbackImage();
+                    img.setFeedback(savedFeedback);
+                    img.setImageUrl(url);
+                    img.setUploadedAt(Instant.now());
+                    feedbackImageRepository.save(img);
                     imageUrls.add(url);
                 }
             }
         }
 
-        return mapToResponse(savedFeedback, booking, booking.getUserid(), imageUrls);
+        return mapToResponse(savedFeedback, booking, booking.getUser(), imageUrls);
     }
 
     @Override
@@ -103,8 +103,8 @@ public class FeedbackServiceImpl implements FeedbackService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin đánh giá"));
 
         // Kiểm tra quyền sở hữu đánh giá
-        Booking booking = feedback.getBookingid();
-        if (!booking.getUserid().getEmail().equalsIgnoreCase(customerEmail)) {
+        Booking booking = feedback.getBooking();
+        if (!booking.getUser().getEmail().equalsIgnoreCase(customerEmail)) {
             throw new RuntimeException("Bạn không có quyền chỉnh sửa đánh giá này");
         }
 
@@ -113,27 +113,27 @@ public class FeedbackServiceImpl implements FeedbackService {
         feedback.setComment(request.getComment());
         feedback.setPros(request.getPros());
         feedback.setCons(request.getCons());
-        feedback.setUpdatedat(Instant.now());
+        feedback.setUpdatedAt(Instant.now());
 
         Feedback savedFeedback = feedbackRepository.save(feedback);
 
         // Xóa ảnh cũ và thêm ảnh mới
-        feedbackimageRepository.deleteByFeedbackid_Id(feedbackId);
+        feedbackImageRepository.deleteByFeedback_Id(feedbackId);
         List<String> imageUrls = new ArrayList<>();
         if (request.getImages() != null && !request.getImages().isEmpty()) {
             for (String url : request.getImages()) {
                 if (url != null && !url.isBlank()) {
-                    Feedbackimage img = new Feedbackimage();
-                    img.setFeedbackid(savedFeedback);
-                    img.setImageurl(url);
-                    img.setUploadedat(Instant.now());
-                    feedbackimageRepository.save(img);
+                    FeedbackImage img = new FeedbackImage();
+                    img.setFeedback(savedFeedback);
+                    img.setImageUrl(url);
+                    img.setUploadedAt(Instant.now());
+                    feedbackImageRepository.save(img);
                     imageUrls.add(url);
                 }
             }
         }
 
-        return mapToResponse(savedFeedback, booking, booking.getUserid(), imageUrls);
+        return mapToResponse(savedFeedback, booking, booking.getUser(), imageUrls);
     }
 
     @Override
@@ -145,7 +145,7 @@ public class FeedbackServiceImpl implements FeedbackService {
         User currentUser = userRepository.findByEmail(customerEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
-        boolean isOwner = feedback.getBookingid().getUserid().getEmail().equalsIgnoreCase(customerEmail);
+        boolean isOwner = feedback.getBooking().getUser().getEmail().equalsIgnoreCase(customerEmail);
         String roleStr = currentUser.getRole().name();
         boolean isStaffOrManager = "receptionist".equalsIgnoreCase(roleStr) || "manager".equalsIgnoreCase(roleStr);
 
@@ -154,7 +154,7 @@ public class FeedbackServiceImpl implements FeedbackService {
         }
 
         // Xóa các ảnh liên quan
-        feedbackimageRepository.deleteByFeedbackid_Id(feedbackId);
+        feedbackImageRepository.deleteByFeedback_Id(feedbackId);
 
         // Xóa đánh giá
         feedbackRepository.delete(feedback);
@@ -166,25 +166,25 @@ public class FeedbackServiceImpl implements FeedbackService {
         Feedback feedback = feedbackRepository.findByIdWithDetails(feedbackId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin đánh giá"));
 
-        List<Feedbackimage> images = feedbackimageRepository.findByFeedbackid_Id(feedback.getId());
-        List<String> imageUrls = images.stream().map(Feedbackimage::getImageurl).toList();
+        List<FeedbackImage> images = feedbackImageRepository.findByFeedback_Id(feedback.getId());
+        List<String> imageUrls = images.stream().map(FeedbackImage::getImageUrl).toList();
 
-        return mapToResponse(feedback, feedback.getBookingid(), feedback.getBookingid().getUserid(), imageUrls);
+        return mapToResponse(feedback, feedback.getBooking(), feedback.getBooking().getUser(), imageUrls);
     }
 
     private FeedbackResponse mapToResponse(Feedback feedback, Booking booking, User user, List<String> images) {
         return FeedbackResponse.builder()
                 .feedbackId(feedback.getId())
                 .bookingId(booking.getId())
-                .bookingReference(booking.getBookingreference())
+                .bookingReference(booking.getBookingReference())
                 .rating(feedback.getRating())
                 .comment(feedback.getComment())
                 .pros(feedback.getPros())
                 .cons(feedback.getCons())
                 .status(feedback.getStatus())
-                .createdAt(feedback.getCreatedat())
-                .updatedAt(feedback.getUpdatedat())
-                .customerName(user.getFullname())
+                .createdAt(feedback.getCreatedAt())
+                .updatedAt(feedback.getUpdatedAt())
+                .customerName(user.getFullName())
                 .customerAvatar(user.getAvatar())
                 .images(images)
                 .build();
@@ -199,9 +199,9 @@ public class FeedbackServiceImpl implements FeedbackService {
                 pageable);
 
         List<FeedbackResponse> content = feedbackPage.getContent().stream().map(f -> {
-            List<Feedbackimage> images = feedbackimageRepository.findByFeedbackid_Id(f.getId());
-            List<String> imageUrls = images.stream().map(Feedbackimage::getImageurl).toList();
-            return mapToResponse(f, f.getBookingid(), f.getBookingid().getUserid(), imageUrls);
+            List<FeedbackImage> images = feedbackImageRepository.findByFeedback_Id(f.getId());
+            List<String> imageUrls = images.stream().map(FeedbackImage::getImageUrl).toList();
+            return mapToResponse(f, f.getBooking(), f.getBooking().getUser(), imageUrls);
         }).toList();
 
         return PageResponse.<FeedbackResponse>builder()

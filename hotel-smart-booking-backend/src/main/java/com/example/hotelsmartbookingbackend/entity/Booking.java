@@ -7,8 +7,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
+
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -25,58 +24,58 @@ public class Booking {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "userid")
-    private User userid;
+    private User user;
 
     @Size(max = 20)
     @NotNull
     @Column(name = "bookingreference", nullable = false, unique = true, length = 20)
-    private String bookingreference;
+    private String bookingReference;
 
     @Size(max = 50)
     @NotNull
     @Column(name = "bookingtype", nullable = false, length = 50)
-    private String bookingtype;
+    private String bookingType;
 
     @Size(max = 50)
     @NotNull
     @ColumnDefault("'Manual'")
     @Column(name = "checkinmethod", nullable = false, length = 50)
-    private String checkinmethod;
+    private String checkInMethod;
 
     @NotNull
     @ColumnDefault("0")
     @Column(name = "totalamount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal totalamount;
+    private BigDecimal totalAmount;
 
     @NotNull
     @ColumnDefault("0")
     @Column(name = "paidamount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal paidamount;
+    private BigDecimal paidAmount;
 
     @NotNull
     @ColumnDefault("0")
     @Column(name = "depositamount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal depositamount;
+    private BigDecimal depositAmount;
 
     @NotNull
     @ColumnDefault("0")
     @Column(name = "discountamount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal discountamount;
+    private BigDecimal discountAmount;
 
     @NotNull
     @ColumnDefault("0")
     @Column(name = "taxamount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal taxamount;
+    private BigDecimal taxAmount;
 
     @NotNull
     @ColumnDefault("0")
     @Column(name = "servicechargeamount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal servicechargeamount;
+    private BigDecimal serviceChargeAmount;
 
     @NotNull
     @ColumnDefault("0")
     @Column(name = "finalamount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal finalamount;
+    private BigDecimal finalAmount;
 
     @NotNull
     @ColumnDefault("'Pending'")
@@ -86,31 +85,31 @@ public class Booking {
 
     @Size(max = 500)
     @Column(name = "cancellationreason", length = 500)
-    private String cancellationreason;
+    private String cancellationReason;
 
     @Column(name = "cancelledat")
-    private Instant cancelledat;
+    private Instant cancelledAt;
 
     @Column(name = "specialrequests", length = Integer.MAX_VALUE)
-    private String specialrequests;
+    private String specialRequests;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "createdat", nullable = false)
-    private Instant createdat;
+    private Instant createdAt;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "updatedat", nullable = false)
-    private Instant updatedat;
+    private Instant updatedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cancelledby")
-    private User cancelledby;
+    private User cancelledBy;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "createdby")
-    private User createdby;
+    private User createdBy;
 
 
 }

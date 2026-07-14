@@ -59,9 +59,9 @@ public class StatisticServiceImpl implements StatisticService {
         }
 
         for (Booking b : monthlyBookings) {
-            YearMonth ym = YearMonth.from(b.getCreatedat().atZone(ZoneId.systemDefault()));
+            YearMonth ym = YearMonth.from(b.getCreatedAt().atZone(ZoneId.systemDefault()));
             if (revenueMap.containsKey(ym)) {
-                revenueMap.put(ym, revenueMap.get(ym).add(b.getFinalamount()));
+                revenueMap.put(ym, revenueMap.get(ym).add(b.getFinalAmount()));
             }
         }
 
@@ -94,7 +94,7 @@ public class StatisticServiceImpl implements StatisticService {
         long walkInCount = 0;
 
         for (Booking b : allActiveBookings) {
-            String type = b.getBookingtype();
+            String type = b.getBookingType();
             if ("Online".equalsIgnoreCase(type)) {
                 onlineCount++;
             } else if ("Group".equalsIgnoreCase(type)) {
@@ -131,8 +131,8 @@ public class StatisticServiceImpl implements StatisticService {
                     totalCheckOuts++;
                 }
             }
-            if (b.getUserid() != null) {
-                Integer uId = b.getUserid().getId();
+            if (b.getUser() != null) {
+                Integer uId = b.getUser().getId();
                 userBookingCounts.put(uId, userBookingCounts.getOrDefault(uId, 0) + 1);
             }
         }

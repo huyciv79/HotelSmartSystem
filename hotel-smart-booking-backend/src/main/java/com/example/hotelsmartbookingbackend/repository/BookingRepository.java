@@ -16,20 +16,13 @@ import com.example.hotelsmartbookingbackend.enums.BookingStatus;
 
 public interface BookingRepository extends JpaRepository<Booking, Integer>, JpaSpecificationExecutor<Booking> {
 
-    boolean existsByBookingreference(String bookingreference);
+    boolean existsByBookingReference(String bookingreference);
 
-    Page<Booking> findByStatus(BookingStatus status, Pageable pageable);
 
-    Page<Booking> findByBookingreference(String bookingReference, Pageable pageable);
-
-    Page<Booking> findByUseridEmailContaining(String email, Pageable pageable);
-
-    Page<Booking> findByCreatedatBetween( Instant from, Instant to, Pageable pageable);
-
-    @Query("SELECT b FROM Booking b WHERE b.createdat >= :startDate AND b.status <> com.example.hotelsmartbookingbackend.enums.BookingStatus.CANCELLED")
+    @Query("SELECT b FROM Booking b WHERE b.createdAt >= :startDate AND b.status <> com.example.hotelsmartbookingbackend.enums.BookingStatus.CANCELLED")
     List<Booking> findActiveBookingsSince(@Param("startDate") Instant startDate);
 
-    @Query("SELECT SUM(b.finalamount) FROM Booking b WHERE b.status <> com.example.hotelsmartbookingbackend.enums.BookingStatus.CANCELLED")
+    @Query("SELECT SUM(b.finalAmount) FROM Booking b WHERE b.status <> com.example.hotelsmartbookingbackend.enums.BookingStatus.CANCELLED")
     BigDecimal sumExpectedRevenue();
 
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.status IN (com.example.hotelsmartbookingbackend.enums.BookingStatus.CONFIRMED, com.example.hotelsmartbookingbackend.enums.BookingStatus.PAID, com.example.hotelsmartbookingbackend.enums.BookingStatus.PARTIALLY_PAID)")

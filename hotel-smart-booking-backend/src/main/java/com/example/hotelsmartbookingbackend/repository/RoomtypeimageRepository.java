@@ -1,14 +1,14 @@
 package com.example.hotelsmartbookingbackend.repository;
 
-import com.example.hotelsmartbookingbackend.entity.Roomtypeimage;
+import com.example.hotelsmartbookingbackend.entity.RoomTypeImage;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface RoomtypeimageRepository extends JpaRepository<Roomtypeimage, Integer> {
+public interface RoomTypeImageRepository extends JpaRepository<RoomTypeImage, Integer> {
 
-    List<Roomtypeimage> findByRoomtypeid_IdOrderByDisplayorderAsc(Integer roomTypeId);
+    List<RoomTypeImage> findByRoomType_IdOrderByDisplayOrderAsc(Integer roomTypeId);
 
-    Optional<Roomtypeimage> findFirstByRoomtypeid_IdAndIsprimaryTrue(Integer roomTypeId);
+    Optional<RoomTypeImage> findFirstByRoomType_IdAndIsPrimaryTrue(Integer roomTypeId);
 }

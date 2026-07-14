@@ -47,7 +47,7 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email đã tồn tại trong hệ thống");
         }
-        if (userRepository.existsByIdcardnumber(request.getIdCardNumber())) {
+        if (userRepository.existsByIdCardNumber(request.getIdCardNumber())) {
             throw new RuntimeException("So CCCD nay da ton tai trong he thong");
         }
 
@@ -86,19 +86,19 @@ public class AuthServiceImpl implements AuthService {
         if (registerRequest.getIdCardNumber() == null || !registerRequest.getIdCardNumber().matches("^[0-9]{12}$")) {
             throw new RuntimeException("So CCCD phai gom dung 12 chu so");
         }
-        if (userRepository.existsByIdcardnumber(registerRequest.getIdCardNumber())) {
+        if (userRepository.existsByIdCardNumber(registerRequest.getIdCardNumber())) {
             throw new RuntimeException("So CCCD nay da ton tai trong he thong");
         }
 
         User user = new User();
         user.setEmail(registerRequest.getEmail());
-        user.setPasswordhash(passwordEncoder.encode(registerRequest.getPassword()));
-        user.setFullname(registerRequest.getFullName());
-        user.setPhonenumber(registerRequest.getPhone());
-        user.setIdcardnumber(registerRequest.getIdCardNumber());
+        user.setPasswordHash(passwordEncoder.encode(registerRequest.getPassword()));
+        user.setFullName(registerRequest.getFullName());
+        user.setPhoneNumber(registerRequest.getPhone());
+        user.setIdCardNumber(registerRequest.getIdCardNumber());
         user.setRole(Role.customer); // Default role confirmed by user
         user.setStatus("Active");
-        user.setCreatedat(Instant.now());
+        user.setCreatedAt(Instant.now());
 
         userRepository.save(user);
 
@@ -112,7 +112,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("Email hoặc mật khẩu không đúng"));
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordhash())) {
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new RuntimeException("Email hoặc mật khẩu không đúng");
         }
 
@@ -133,7 +133,7 @@ public class AuthServiceImpl implements AuthService {
                 .accessToken(accessToken)
                 .refreshToken(null)
                 .email(user.getEmail())
-                .fullName(user.getFullname())
+                .fullName(user.getFullName())
                 .role(user.getRole().name())
                 .build();
     }
@@ -195,8 +195,8 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
         // Cập nhật mật khẩu mới bằng cách mã hóa bằng BCrypt trước khi lưu
-        user.setPasswordhash(passwordEncoder.encode(request.getNewPassword()));
-        user.setUpdatedat(java.time.Instant.now());
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setUpdatedAt(java.time.Instant.now());
         userRepository.save(user);
 
 
@@ -218,14 +218,14 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
         // Xác thực mật khẩu hiện tại
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordhash())) {
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
             throw new RuntimeException("Mật khẩu hiện tại không đúng");
         }
 
         // Cập nhật mật khẩu mới bằng BCrypt hash
         String newPasswordHash = passwordEncoder.encode(request.getNewPassword());
-        user.setPasswordhash(newPasswordHash);
-        user.setUpdatedat(Instant.now());
+        user.setPasswordHash(newPasswordHash);
+        user.setUpdatedAt(Instant.now());
         userRepository.save(user);
 
     }

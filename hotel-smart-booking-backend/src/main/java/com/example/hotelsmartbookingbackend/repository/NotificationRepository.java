@@ -12,11 +12,11 @@ import java.util.List;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Integer> {
     
-    Page<Notification> findByUserOrderBySentatDesc(User user, Pageable pageable);
+    Page<Notification> findByUserOrderBySentAtDesc(User user, Pageable pageable);
     
-    Page<Notification> findByUserAndIsreadOrderBySentatDesc(User user, Boolean isread, Pageable pageable);
+    Page<Notification> findByUserAndIsReadOrderBySentAtDesc(User user, Boolean isRead, Pageable pageable);
     
-    List<Notification> findByUserAndIsread(User user, Boolean isread);
+    List<Notification> findByUserAndIsRead(User user, Boolean isRead);
     
-    long countByUserAndIsread(User user, Boolean isread);
+    long countByUserAndIsRead(User user, Boolean isRead);
 }

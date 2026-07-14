@@ -8,6 +8,6 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Integer> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
-    boolean existsByIdcardnumber(String idcardnumber);
+    boolean existsByIdCardNumber(String idCardNumber);
     java.util.List<User> findAllByRoleIn(java.util.Collection<com.example.hotelsmartbookingbackend.enums.Role> roles);
 }

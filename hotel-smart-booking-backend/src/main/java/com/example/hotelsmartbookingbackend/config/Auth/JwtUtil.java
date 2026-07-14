@@ -91,7 +91,7 @@ public class JwtUtil {
                 .subject(user.getEmail())
                 .claim("userId", user.getId())
                 .claim("role", user.getRole().name())
-                .claim("fullName", user.getFullname())
+                .claim("fullName", user.getFullName())
                 .claim("type", tokenType)
                 .id(UUID.randomUUID().toString())
                 .issuedAt(now)

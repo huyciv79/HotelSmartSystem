@@ -21,9 +21,6 @@ public interface RoomService {
 
     List<RoomStatusResponse> getAllRoomStatuses();
 
-    RoomStatusResponse updateRoomStatus(
-            Integer roomId,
-            UpdateRoomRequest request
-    );
+    RoomStatusResponse updateRoomStatus(Integer roomId, UpdateRoomRequest request);
 }
 

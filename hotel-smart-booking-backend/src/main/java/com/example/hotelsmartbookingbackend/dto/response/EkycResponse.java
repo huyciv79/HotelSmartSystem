@@ -5,9 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * Response DTO trả về cho client sau khi xử lý eKYC.
- */
 @Data
 @Builder
 @NoArgsConstructor

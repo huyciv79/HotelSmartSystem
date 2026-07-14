@@ -8,9 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-/**
- * Response returned by POST /api/v1/face/enroll.
- */
+
 @Data
 @Builder
 @NoArgsConstructor

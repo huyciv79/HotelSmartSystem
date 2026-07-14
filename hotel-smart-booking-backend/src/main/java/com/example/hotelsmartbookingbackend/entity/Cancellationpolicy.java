@@ -14,7 +14,7 @@ import java.time.Instant;
 @Setter
 @Entity
 @Table(name = "cancellationpolicies")
-public class Cancellationpolicy {
+public class CancellationPolicy {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "policyid", nullable = false)
@@ -23,20 +23,20 @@ public class Cancellationpolicy {
     @Size(max = 100)
     @NotNull
     @Column(name = "policyname", nullable = false, length = 100)
-    private String policyname;
+    private String policyName;
 
     @NotNull
     @Column(name = "daysbeforecheckin", nullable = false)
-    private Integer daysbeforecheckin;
+    private Integer daysBeforeCheckIn;
 
     @NotNull
     @Column(name = "refundpercentage", nullable = false, precision = 5, scale = 2)
-    private BigDecimal refundpercentage;
+    private BigDecimal refundPercentage;
 
     @NotNull
     @ColumnDefault("true")
     @Column(name = "isactive", nullable = false)
-    private Boolean isactive = false;
+    private Boolean isActive = false;
 
     @NotNull
     @ColumnDefault("0")
@@ -46,6 +46,5 @@ public class Cancellationpolicy {
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "createdat", nullable = false)
-    private Instant createdat;
-
+    private Instant createdAt;
 }

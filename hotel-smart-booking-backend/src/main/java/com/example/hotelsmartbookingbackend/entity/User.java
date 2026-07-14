@@ -33,22 +33,22 @@ public class User {
     @Size(max = 20)
     @NotNull
     @Column(name = "phonenumber", nullable = false, length = 20)
-    private String phonenumber;
+    private String phoneNumber;
 
     @Size(min = 12, max = 12)
     @Pattern(regexp = "^[0-9]{12}$")
     @Column(name = "idcardnumber", length = 12, unique = true)
-    private String idcardnumber;
+    private String idCardNumber;
 
     @Size(max = 255)
     @NotNull
     @Column(name = "passwordhash", nullable = false)
-    private String passwordhash;
+    private String passwordHash;
 
     @Size(max = 255)
     @NotNull
     @Column(name = "fullname", nullable = false)
-    private String fullname;
+    private String fullName;
 
     @Size(max = 512)
     @Column(name = "avatar", length = 512)
@@ -66,9 +66,9 @@ public class User {
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "createdat", nullable = false)
-    private Instant createdat;
+    private Instant createdAt;
 
     @Column(name = "updatedat")
-    private Instant updatedat;
+    private Instant updatedAt;
 
 }

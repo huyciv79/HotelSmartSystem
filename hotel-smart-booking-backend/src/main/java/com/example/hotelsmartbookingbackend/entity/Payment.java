@@ -26,7 +26,7 @@ public class Payment {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "bookingid", nullable = false)
-    private Booking bookingid;
+    private Booking booking;
 
     @NotNull
     @Column(name = "amount", nullable = false, precision = 12, scale = 2)
@@ -35,16 +35,16 @@ public class Payment {
     @Size(max = 50)
     @NotNull
     @Column(name = "paymentmethod", nullable = false, length = 50)
-    private String paymentmethod;
+    private String paymentMethod;
 
     @Size(max = 50)
     @NotNull
     @Column(name = "paymenttype", nullable = false, length = 50)
-    private String paymenttype;
+    private String paymentType;
 
     @Size(max = 100)
     @Column(name = "transactioncode", length = 100)
-    private String transactioncode;
+    private String transactionCode;
 
     @Size(max = 50)
     @NotNull
@@ -55,12 +55,12 @@ public class Payment {
     @NotNull
     @ColumnDefault("0")
     @Column(name = "refundedamount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal refundedamount;
+    private BigDecimal refundedAmount;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "paymentdate", nullable = false)
-    private Instant paymentdate;
+    private Instant paymentDate;
 
     @Size(max = 500)
     @Column(name = "notes", length = 500)

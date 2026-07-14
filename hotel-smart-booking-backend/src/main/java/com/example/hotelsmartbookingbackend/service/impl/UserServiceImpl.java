@@ -37,9 +37,9 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin người dùng với email: " + email));
 
-        user.setFullname(request.getFullName());
+        user.setFullName(request.getFullName());
         user.setAddress(request.getAddress());
-        user.setUpdatedat(Instant.now());
+        user.setUpdatedAt(Instant.now());
 
         userRepository.save(user);
 
@@ -92,7 +92,7 @@ public class UserServiceImpl implements UserService {
 
             String oldAvatarUrl = user.getAvatar();
             user.setAvatar(newAvatarUrl);
-            user.setUpdatedat(Instant.now());
+            user.setUpdatedAt(Instant.now());
             userRepository.save(user);
 
             // Clean up old avatar from Supabase Storage
@@ -114,14 +114,14 @@ public class UserServiceImpl implements UserService {
                 .id(user.getId())
                 .email(user.getEmail())
                 .role(user.getRole() != null ? user.getRole().name() : null)
-                .phoneNumber(user.getPhonenumber())
-                .idCardNumber(user.getIdcardnumber())
-                .fullName(user.getFullname())
+                .phoneNumber(user.getPhoneNumber())
+                .idCardNumber(user.getIdCardNumber())
+                .fullName(user.getFullName())
                 .avatar(user.getAvatar())
                 .address(user.getAddress())
                 .status(user.getStatus())
-                .createdAt(user.getCreatedat())
-                .updatedAt(user.getUpdatedat())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
                 .build();
     }
 }

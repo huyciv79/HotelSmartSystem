@@ -1,6 +1,6 @@
 package com.example.hotelsmartbookingbackend.repository;
 
-import com.example.hotelsmartbookingbackend.entity.Roomtype;
+import com.example.hotelsmartbookingbackend.entity.RoomType;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -10,9 +10,9 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
-public interface RoomtypeRepository extends JpaRepository<Roomtype, Integer>, JpaSpecificationExecutor<Roomtype> {
+public interface RoomTypeRepository extends JpaRepository<RoomType, Integer>, JpaSpecificationExecutor<RoomType> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select r from Roomtype r where r.id = :id")
-    Optional<Roomtype> findByIdForUpdate(@Param("id") Integer id);
+    @Query("select r from RoomType r where r.id = :id")
+    Optional<RoomType> findByIdForUpdate(@Param("id") Integer id);
 }

@@ -11,8 +11,8 @@ import java.io.IOException;
 import com.example.hotelsmartbookingbackend.entity.EkycProfile;
 import com.example.hotelsmartbookingbackend.entity.User;
 import com.example.hotelsmartbookingbackend.repository.EkycProfileRepository;
-import com.example.hotelsmartbookingbackend.repository.FaceembeddingAngleRepository;
-import com.example.hotelsmartbookingbackend.repository.FaceembeddingRepository;
+import com.example.hotelsmartbookingbackend.repository.FaceEmbeddingAngleRepository;
+import com.example.hotelsmartbookingbackend.repository.FaceEmbeddingRepository;
 import com.example.hotelsmartbookingbackend.repository.UserRepository;
 import com.example.hotelsmartbookingbackend.service.EkycService;
 import com.example.hotelsmartbookingbackend.service.SupabaseStorageService;
@@ -39,9 +39,7 @@ import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Triển khai luồng xử lý eKYC (Electronic Know Your Customer) – Tự động hóa hoàn toàn.
- */
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -50,8 +48,8 @@ public class EkycServiceImpl implements EkycService {
     // ── Dependencies ─────────────────────────────────────────────────────────
     private final UserRepository userRepository;
     private final EkycProfileRepository ekycProfileRepository;
-    private final FaceembeddingRepository faceembeddingRepository;
-    private final FaceembeddingAngleRepository faceembeddingAngleRepository;
+    private final FaceEmbeddingRepository faceEmbeddingRepository;
+    private final FaceEmbeddingAngleRepository faceEmbeddingAngleRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final WebClient webClient;
     private final AesEncryptionService aesEncryptionService;
@@ -115,7 +113,7 @@ public class EkycServiceImpl implements EkycService {
         }
 
         // ── 2. Kiểm tra profile hiện tại ─────────────────────────────────────
-        Optional<EkycProfile> profileOpt = ekycProfileRepository.findTopByUseridOrderByCreatedatDesc(user);
+        Optional<EkycProfile> profileOpt = ekycProfileRepository.findTopByUserOrderByCreatedAtDesc(user);
         boolean isUpdateFlow = false;
         EkycProfile profile;
         Instant now = Instant.now();
@@ -134,13 +132,13 @@ public class EkycServiceImpl implements EkycService {
 
         // ── 3. Tạo/Cập nhật bản ghi EkycProfile với trạng thái SUBMITTED rồi AI_CHECKING ──
         if (isUpdateFlow) {
-            profile.setFrontimage(request.getFrontImageUrl());
-            profile.setBackimage(request.getBackImageUrl());
-            profile.setFaceimage(request.getFaceImageUrl());
+            profile.setFrontImage(request.getFrontImageUrl());
+            profile.setBackImage(request.getBackImageUrl());
+            profile.setFaceImage(request.getFaceImageUrl());
             profile.setStatus(STATUS_SUBMITTED);
-            profile.setRejectionreason(null);
-            profile.setVerificationmethod(VERIFICATION_METHOD);
-            profile.setUpdatedat(now);
+            profile.setRejectionReason(null);
+            profile.setVerificationMethod(VERIFICATION_METHOD);
+            profile.setUpdatedAt(now);
             ekycProfileRepository.save(profile);
         } else {
             profile = createSubmittedProfile(user, request);
@@ -149,7 +147,7 @@ public class EkycServiceImpl implements EkycService {
         Instant aiStartedAt = Instant.now();
         ekycProfileRepository.markAsAiChecking(profile.getId(), aiStartedAt);
         profile.setStatus(STATUS_AI_CHECKING);
-        profile.setUpdatedat(aiStartedAt);
+        profile.setUpdatedAt(aiStartedAt);
 
         // ── 4. OCR CCCD ───────────────────────────────────────────────────────
         AiEkycResponse ocrResponse;
@@ -199,7 +197,7 @@ public class EkycServiceImpl implements EkycService {
                             + "Vui lòng chụp lại mặt trước CCCD rõ nét và đầy đủ bốn góc."
             );
         }
-        String registeredIdCardNumber = normalizeIdCardNumber(user.getIdcardnumber());
+        String registeredIdCardNumber = normalizeIdCardNumber(user.getIdCardNumber());
         if (registeredIdCardNumber == null) {
             throw new RuntimeException("Tai khoan chua co so CCCD da dang ky.");
         }
@@ -257,10 +255,10 @@ public class EkycServiceImpl implements EkycService {
             return;
         }
 
-        Integer embeddingId = faceembeddingRepository.findEmbeddingIdByUserId(userId)
+        Integer embeddingId = faceEmbeddingRepository.findEmbeddingIdByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Khong tim thay FaceEmbedding vua luu"));
 
-        faceembeddingAngleRepository.deleteByEmbeddingId(embeddingId);
+        faceEmbeddingAngleRepository.deleteByEmbeddingId(embeddingId);
         for (AiFaceEnrollmentResponse.FaceAngleEmbedding angle : angleEmbeddings) {
             if (angle == null || angle.getPose() == null || angle.getEmbedding() == null) {
                 continue;
@@ -271,7 +269,7 @@ public class EkycServiceImpl implements EkycService {
                 throw new RuntimeException("Face API tra ve pose khong hop le: " + angle.getPose());
             }
 
-            faceembeddingAngleRepository.upsertAngle(
+            faceEmbeddingAngleRepository.upsertAngle(
                     embeddingId,
                     pose,
                     convertToPostgresVectorString(angle.getEmbedding()),
@@ -294,13 +292,13 @@ public class EkycServiceImpl implements EkycService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy user với email: " + email));
 
-        Optional<EkycProfile> profileOpt = ekycProfileRepository.findTopByUseridOrderByCreatedatDesc(user);
+        Optional<EkycProfile> profileOpt = ekycProfileRepository.findTopByUserOrderByCreatedAtDesc(user);
 
         if (profileOpt.isEmpty()) {
             return EkycStatusResponse.builder()
                     .status("NOT_FOUND")
                     .message("You have not registered an identity verification profile yet.")
-                    .fullName(user.getFullname())
+                    .fullName(user.getFullName())
                     .address(user.getAddress())
                     .build();
         }
@@ -317,9 +315,9 @@ public class EkycServiceImpl implements EkycService {
 
         // Giải mã số CCCD (lưu dạng AES-256-GCM)
         String decryptedIdNumber = null;
-        if (profile.getIdcardnumber() != null) {
+        if (profile.getIdCardNumber() != null) {
             try {
-                decryptedIdNumber = aesEncryptionService.decrypt(profile.getIdcardnumber());
+                decryptedIdNumber = aesEncryptionService.decrypt(profile.getIdCardNumber());
                 if (STATUS_VERIFIED.equals(statusStr)) {
                     decryptedIdNumber = maskIdNumber(decryptedIdNumber);
                 }
@@ -329,14 +327,14 @@ public class EkycServiceImpl implements EkycService {
         }
 
         String decryptedFullName = null;
-        if (profile.getFullname() != null) {
-            try { decryptedFullName = aesEncryptionService.decrypt(profile.getFullname()); }
+        if (profile.getFullName() != null) {
+            try { decryptedFullName = aesEncryptionService.decrypt(profile.getFullName()); }
             catch (Exception ex) { /* ignore */ }
         }
 
         String decryptedDob = null;
-        if (profile.getDateofbirth() != null) {
-            try { decryptedDob = aesEncryptionService.decrypt(profile.getDateofbirth()); }
+        if (profile.getDateOfBirth() != null) {
+            try { decryptedDob = aesEncryptionService.decrypt(profile.getDateOfBirth()); }
             catch (Exception ex) { /* ignore */ }
         }
 
@@ -347,34 +345,34 @@ public class EkycServiceImpl implements EkycService {
         }
 
         String decryptedHometown = null;
-        if (profile.getHometown() != null) {
-            try { decryptedHometown = aesEncryptionService.decrypt(profile.getHometown()); }
+        if (profile.getHomeTown() != null) {
+            try { decryptedHometown = aesEncryptionService.decrypt(profile.getHomeTown()); }
             catch (Exception ex) { /* ignore */ }
         }
 
         String decryptedProvinceName = null;
-        if (profile.getProvincename() != null) {
-            try { decryptedProvinceName = aesEncryptionService.decrypt(profile.getProvincename()); }
+        if (profile.getProvinceName() != null) {
+            try { decryptedProvinceName = aesEncryptionService.decrypt(profile.getProvinceName()); }
             catch (Exception ex) { /* ignore */ }
         }
 
         return EkycStatusResponse.builder()
                 .status(statusStr)
                 .message(statusMsg)
-                .fullName(decryptedFullName != null ? decryptedFullName : user.getFullname())
+                .fullName(decryptedFullName != null ? decryptedFullName : user.getFullName())
                 .idNumber(decryptedIdNumber)
                 .dateOfBirth(decryptedDob)
                 .address(user.getAddress())
                 .gender(decryptedGender)
                 .hometown(decryptedHometown != null ? decryptedHometown : decryptedProvinceName)
-                .provinceCode(profile.getProvincecode())
+                .provinceCode(profile.getProvinceCode())
                 .provinceName(decryptedProvinceName)
-                .verifiedAt(profile.getVerifiedat())
-                .rejectionReason(profile.getRejectionreason())
+                .verifiedAt(profile.getVerifiedAt())
+                .rejectionReason(profile.getRejectionReason())
                 .requestId(profile.getId() != null ? profile.getId().toString() : null)
-                .frontImage(supabaseStorageService.getSignedUrl(profile.getFrontimage()))
-                .backImage(supabaseStorageService.getSignedUrl(profile.getBackimage()))
-                .faceImage(supabaseStorageService.getSignedUrl(profile.getFaceimage()))
+                .frontImage(supabaseStorageService.getSignedUrl(profile.getFrontImage()))
+                .backImage(supabaseStorageService.getSignedUrl(profile.getBackImage()))
+                .faceImage(supabaseStorageService.getSignedUrl(profile.getFaceImage()))
                 .build();
     }
 
@@ -433,21 +431,18 @@ public class EkycServiceImpl implements EkycService {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // PRIVATE HELPERS
-    // ─────────────────────────────────────────────────────────────────────────
 
     private EkycProfile createSubmittedProfile(User user, EkycRequest request) {
         Instant now = Instant.now();
         EkycProfile profile = new EkycProfile();
-        profile.setUserid(user);
-        profile.setFrontimage(request.getFrontImageUrl());
-        profile.setBackimage(request.getBackImageUrl());
-        profile.setFaceimage(request.getFaceImageUrl());
+        profile.setUser(user);
+        profile.setFrontImage(request.getFrontImageUrl());
+        profile.setBackImage(request.getBackImageUrl());
+        profile.setFaceImage(request.getFaceImageUrl());
         profile.setStatus(STATUS_SUBMITTED);
-        profile.setVerificationmethod(VERIFICATION_METHOD);
-        profile.setCreatedat(now);
-        profile.setUpdatedat(now);
+        profile.setVerificationMethod(VERIFICATION_METHOD);
+        profile.setCreatedAt(now);
+        profile.setUpdatedAt(now);
         return profile;
     }
 
@@ -564,7 +559,7 @@ public class EkycServiceImpl implements EkycService {
             throw new RuntimeException("Số CCCD này đã được liên kết với một tài khoản khác.");
         }
 
-        String registeredIdCardNumber = normalizeIdCardNumber(user.getIdcardnumber());
+        String registeredIdCardNumber = normalizeIdCardNumber(user.getIdCardNumber());
         if (registeredIdCardNumber == null || !registeredIdCardNumber.equals(idCardNumber)) {
             throw new RuntimeException("So CCCD tren anh khong khop voi so CCCD da dang ky tai khoan.");
         }
@@ -595,7 +590,7 @@ public class EkycServiceImpl implements EkycService {
 
         // Upsert FaceEmbedding
         String embeddingVector = convertToPostgresVectorString(faceResponse.getEmbedding());
-        faceembeddingRepository.upsertEmbedding(user.getId(), embeddingVector, now);
+        faceEmbeddingRepository.upsertEmbedding(user.getId(), embeddingVector, now);
         saveAngleEmbeddings(user.getId(), faceResponse.getAngleEmbeddings(), now);
 
         // Cache Redis

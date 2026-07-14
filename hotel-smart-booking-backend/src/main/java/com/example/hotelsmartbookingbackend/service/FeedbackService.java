@@ -4,7 +4,6 @@ import com.example.hotelsmartbookingbackend.dto.request.FeedbackRequest;
 import com.example.hotelsmartbookingbackend.dto.response.FeedbackResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
 
-import java.util.List;
 
 public interface FeedbackService {
 

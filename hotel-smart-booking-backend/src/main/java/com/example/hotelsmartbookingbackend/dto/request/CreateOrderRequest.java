@@ -14,13 +14,9 @@ public class CreateOrderRequest {
     @NotNull(message = "Booking ID is required")
     private Integer bookingId;
 
-    private BigDecimal amount; // Optional, defaults to remaining unpaid balance
+    private BigDecimal amount;
 
-    private String paymentOption; // "DEPOSIT" or "FULL"
+    private String paymentOption;
 
-    public CreateOrderRequest(Integer bookingId, BigDecimal amount) {
-        this.bookingId = bookingId;
-        this.amount = amount;
-        this.paymentOption = "FULL";
-    }
+
 }

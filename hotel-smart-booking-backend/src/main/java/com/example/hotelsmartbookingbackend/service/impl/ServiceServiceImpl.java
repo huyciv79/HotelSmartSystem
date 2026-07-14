@@ -52,10 +52,10 @@ public class ServiceServiceImpl implements ServiceService {
         service.setDescription(request.getDescription());
         service.setPrice(request.getPrice());
         service.setUnit(request.getUnit());
-        service.setIsactive(request.getIsactive());
+        service.setIsActive(request.getIsactive());
 
-        service.setCreatedat(Instant.now());
-        service.setUpdatedat(Instant.now());
+        service.setCreatedAt(Instant.now());
+        service.setUpdatedAt(Instant.now());
 
         Service saved = serviceRepository.save(service);
 
@@ -72,7 +72,7 @@ public class ServiceServiceImpl implements ServiceService {
                         new RuntimeException("Không tìm thấy dịch vụ với mã: " + id));
 
         service.setIsDeleted(true);
-        service.setUpdatedat(Instant.now());
+        service.setUpdatedAt(Instant.now());
 
         serviceRepository.save(service);
     }
@@ -90,9 +90,9 @@ public class ServiceServiceImpl implements ServiceService {
         service.setDescription(request.getDescription());
         service.setPrice(request.getPrice());
         service.setUnit(request.getUnit());
-        service.setIsactive(request.getIsactive());
+        service.setIsActive(request.getIsactive());
 
-        service.setUpdatedat(Instant.now());
+        service.setUpdatedAt(Instant.now());
 
         Service updated = serviceRepository.save(service);
 
@@ -107,9 +107,9 @@ public class ServiceServiceImpl implements ServiceService {
                 .description(service.getDescription())
                 .price(service.getPrice())
                 .unit(service.getUnit())
-                .isactive(service.getIsactive())
-                .createdAt(service.getCreatedat())
-                .updatedAt(service.getUpdatedat())
+                .isactive(service.getIsActive())
+                .createdAt(service.getCreatedAt())
+                .updatedAt(service.getUpdatedAt())
                 .build();
     }
 

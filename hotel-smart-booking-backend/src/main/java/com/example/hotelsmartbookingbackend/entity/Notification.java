@@ -39,18 +39,18 @@ public class Notification {
     private String type;
 
     @Column(name = "referenceid")
-    private Integer referenceid;
+    private Integer referenceId;
 
     @NotNull
     @ColumnDefault("false")
     @Column(name = "isread", nullable = false)
-    private Boolean isread = false;
+    private Boolean isRead = false;
 
     @Column(name = "readat")
-    private Instant readat;
+    private Instant readAt;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "sentat", nullable = false)
-    private Instant sentat;
+    private Instant sentAt;
 }

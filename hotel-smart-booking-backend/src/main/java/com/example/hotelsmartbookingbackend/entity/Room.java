@@ -23,19 +23,19 @@ public class Room {
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "roomtypeid", nullable = false)
-    private Roomtype roomtypeid;
+    private RoomType roomType;
 
     @Size(max = 20)
     @NotNull
     @Column(name = "roomnumber", nullable = false, length = 20)
-    private String roomnumber;
+    private String roomNumber;
 
     @Column(name = "floornumber")
-    private Integer floornumber;
+    private Integer floorNumber;
 
     @Size(max = 100)
     @Column(name = "adminpasscode", length = 100)
-    private String adminpasscode;
+    private String adminPasscode;
 
     @Size(max = 50)
     @NotNull
@@ -50,11 +50,11 @@ public class Room {
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "createdat", nullable = false)
-    private Instant createdat;
+    private Instant createdAt;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "updatedat", nullable = false)
-    private Instant updatedat;
+    private Instant updatedAt;
 
 }

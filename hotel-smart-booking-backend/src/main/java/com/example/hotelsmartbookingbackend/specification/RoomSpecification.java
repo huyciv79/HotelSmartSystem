@@ -32,7 +32,7 @@ public final class RoomSpecification {
             if (keyword == null || keyword.isBlank()) {
                 return cb.conjunction();
             }
-            return cb.like(cb.lower(root.get("roomnumber")), "%" + keyword.trim().toLowerCase() + "%");
+            return cb.like(cb.lower(root.get("roomNumber")), "%" + keyword.trim().toLowerCase() + "%");
         };
     }
 
@@ -41,7 +41,7 @@ public final class RoomSpecification {
             if (roomTypeId == null) {
                 return cb.conjunction();
             }
-            return cb.equal(root.get("roomtypeid").get("id"), roomTypeId);
+            return cb.equal(root.get("roomType").get("id"), roomTypeId);
         };
     }
 
@@ -50,7 +50,7 @@ public final class RoomSpecification {
             if (floorNumber == null) {
                 return cb.conjunction();
             }
-            return cb.equal(root.get("floornumber"), floorNumber);
+            return cb.equal(root.get("floorNumber"), floorNumber);
         };
     }
 }

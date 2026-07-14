@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.example.hotelsmartbookingbackend.dto.response.Notification;
+import com.example.hotelsmartbookingbackend.dto.response.NotificationResponse;
 
 import java.time.Instant;
 
@@ -22,37 +22,10 @@ public class WebSocketNotificationDTO {
     private String action;
 
     @JsonProperty("notification")
-    private Notification notification;
+    private NotificationResponse notification;
 
     @JsonProperty("timestamp")
     private Instant timestamp;
 
-    public static WebSocketNotificationDTO ofNew(Notification notification) {
-        return WebSocketNotificationDTO.builder()
-                .type("notification")
-                .action("new")
-                .notification(notification)
-                .timestamp(Instant.now())
-                .build();
-    }
 
-    public static WebSocketNotificationDTO ofRead(Notification notification) {
-        return WebSocketNotificationDTO.builder()
-                .type("notification")
-                .action("read")
-                .notification(notification)
-                .timestamp(Instant.now())
-                .build();
-    }
-
-    public static WebSocketNotificationDTO ofDelete(Integer notificationId) {
-        return WebSocketNotificationDTO.builder()
-                .type("notification")
-                .action("delete")
-                .notification(Notification.builder().id(notificationId).build())
-                .timestamp(Instant.now())
-                .build();
-    }
 }
-
-

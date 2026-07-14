@@ -41,17 +41,17 @@ public class Service {
     @NotNull
     @ColumnDefault("true")
     @Column(name = "isactive", nullable = false)
-    private Boolean isactive = false;
+    private Boolean isActive = false;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "createdat", nullable = false)
-    private Instant createdat;
+    private Instant createdAt;
 
     @NotNull
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "updatedat", nullable = false)
-    private Instant updatedat;
+    private Instant updatedAt;
 
     @NotNull
     @ColumnDefault("false")
