@@ -12,7 +12,7 @@ const CurrentBooking = ({ booking, onViewDetail }) => {
             {suiteName === "Grand Deluxe Suite" ? t("room_grand_deluxe_suite", "Phòng Grand Deluxe Suite") : suiteName}
           </h2>
           <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
-            {t("db_current_ref_code", "Mã đặt phòng:")} {refCode}
+            {t("db_current_ref_code", "Mã đặt phòng:")} <span className="keep-font-bold font-bold text-white ml-1">{refCode}</span>
           </p>
         </div>
         <span className="px-4 py-2 bg-green-100 text-green-700 text-xs font-black uppercase tracking-widest rounded-none">

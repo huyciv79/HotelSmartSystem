@@ -156,7 +156,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
     { id: 'home', label: t('nav_hotels') },
     { id: 'residences', label: t('nav_residences') },
     { id: 'experiences', label: t('nav_experiences') },
-    { id: 'ai-assistant', label: t('nav_ai_assistant', 'TRỢ LÝ AI') }
+    { id: 'terms-of-service', label: t('footer_terms', 'ĐIỀU KHOẢN').toUpperCase() }
   ];
 
   const handleNavClick = (id) => {
@@ -289,7 +289,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
         </div>
 
         {/* Desktop Navigation (Centered; middle item aligns cleanly under logo) */}
-        <nav ref={navContainerRef} className="hidden md:flex gap-6 mx-auto justify-center items-center h-full relative">
+        <nav ref={navContainerRef} className="hidden md:flex gap-6 absolute left-1/2 -translate-x-1/2 justify-center items-center h-full">
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -362,6 +362,17 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                   <div className="space-y-1">
                     <button
                       onClick={() => {
+                        setActiveModal('changePassword');
+                        setIsDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer border-none bg-transparent rounded-none"
+                    >
+                      <span className="material-symbols-outlined text-base">vpn_key</span>
+                      <span>Đổi mật khẩu</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
                         showToast('Đăng xuất thành công!', 'success');
                         localStorage.removeItem('accessToken');
                         localStorage.removeItem('refreshToken');
@@ -399,10 +410,10 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
     } ${
       isMobileMenuOpen ? 'open' : ''
     }`}>
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 p-10 pl-4 md:pl-6 gap-8 min-h-full items-start">
+        <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-0 min-h-full items-stretch">
           
           {/* Left Column: Menu Items & Secondary Links (col-span-4) */}
-          <div className="md:col-span-4 flex flex-col justify-between min-h-[420px] py-4 self-start">
+          <div className="md:col-span-4 flex flex-col justify-start min-h-[450px] py-12 px-margin-mobile md:pl-margin-desktop md:pr-12 self-stretch bg-background">
             {/* Main Navigation List */}
             <div className="flex flex-col space-y-7 text-left font-['Montserrat'] select-none">
 
@@ -412,9 +423,9 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                   onClick={() => {
                     setShowRoomTypes(!showRoomTypes);
                   }}
-                  className="group text-left font-bold text-[12.5px] md:text-[14px] uppercase tracking-widest cursor-pointer bg-transparent border-none w-fit transition-all duration-300"
+                  className="group text-left font-semibold text-[17px] md:text-[22px] uppercase tracking-widest cursor-pointer bg-transparent border-none w-fit transition-all duration-300"
                 >
-                  <span className={`relative pb-1 transition-colors duration-300 font-extrabold ${
+                  <span className={`relative pb-1 transition-colors duration-300 font-semibold ${
                     (showRoomTypes || activePage === 'home') ? 'text-primary' : 'text-slate-800 group-hover:text-primary'
                   }`}>
                     {t('nav_room_types')}
@@ -444,8 +455,8 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                           setIsMobileMenuOpen(false);
                           setActivePage('home');
                         }}
-                        className={`text-left text-[11px] font-bold uppercase tracking-wider cursor-pointer bg-transparent border-none transition-all duration-200 hover:text-primary ${
-                          selectedRoom?.id === room.id ? 'text-primary font-extrabold translate-x-0.5' : 'text-slate-600'
+                        className={`text-left text-[13px] font-semibold uppercase tracking-wider cursor-pointer bg-transparent border-none transition-all duration-200 hover:text-primary ${
+                          selectedRoom?.id === room.id ? 'text-primary font-bold translate-x-0.5' : 'text-slate-600'
                         }`}
                       >
                         {room.name}
@@ -463,9 +474,9 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                     setShowRoomTypes(false);
                     handleNavClick(item.id);
                   }}
-                  className="group text-left font-bold text-[12.5px] md:text-[14px] uppercase tracking-widest cursor-pointer bg-transparent border-none w-fit transition-all duration-300"
+                  className="group text-left font-semibold text-[17px] md:text-[22px] uppercase tracking-widest cursor-pointer bg-transparent border-none w-fit transition-all duration-300"
                 >
-                  <span className={`relative pb-1 transition-colors duration-300 font-extrabold ${
+                  <span className={`relative pb-1 transition-colors duration-300 font-semibold ${
                     (activePage === item.id && !showRoomTypes) ? 'text-primary' : 'text-slate-800 group-hover:text-primary'
                   }`}>
                     {item.label}
@@ -476,21 +487,11 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                 </button>
               ))}
             </div>
-
-            {/* Bottom Left Secondary Links */}
-            <div className="grid grid-cols-2 gap-y-3.5 gap-x-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-12 select-none border-t border-slate-200 pt-6">
-              <button onClick={() => handleNavClick('group-booking')} className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider text-primary">{t('nav_group_booking')}</button>
-              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_about')}</button>
-              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_careers')}</button>
-              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_environment')}</button>
-              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_blogs')}</button>
-              <button className="text-left hover:text-primary transition-all duration-200 hover:translate-x-0.5 cursor-pointer bg-transparent border-none p-0 font-bold uppercase text-[10px] tracking-wider">{t('nav_contact')}</button>
-            </div>
           </div>
 
           {/* Right Column: Dynamic Room Image Carousel (col-span-8) */}
-          <div className="md:col-span-8 pl-0 md:pl-8 flex flex-col justify-start self-start py-4 w-full">
-            <div className="w-full h-[450px] overflow-hidden relative shadow-2xl border border-slate-200 group bg-slate-950">
+          <div className="md:col-span-8 w-full relative min-h-[400px] md:min-h-full self-stretch overflow-hidden bg-slate-950">
+            <div className="w-full h-full relative group">
               
               {/* Background Layer: Previous Room Image */}
               {prevRoom && prevRoom.id !== selectedRoom?.id && (
@@ -523,14 +524,14 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
 
                 {/* Room Name & Info Overlay (Bottom Left) */}
                 <div className="absolute bottom-8 left-8 text-left z-10 animate-room-text">
-                  <span className="text-[10px] font-black text-white/80 uppercase tracking-widest block mb-1">
+                  <span className="text-[10px] font-semibold text-white/80 uppercase tracking-widest block mb-1">
                     {selectedRoom?.bedType || 'ELYSIAN HOTELS & RESORTS'}
                   </span>
-                  <h3 className="text-2xl font-black text-white uppercase tracking-wider leading-tight">
+                  <h3 className="text-2xl font-semibold text-white uppercase tracking-wider leading-tight">
                     {selectedRoom?.name || 'KỲ NGHỈ DƯỠNG THƯỢNG LƯU'}
                   </h3>
                   {selectedRoom && (
-                    <p className="text-xs font-bold text-white/95 uppercase tracking-widest mt-1.5">
+                    <p className="text-xs font-semibold text-white/95 uppercase tracking-widest mt-1.5">
                       {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedRoom.basePrice)} / ĐÊM
                     </p>
                   )}
@@ -538,7 +539,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
 
                 {/* Chi tiết Button (Bottom Right) */}
                 {selectedRoom && (
-                  <div className="absolute bottom-8 right-8 z-10 animate-room-btn">
+                  <div className="absolute bottom-8 right-28 z-10 animate-room-btn">
                     <button
                       onClick={() => handleOpenRoomDetail(selectedRoom.id)}
                       className="bg-transparent text-white/95 hover:text-white transition-all duration-300 text-base border-b border-white/40 pb-1 cursor-pointer hover:border-white whitespace-nowrap"

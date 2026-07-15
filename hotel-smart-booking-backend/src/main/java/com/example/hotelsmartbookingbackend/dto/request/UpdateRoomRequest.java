@@ -19,8 +19,8 @@ public class UpdateRoomRequest {
     private String note;
 
     @Size(max = 100, message = "Mã kiểm soát admin không được vượt quá 100 ký tự")
-    private String adminpasscode;
+    private String adminPasscode;
 
-    private Integer roomtypeid;
+    private Integer roomTypeId;
 }
 

@@ -538,7 +538,7 @@ export default function BookingDetail({ setActivePage }) {
   return (
     <>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-      <div className="w-full min-h-screen pt-36 pb-24 bg-gray-50 flex items-start justify-center px-4 font-['Montserrat']">
+      <div className="w-full min-h-screen pt-36 pb-24 bg-gray-50 flex items-start justify-center px-4 font-['Montserrat'] dashboard-font-semibold">
         <div className="max-w-6xl w-full flex flex-col text-left">
 
           {/* Header Area */}
@@ -552,7 +552,7 @@ export default function BookingDetail({ setActivePage }) {
               </button>
 
               <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-xl md:text-2xl font-black text-slate-950 uppercase tracking-wider m-0">{t('bd_title', 'Đặt phòng:')} {booking.bookingReference}</h2>
+                <h2 className="text-xl md:text-2xl font-semibold text-slate-950 uppercase tracking-wider m-0">{t('bd_title', 'Đặt phòng:')} <span className="keep-font-bold font-bold text-primary">{booking.bookingReference}</span></h2>
                 <button
                   onClick={handleCopyCode}
                   className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold px-2 py-1 uppercase tracking-wider border-none cursor-pointer transition-all"

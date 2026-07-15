@@ -90,13 +90,13 @@ public class RoomServiceImpl implements RoomService {
             room.setNote(request.getNote());
         }
 
-        if (request.getAdminpasscode() != null) {
-            room.setAdminPasscode(request.getAdminpasscode());
+        if (request.getAdminPasscode() != null) {
+            room.setAdminPasscode(request.getAdminPasscode());
         }
 
-        if (request.getRoomtypeid() != null) {
-            RoomType roomType = roomTypeRepository.findById(request.getRoomtypeid())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy loại phòng với mã: " + request.getRoomtypeid()));
+        if (request.getRoomTypeId() != null) {
+            RoomType roomType = roomTypeRepository.findById(request.getRoomTypeId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy loại phòng với mã: " + request.getRoomTypeId()));
             room.setRoomType(roomType);
         }
 
@@ -112,12 +112,12 @@ public class RoomServiceImpl implements RoomService {
     private RoomSummaryDTO mapToSummaryDTO(Room room) {
         return RoomSummaryDTO.builder()
                 .id(room.getId())
-                .roomnumber(room.getRoomNumber())
-                .floornumber(room.getFloorNumber())
+                .roomNumber(room.getRoomNumber())
+                .floorNumber(room.getFloorNumber())
                 .status(room.getStatus())
-                .roomtypeid(room.getRoomType().getId())
-                .roomtypename(room.getRoomType().getName())
-                .adminpasscode(room.getAdminPasscode())
+                .roomTypeId(room.getRoomType().getId())
+                .roomTypeName(room.getRoomType().getName())
+                .adminPasscode(room.getAdminPasscode())
                 .createdAt(room.getCreatedAt())
                 .updatedAt(room.getUpdatedAt())
                 .build();
@@ -126,13 +126,13 @@ public class RoomServiceImpl implements RoomService {
     private RoomDetailDTO mapToDetailDTO(Room room) {
         return RoomDetailDTO.builder()
                 .id(room.getId())
-                .roomnumber(room.getRoomNumber())
-                .floornumber(room.getFloorNumber())
+                .roomNumber(room.getRoomNumber())
+                .floorNumber(room.getFloorNumber())
                 .status(room.getStatus())
                 .note(room.getNote())
-                .adminpasscode(room.getAdminPasscode())
-                .roomtypeid(room.getRoomType().getId())
-                .roomtypename(room.getRoomType().getName())
+                .adminPasscode(room.getAdminPasscode())
+                .roomTypeId(room.getRoomType().getId())
+                .roomTypeName(room.getRoomType().getName())
                 .createdAt(room.getCreatedAt())
                 .updatedAt(room.getUpdatedAt())
                 .build();

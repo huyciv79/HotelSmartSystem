@@ -282,33 +282,33 @@ export default function EkycCamera({ overlayType = 'id', hint, onCapture, mirror
 
       {/* Blur warning banner */}
       {blurWarning && (
-        <div className="flex items-center gap-2 bg-amber-500/15 border border-amber-500/40 rounded-xl px-4 py-2.5 w-full max-w-md">
-          <AlertTriangle size={16} className="text-amber-400 flex-shrink-0" />
-          <p className="text-amber-300 text-xs font-['Geist'] leading-snug">
+        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-none px-4 py-2.5 w-full max-w-md">
+          <AlertCircle size={16} className="text-red-600 flex-shrink-0" />
+          <p className="text-red-700 text-xs font-semibold leading-snug">
             Ảnh bị mờ — vui lòng giữ thẻ <strong>thẳng &amp; bất động</strong>, đảm bảo đủ sáng rồi chụp lại.
           </p>
         </div>
       )}
 
       {/* Camera container with overlay */}
-      <div className="relative w-full max-w-md aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl">
+      <div className="relative w-full max-w-md aspect-video bg-black rounded-none overflow-hidden shadow-lg border border-outline-variant">
         {loadingStream && !cameraError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900">
-            <Loader2 size={32} className="text-amber-400 animate-spin" />
-            <p className="text-slate-500 text-xs font-['Geist']">Đang khởi động camera...</p>
+            <Loader2 size={32} className="text-primary animate-spin" />
+            <p className="text-slate-500 text-xs font-semibold">Đang khởi động camera...</p>
           </div>
         )}
 
         {cameraError ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3.5 bg-slate-900 p-6 border border-white/5">
             <Camera size={36} className="text-red-400" />
-            <p className="text-red-200 text-xs text-center font-['Geist'] leading-relaxed">
+            <p className="text-red-200 text-xs text-center font-semibold leading-relaxed">
               Camera access is required for automated eKYC. Please grant camera permissions in your browser settings or use the Manual Upload alternative.
             </p>
             <button
               type="button"
               onClick={handleManualUploadClick}
-              className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold uppercase text-[9px] tracking-widest transition-all cursor-pointer rounded-xl border-none"
+              className="px-4 py-2 bg-primary hover:bg-slate-950 text-white font-semibold uppercase text-[10px] tracking-widest transition-all cursor-pointer rounded-none border-none parallelogram-btn"
             >
               Chọn ảnh từ thiết bị
             </button>
@@ -332,16 +332,16 @@ export default function EkycCamera({ overlayType = 'id', hint, onCapture, mirror
 
             {/* Guide frame overlay */}
             {overlayType === 'id' ? (
-              // Rectangular dashed yellow frame for ID card
+              // Rectangular dashed primary red frame for ID card
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div
-                  className="rounded-xl"
+                  className="rounded-none"
                   style={{
                     width: '80%',
                     height: '65%',
-                    border: '2.5px dashed #FACC15',
+                    border: '2.5px dashed #a20513',
                     boxShadow: '0 0 0 2000px rgba(0,0,0,0.3)',
-                    borderRadius: '12px',
+                    borderRadius: '0px',
                   }}
                 />
               </div>
@@ -364,10 +364,10 @@ export default function EkycCamera({ overlayType = 'id', hint, onCapture, mirror
             {overlayType === 'id' && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="relative" style={{ width: '80%', height: '65%' }}>
-                  <span className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-yellow-400 rounded-tl-sm" />
-                  <span className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-yellow-400 rounded-tr-sm" />
-                  <span className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-yellow-400 rounded-bl-sm" />
-                  <span className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-yellow-400 rounded-br-sm" />
+                  <span className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-primary rounded-none" />
+                  <span className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-primary rounded-none" />
+                  <span className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-primary rounded-none" />
+                  <span className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-primary rounded-none" />
                 </div>
               </div>
             )}
@@ -392,12 +392,11 @@ export default function EkycCamera({ overlayType = 'id', hint, onCapture, mirror
             disabled={compressing}
             className="
               relative flex items-center justify-center gap-2.5
-              px-8 py-3.5 rounded-full font-['Geist'] font-semibold text-sm
-              bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-900
-              shadow-lg shadow-amber-500/30
-              hover:shadow-amber-500/50 hover:scale-105
+              px-8 py-3.5 rounded-none font-semibold text-xs uppercase tracking-widest
+              bg-primary hover:bg-slate-950 text-white
               disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
               transition-all duration-200 w-full max-w-[200px] border-none cursor-pointer
+              parallelogram-btn h-12
             "
           >
             {compressing ? (
@@ -420,7 +419,7 @@ export default function EkycCamera({ overlayType = 'id', hint, onCapture, mirror
               type="button"
               onClick={handleManualUploadClick}
               disabled={compressing}
-              className="text-xs text-slate-400 hover:text-amber-400 transition-colors uppercase font-bold tracking-wider underline border-none bg-transparent cursor-pointer"
+              className="text-xs text-slate-400 hover:text-primary transition-colors uppercase font-semibold tracking-wider underline border-none bg-transparent cursor-pointer"
             >
               Hoặc tải ảnh từ thiết bị
             </button>
@@ -428,7 +427,7 @@ export default function EkycCamera({ overlayType = 'id', hint, onCapture, mirror
               <button
                 type="button"
                 onClick={startCamera}
-                className="text-xs text-slate-400 hover:text-amber-400 transition-colors uppercase font-bold tracking-wider flex items-center gap-1 border-none bg-transparent cursor-pointer"
+                className="text-xs text-slate-400 hover:text-primary transition-colors uppercase font-semibold tracking-wider flex items-center gap-1 border-none bg-transparent cursor-pointer"
               >
                 <RefreshCcw size={10} /> Khởi động lại camera
               </button>

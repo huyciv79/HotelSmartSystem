@@ -31,7 +31,7 @@ public class RoomTypeController {
     public ResponseEntity<ApiResponse<PageResponse<RoomTypeSummaryResponse>>> getRoomTypeList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "baseprice") String sortBy,
+            @RequestParam(defaultValue = "basePrice") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) BigDecimal minPrice,
@@ -49,9 +49,20 @@ public class RoomTypeController {
                 .status(status)
                 .build();
 
+        String sortField = sortBy;
+        if (sortBy.equalsIgnoreCase("baseprice")) {
+            sortField = "basePrice";
+        } else if (sortBy.equalsIgnoreCase("adultcapacity")) {
+            sortField = "adultCapacity";
+        } else if (sortBy.equalsIgnoreCase("childcapacity")) {
+            sortField = "childCapacity";
+        } else if (sortBy.equalsIgnoreCase("roomtypeid") || sortBy.equalsIgnoreCase("id")) {
+            sortField = "id";
+        }
+
         Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
+                ? Sort.by(sortField).descending()
+                : Sort.by(sortField).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
 

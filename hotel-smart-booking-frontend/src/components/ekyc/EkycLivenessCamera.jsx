@@ -293,10 +293,10 @@ export default function EkycLivenessCamera({ onComplete }) {
         {cameraState !== 'ready' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900 p-6 text-center">
             {cameraState === 'starting'
-              ? <Loader2 size={32} className="animate-spin text-amber-400" />
+              ? <Loader2 size={32} className="animate-spin text-primary" />
               : <Camera size={36} className="text-red-400" />
             }
-            <p className="text-xs text-slate-400">{cameraError || 'Đang mở camera...'}</p>
+            <p className="text-xs text-slate-400 font-semibold">{cameraError || 'Đang mở camera...'}</p>
           </div>
         )}
 
@@ -315,7 +315,7 @@ export default function EkycLivenessCamera({ onComplete }) {
             )}
 
             {/* step + instruction label */}
-            <div className="absolute left-4 top-4 bg-black/70 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white">
+            <div className="absolute left-4 top-4 bg-black/70 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-white">
               {isScanning
                 ? `Bước ${stepIndex + 1}/5 · ${currentStep.instruction}`
                 : 'Camera sẵn sàng'}
@@ -323,9 +323,9 @@ export default function EkycLivenessCamera({ onComplete }) {
 
             {/* Validation error overlay */}
             {validationError && (
-              <div className="absolute inset-x-4 top-16 flex items-start gap-2 rounded-xl border border-red-500/50 bg-red-500/90 p-3 text-white shadow-lg backdrop-blur-md animate-fade-in z-20">
-                <AlertTriangle size={18} className="mt-0.5 flex-shrink-0 text-red-200" />
-                <p className="text-xs font-semibold leading-relaxed tracking-wide">
+              <div className="absolute inset-x-4 top-16 flex items-start gap-2 rounded-none border border-red-200 bg-red-50 p-3 text-red-700 shadow-md backdrop-blur-md animate-fade-in z-20">
+                <AlertCircle size={18} className="mt-0.5 flex-shrink-0 text-red-600" />
+                <p className="text-xs font-semibold leading-relaxed tracking-wide uppercase">
                   {validationError}
                 </p>
               </div>
@@ -336,7 +336,7 @@ export default function EkycLivenessCamera({ onComplete }) {
               <div className="pointer-events-none absolute inset-0 flex items-end justify-center pb-14">
                 <span
                   key={countdown}           /* re-mount triggers animation */
-                  className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-amber-400 bg-black/75 text-3xl font-black text-amber-300"
+                  className="flex h-16 w-16 items-center justify-center rounded-none border border-primary bg-black/75 text-3xl font-semibold text-primary"
                   style={{ animation: 'countPop 0.25s ease-out forwards' }}
                 >
                   {countdown === 0 ? '✓' : countdown}
@@ -346,14 +346,14 @@ export default function EkycLivenessCamera({ onComplete }) {
 
             {/* holding / capture banner */}
             {phase === 'holding' && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-emerald-500/90 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-emerald-600/90 px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-white">
                 Giữ nguyên · Đang chụp
               </div>
             )}
 
             {/* validating banner */}
             {phase === 'validating' && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-amber-500/90 px-4 py-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-primary/90 px-4 py-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-white">
                 <Loader2 size={12} className="animate-spin" />
                 Đang kiểm tra
               </div>
@@ -361,7 +361,7 @@ export default function EkycLivenessCamera({ onComplete }) {
 
             {/* completed step banner */}
             {phase === 'completed' && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-emerald-700/90 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-200">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-emerald-700/90 px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-emerald-200">
                 ✓ Chụp xong bước {stepIndex + 1}
               </div>
             )}
@@ -384,10 +384,10 @@ export default function EkycLivenessCamera({ onComplete }) {
             key={step.key}
             className={`h-1.5 flex-1 transition-colors ${
               completedFrames[step.key]
-                ? 'bg-emerald-400'
+                ? 'bg-emerald-600'
                 : isScanning && index === stepIndex
-                  ? 'animate-pulse bg-amber-400'
-                  : 'bg-white/10'
+                  ? 'animate-pulse bg-primary'
+                  : 'bg-slate-200'
             }`}
           />
         ))}
@@ -399,7 +399,7 @@ export default function EkycLivenessCamera({ onComplete }) {
           type="button"
           onClick={startLiveness}
           disabled={isScanning}
-          className="flex w-full max-w-xs items-center justify-center gap-2 rounded-full border-none bg-gradient-to-r from-emerald-500 to-green-400 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex w-full max-w-xs items-center justify-center gap-2 rounded-none border-none bg-primary hover:bg-slate-950 px-8 py-3.5 text-xs font-semibold uppercase tracking-widest text-white transition-all cursor-pointer parallelogram-btn h-12"
         >
           {isScanning
             ? <Loader2 size={18} className="animate-spin" />
@@ -411,7 +411,7 @@ export default function EkycLivenessCamera({ onComplete }) {
         <button
           type="button"
           onClick={startCamera}
-          className="flex items-center gap-2 rounded-full bg-white/10 px-5 py-3 text-sm text-white"
+          className="flex items-center gap-2 rounded-none bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-350 px-5 py-3 text-xs font-semibold uppercase tracking-widest transition-all cursor-pointer"
         >
           <RefreshCcw size={15} />
           Mở lại camera

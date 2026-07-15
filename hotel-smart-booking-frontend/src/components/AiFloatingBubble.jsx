@@ -283,15 +283,39 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
     setActivePage('ai-assistant');
   };
 
+  const handleClearChat = () => {
+    try {
+      localStorage.removeItem('elysianChatMessages');
+      localStorage.removeItem('elysianBookingState');
+    } catch (e) {
+      console.error("Error clearing chat from localStorage in AiFloatingBubble:", e);
+    }
+    const welcomeMsgs = {
+      VN: 'Xin chào! Tôi có thể hỗ trợ gì cho bạn về hành trình lưu trú hoặc đặt phòng hôm nay?',
+      EN: 'Hello! How can I assist you with your travel plans or room bookings today?',
+      JP: 'こんにちは！本日のご宿泊やご予約について、何かお手伝いできることはありますか？',
+      KR: '안녕하세요! 오늘 여행 계획이나 객실 예약과 관련하여 무엇을 도와드릴까요?',
+      CN: '您好！今天有什么我可以帮您的吗？比如查找房间或了解入住流程？'
+    };
+    const initialGreeting = welcomeMsgs[language] || welcomeMsgs.EN;
+    setChatMessages([
+      {
+        role: 'assistant',
+        content: initialGreeting
+      }
+    ]);
+    setBookingState(createInitialBookingState());
+  };
+
   return (
     <div className="fixed bottom-6 right-6 z-[9999] font-['Montserrat'] text-slate-800 text-left select-none">
       
       {/* Floating Chat Window */}
       {isOpen && (
-        <div className="absolute bottom-16 right-0 w-[330px] sm:w-[360px] h-[480px] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-2xl overflow-hidden flex flex-col justify-between animate-scale-in">
+        <div className="absolute bottom-16 right-0 w-[330px] sm:w-[360px] h-[480px] bg-transparent shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-2xl overflow-hidden flex flex-col justify-between animate-scale-in">
           
           {/* Header Panel */}
-          <div className="px-4 py-3 bg-neutral-900 text-white flex items-center justify-between">
+          <div className="px-4 py-3 bg-black/60 backdrop-blur-lg text-white flex items-center justify-between border-b border-white/10">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
                 <span className="material-symbols-outlined text-[14px]">support_agent</span>
@@ -303,6 +327,13 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
             </div>
             
             <div className="flex items-center gap-1.5">
+              <button 
+                onClick={handleClearChat}
+                title="Làm mới cuộc trò chuyện"
+                className="p-1 hover:bg-white/10 text-white transition-colors border-none bg-transparent cursor-pointer flex items-center"
+              >
+                <span className="material-symbols-outlined text-base">refresh</span>
+              </button>
               <button 
                 onClick={handleExpandUI}
                 title="Mở rộng giao diện"
@@ -320,7 +351,7 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
           </div>
 
           {/* Messages Flow */}
-          <div className="flex-grow p-4 overflow-y-auto space-y-3 bg-slate-50/50">
+          <div className="flex-grow p-4 overflow-y-auto space-y-3 bg-[#f8fafc]">
             {chatMessages.map((msg, index) => {
               const isBot = msg.role === 'assistant';
               return (

@@ -35,7 +35,7 @@ public class RoomController {
     public ResponseEntity<ApiResponse<PageResponse<RoomSummaryDTO>>> getRoomList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "roomnumber") String sortBy,
+            @RequestParam(defaultValue = "roomNumber") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,

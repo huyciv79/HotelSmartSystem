@@ -1795,7 +1795,7 @@ public class BookingServiceImpl implements BookingService {
     public PageResponse<BookingHistoryResponse> filterBookings(BookingFilter criteria) {
         int page = criteria.getPage() != null ? criteria.getPage() : 0;
         int pageSize = criteria.getPageSize() != null ? criteria.getPageSize() : 10;
-        String sortBy = criteria.getSortBy() != null ? criteria.getSortBy() : "createdat";
+        String sortBy = criteria.getSortBy() != null ? criteria.getSortBy() : "createdAt";
         Sort.Direction direction = criteria.getSortDirection() != null
                 && criteria.getSortDirection().equalsIgnoreCase("DESC")
                         ? Sort.Direction.DESC

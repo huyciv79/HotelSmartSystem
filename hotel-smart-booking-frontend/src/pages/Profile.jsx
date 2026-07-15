@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Camera, User, Mail, Phone, MapPin, Award, Check, X, IdCard } from 'lucide-react';
 import { updateUserProfile, uploadAvatar } from '../services/userService';
-import ChangePassword from './ChangePassword';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function Profile({ initialProfile, onProfileUpdate, showToast }) {
@@ -147,26 +146,27 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-8 animate-fade-in font-['Montserrat'] select-none">
-      {/* Title Block */}
-      <div className="mb-10 text-left border-b border-outline-variant pb-6">
-        <h2 className="font-headline-lg text-2xl md:text-3xl text-primary uppercase italic m-0 tracking-widest font-black leading-none">
-          {t('profile_title', 'HỒ SƠ CÁ NHÂN')}
-        </h2>
-        <p className="text-secondary text-xs uppercase tracking-widest mt-3 font-bold opacity-80">
-          {t('profile_subtitle', 'Quản lý thông tin tài khoản')}
-        </p>
-      </div>
+    <div className="elysian-pattern -m-8 p-8 flex-1 min-h-[calc(100vh-80px)] animate-fade-in font-['Montserrat'] select-none text-left">
+      <div className="max-w-6xl mx-auto">
+        {/* Title Block */}
+        <div className="mb-10 text-left border-b border-white/20 pb-6">
+          <h2 className="font-headline-lg text-2xl md:text-3xl text-white uppercase italic m-0 tracking-widest font-black leading-none text-shadow-hard">
+            {t('profile_title', 'HỒ SƠ CÁ NHÂN')}
+          </h2>
+          <p className="text-white/80 text-xs uppercase tracking-widest mt-3 font-semibold">
+            {t('profile_subtitle', 'Quản lý thông tin tài khoản')}
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Membership Card */}
-        <div className="lg:col-span-1 flex flex-col gap-6">
-          <div className="elysian-pattern text-white rounded-none overflow-hidden shadow-xl border border-[#a20513] relative">
-            <div className="bg-transparent p-8 flex flex-col items-center text-center relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+          {/* Left Column: Membership Card */}
+          <div className="lg:col-span-1 flex flex-col gap-6 h-full">
+            <div className="bg-white text-on-surface rounded-none overflow-hidden shadow-xl border border-outline-variant relative flex flex-col h-full">
+              <div className="bg-transparent p-8 flex flex-col items-center text-center relative z-10">
 
               {/* Avatar Uploader */}
               <div className="relative group cursor-pointer mb-6" onClick={handleAvatarClick}>
-                <div className="size-32 rounded-full overflow-hidden border-2 border-white shadow-md relative bg-black/40 flex items-center justify-center">
+                <div className="size-32 rounded-full overflow-hidden border-2 border-outline-variant shadow-md relative bg-slate-100 flex items-center justify-center">
                   {avatarPreview ? (
                     <img
                       src={avatarPreview}
@@ -174,7 +174,7 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                   ) : (
-                    <User className="size-16 text-white/50" />
+                    <User className="size-16 text-slate-400" />
                   )}
 
                   {/* Upload Overlay */}
@@ -205,15 +205,15 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
               />
 
               {/* Member Name & Role */}
-              <h3 className="text-base font-bold font-['Playfair_Display'] text-white tracking-widest m-0 uppercase leading-normal">
+              <h3 className="text-base font-bold font-['Playfair_Display'] text-on-surface tracking-widest m-0 uppercase leading-normal">
                 {profile.fullName || t('profile_member_default', 'Hội viên Elysian')}
               </h3>
-              <div className="w-full h-px bg-white/15 my-6" />
+              <div className="w-full h-px bg-outline-variant my-6" />
 
               <div className="w-full space-y-1 text-[10px] uppercase tracking-widest font-bold">
                 <div className="flex items-center justify-between py-2">
-                  <span className="text-white/60">{t('profile_joined_date', 'Gia nhập')}</span>
-                  <span className="text-white">
+                  <span className="text-secondary">{t('profile_joined_date', 'Gia nhập')}</span>
+                  <span className="text-on-surface">
                     {formatDate(profile.createdAt)}
                   </span>
                 </div>
@@ -221,9 +221,9 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
             </div>
 
             {/* Card Footer */}
-            <div className="bg-black/20 px-8 py-3.5 border-t border-white/10 flex justify-between items-center text-[9px]">
-              <span className="text-white/70 tracking-widest font-black font-mono">ELYSIAN HOTELS & RESORTS</span>
-              <Award size={14} className="text-white/80" />
+            <div className="bg-slate-50 px-8 py-3.5 border-t border-outline-variant flex justify-between items-center text-[9px]">
+              <span className="text-secondary tracking-widest font-black font-mono">ELYSIAN HOTELS & RESORTS</span>
+              <Award size={14} className="text-secondary" />
             </div>
           </div>
         </div>
@@ -351,8 +351,8 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
                     type="submit"
                     disabled={!isDirty || isSaving}
                     className={`px-6 py-3 font-bold text-[9px] tracking-widest uppercase rounded-none flex items-center gap-1.5 transition-all cursor-pointer border-none ${isDirty && !isSaving
-                        ? 'bg-primary text-on-primary hover:brightness-110 shadow-md'
-                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      ? 'bg-primary text-on-primary hover:brightness-110 shadow-md'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                       }`}
                   >
                     {isSaving ? (
@@ -372,11 +372,10 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
             </form>
           </div>
 
-          <div className="bg-white rounded-none p-6 md:p-8 border border-outline-variant shadow-lg text-left">
-            <ChangePassword showToast={showToast} />
-          </div>
+
         </div>
       </div>
     </div>
+  </div>
   );
 }

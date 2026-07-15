@@ -903,9 +903,9 @@ export default function StaffDashboard({ setActivePage }) {
       const response = await getRooms({ status: 'Available', roomTypeId: roomTypeId, size: 1000 });
       if (response && response.success && response.data) {
         const list = response.data.content || response.data || [];
-        // Lọc các phòng có roomtypeid khớp (để đề phòng fallback)
+        // Lọc các phòng có roomTypeId khớp (để đề phòng fallback)
         const filtered = list.filter(r => {
-          const typeId = r.roomtypeid?.id || r.roomtypeid || (r.roomType && r.roomType.roomTypeId);
+          const typeId = r.roomTypeId || r.roomtypeid?.id || r.roomtypeid || (r.roomType && r.roomType.roomTypeId);
           return String(typeId) === String(roomTypeId);
         });
         setAvailableRoomsForChange(filtered);
@@ -1747,7 +1747,7 @@ export default function StaffDashboard({ setActivePage }) {
                                     >
                                       <option value="">-- Chọn phòng vật lý --</option>
                                       {availableRoomsForChange.map(r => (
-                                        <option key={r.id} value={r.id}>Phòng {r.roomnumber} (Tầng {r.floornumber})</option>
+                                        <option key={r.id} value={r.id}>Phòng {r.roomNumber || r.roomnumber} (Tầng {r.floorNumber ?? r.floornumber})</option>
                                       ))}
                                     </select>
                                   )}

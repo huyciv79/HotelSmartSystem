@@ -13,13 +13,13 @@ import java.time.Instant;
 @NoArgsConstructor
 public class RoomDetailDTO {
     private Integer id;
-    private String roomnumber;
-    private Integer floornumber;
+    private String roomNumber;
+    private Integer floorNumber;
     private String status;
     private String note;
-    private String adminpasscode;
-    private Integer roomtypeid;
-    private String roomtypename;
+    private String adminPasscode;
+    private Integer roomTypeId;
+    private String roomTypeName;
     private Instant createdAt;
     private Instant updatedAt;
 }

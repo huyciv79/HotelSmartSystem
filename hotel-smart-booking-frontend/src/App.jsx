@@ -23,6 +23,8 @@ import GroupBooking from './pages/GroupBooking';
 import StaffDashboard from './pages/StaffDashboard';
 import AiAssistant from './pages/AiAssistant';
 import AiFloatingBubble from './components/AiFloatingBubble';
+import HotelPolicy from './pages/HotelPolicy';
+import HotelTerms from './pages/HotelTerms';
 
 function DashboardRoute() {
   const navigate = useNavigate();
@@ -119,6 +121,10 @@ function MainSite() {
         return <BookingDetail setActivePage={setActivePage} />;
       case 'ai-assistant':
         return <AiAssistant setActivePage={setActivePage} />;
+      case 'privacy-policy':
+        return <HotelPolicy />;
+      case 'terms-of-service':
+        return <HotelTerms />;
       default:
         return <Home setActivePage={setActivePage} />;
     }
@@ -134,7 +140,7 @@ function MainSite() {
       />
 
       <main className="flex-grow">{renderPage()}</main>
-      <Footer setActivePage={setActivePage} />
+      <Footer activePage={activePage} setActivePage={setActivePage} />
       <AiFloatingBubble setActivePage={setActivePage} activePage={activePage} />
     </div>
   );

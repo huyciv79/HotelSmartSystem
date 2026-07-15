@@ -61,7 +61,7 @@ const BookingHistory = ({ bookings, onViewDetail, onViewAll }) => {
                   <div className="flex-1 min-w-0">
                     <p className="text-zinc-900 font-black text-xs uppercase tracking-wide truncate">{booking.name}</p>
                     <p className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider mt-0.5">
-                      {booking.roomType}
+                      <span className="keep-font-bold font-bold text-slate-600">{booking.roomType}</span>
                     </p>
                   </div>
                   <span className={`px-2.5 py-1 text-[8px] font-black uppercase tracking-widest shrink-0 ${statusClass}`}>

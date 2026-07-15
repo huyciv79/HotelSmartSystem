@@ -103,7 +103,7 @@ export default function Dashboard({ setActivePage }) {
         console.error('Lỗi khi tải thông tin hồ sơ:', err);
       }
     };
-    
+
     const fetchHistory = async () => {
       try {
         const token = localStorage.getItem('accessToken');
@@ -154,14 +154,14 @@ export default function Dashboard({ setActivePage }) {
   );
   const currentBooking = activeBookings.length > 0 ? activeBookings[0] : null;
 
-  const nextStayDate = currentBooking 
+  const nextStayDate = currentBooking
     ? new Date(currentBooking.checkInDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : t('db_stays_none', 'Chưa có lịch trình');
 
   return (
-    <div className="min-h-screen bg-gray-50 flex text-slate-800">
+    <div className="min-h-screen bg-gray-50 flex text-slate-800 dashboard-font-semibold">
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-      
+
       <DashboardSidebar
         activeItem={activeTab}
         setActivePage={setActivePage}
@@ -212,30 +212,29 @@ export default function Dashboard({ setActivePage }) {
                         </div>
                         <div className="text-right">
                           <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('db_status_label', 'Trạng thái')}</span>
-                          <span className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest ${
-                            bk.status === 'Cancelled'
+                          <span className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest ${bk.status === 'Cancelled'
                               ? 'bg-red-100 text-red-700'
                               : bk.status === 'Checked-in' || bk.status === 'Checked In'
-                              ? 'bg-blue-100 text-blue-700'
-                              : bk.status === 'Checked-out' || bk.status === 'Checked Out' || bk.status === 'Completed'
-                              ? 'bg-slate-200 text-slate-700'
-                              : bk.status === 'Paid'
-                              ? 'bg-green-100 text-green-700'
-                              : bk.status === 'Partially Paid'
-                              ? 'bg-indigo-100 text-indigo-700'
-                              : 'bg-yellow-100 text-yellow-700'
-                          }`}>
+                                ? 'bg-blue-100 text-blue-700'
+                                : bk.status === 'Checked-out' || bk.status === 'Checked Out' || bk.status === 'Completed'
+                                  ? 'bg-slate-200 text-slate-700'
+                                  : bk.status === 'Paid'
+                                    ? 'bg-green-100 text-green-700'
+                                    : bk.status === 'Partially Paid'
+                                      ? 'bg-indigo-100 text-indigo-700'
+                                      : 'bg-yellow-100 text-yellow-700'
+                            }`}>
                             {bk.status === 'Cancelled'
                               ? 'Đã Hủy'
                               : bk.status === 'Checked-in' || bk.status === 'Checked In'
-                              ? 'Đã nhận phòng'
-                              : bk.status === 'Checked-out' || bk.status === 'Checked Out' || bk.status === 'Completed'
-                              ? 'Đã trả phòng'
-                              : bk.status === 'Paid'
-                              ? 'Đã thanh toán'
-                              : bk.status === 'Partially Paid'
-                              ? 'Đã cọc 30%'
-                              : 'Chờ thanh toán'}
+                                ? 'Đã nhận phòng'
+                                : bk.status === 'Checked-out' || bk.status === 'Checked Out' || bk.status === 'Completed'
+                                  ? 'Đã trả phòng'
+                                  : bk.status === 'Paid'
+                                    ? 'Đã thanh toán'
+                                    : bk.status === 'Partially Paid'
+                                      ? 'Đã cọc 30%'
+                                      : 'Chờ thanh toán'}
                           </span>
                         </div>
                         <button
@@ -263,8 +262,8 @@ export default function Dashboard({ setActivePage }) {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 flex flex-col gap-8">
                   {currentBooking ? (
-                    <CurrentBooking 
-                      booking={mapRealToCurrentBooking(currentBooking)} 
+                    <CurrentBooking
+                      booking={mapRealToCurrentBooking(currentBooking)}
                       onViewDetail={() => handleViewBookingDetail(currentBooking.bookingId)}
                     />
                   ) : (
@@ -284,8 +283,8 @@ export default function Dashboard({ setActivePage }) {
 
                 <div className="lg:col-span-1 flex flex-col gap-8">
                   <IdentityCard onNavigate={() => setActiveTab('ekyc')} />
-                  <BookingHistory 
-                    bookings={mapRealToBookingHistory(realBookings.slice(0, 3))} 
+                  <BookingHistory
+                    bookings={mapRealToBookingHistory(realBookings.slice(0, 3))}
                     onViewDetail={(id) => handleViewBookingDetail(id)}
                     onViewAll={() => setActiveTab('stays')}
                   />
