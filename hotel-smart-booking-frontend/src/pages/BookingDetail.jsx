@@ -76,21 +76,21 @@ export default function BookingDetail({ setActivePage }) {
   const handleRefundSubmit = async (e) => {
     e.preventDefault();
     if (!refundReason.trim()) {
-      showToast('Vui lòng nhập lý do hoàn tiền', 'warning');
+      showToast(t('Vui lòng nhập lý do hoàn tiền'), 'warning');
       return;
     }
     setIsSubmittingRefund(true);
     try {
       const response = await submitRefundRequest(booking.bookingId, refundReason);
       if (response && response.success) {
-        showToast('Đã gửi yêu cầu hoàn tiền thành công! Yêu cầu đang chờ duyệt.', 'success');
+        showToast(t('Đã gửi yêu cầu hoàn tiền thành công! Yêu cầu đang chờ duyệt.'), 'success');
         setIsRefundModalOpen(false);
         setRefundReason('');
         setBooking(prev => ({ ...prev, status: 'Refund Pending' }));
       }
     } catch (err) {
       console.error(err);
-      showToast(err.response?.data?.message || 'Lỗi khi gửi yêu cầu hoàn tiền.', 'error');
+      showToast(t(err.response?.data?.message, t('Lỗi khi gửi yêu cầu hoàn tiền.')), 'error');
     } finally {
       setIsSubmittingRefund(false);
     }
@@ -235,7 +235,7 @@ export default function BookingDetail({ setActivePage }) {
   const handleCustomerRoomChangeSubmit = async (e) => {
     e.preventDefault();
     if (roomChangeOption === 'different_type' && !selectedRoomType) {
-      showToast('Vui lòng chọn hạng phòng mong muốn', 'warning');
+      showToast(t('Vui lòng chọn hạng phòng mong muốn'), 'warning');
       return;
     }
 
@@ -251,13 +251,13 @@ export default function BookingDetail({ setActivePage }) {
       };
       const response = await submitCustomerRoomChangeRequest(payload);
       if (response && response.success) {
-        showToast('Gửi yêu cầu chuyển phòng thành công! Quản lý sẽ sớm phê duyệt.', 'success');
+        showToast(t('Gửi yêu cầu chuyển phòng thành công! Quản lý sẽ sớm phê duyệt.'), 'success');
         setIsRoomChangeModalOpen(false);
         setIsRoomChangePending(true);
       }
     } catch (err) {
       console.error(err);
-      setRoomChangeError(err.response?.data?.message || 'Gửi yêu cầu chuyển phòng thất bại. Vui lòng thử lại.');
+      setRoomChangeError(t(err.response?.data?.message, t('Gửi yêu cầu chuyển phòng thất bại. Vui lòng thử lại.')));
     } finally {
       setIsSubmittingRoomChange(false);
     }
@@ -267,7 +267,7 @@ export default function BookingDetail({ setActivePage }) {
   const handleStayExtensionSubmit = async (e) => {
     e.preventDefault();
     if (!newCheckOutDate) {
-      showToast('Vui lòng chọn ngày trả phòng mới', 'warning');
+      showToast(t('Vui lòng chọn ngày trả phòng mới'), 'warning');
       return;
     }
     setIsSubmittingExtension(true);
@@ -278,13 +278,13 @@ export default function BookingDetail({ setActivePage }) {
         description: extensionReason.trim() || 'Khách yêu cầu gia hạn lưu trú'
       });
       if (response && response.success) {
-        showToast('Gửi yêu cầu gia hạn lưu trú thành công!', 'success');
+        showToast(t('Gửi yêu cầu gia hạn lưu trú thành công!'), 'success');
         setIsStayExtensionPending(true);
         setIsStayExtensionModalOpen(false);
       }
     } catch (err) {
       console.error('Lỗi khi gửi yêu cầu gia hạn:', err);
-      showToast(err.response?.data?.message || 'Không thể gửi yêu cầu gia hạn lưu trú.', 'error');
+      showToast(t(err.response?.data?.message, t('Không thể gửi yêu cầu gia hạn lưu trú.')), 'error');
     } finally {
       setIsSubmittingExtension(false);
     }
@@ -294,7 +294,7 @@ export default function BookingDetail({ setActivePage }) {
   const handleEarlyCheckOutSubmit = async (e) => {
     e.preventDefault();
     if (!newEarlyCheckOutDate) {
-      showToast('Vui lòng chọn ngày trả phòng mới', 'warning');
+      showToast(t('Vui lòng chọn ngày trả phòng mới'), 'warning');
       return;
     }
     setIsSubmittingEarlyCheckOut(true);
@@ -305,13 +305,13 @@ export default function BookingDetail({ setActivePage }) {
         description: earlyCheckOutReason.trim() || 'Khách yêu cầu check-out sớm'
       });
       if (response && response.success) {
-        showToast('Gửi yêu cầu check-out sớm thành công!', 'success');
+        showToast(t('Gửi yêu cầu check-out sớm thành công!'), 'success');
         setIsEarlyCheckOutPending(true);
         setIsEarlyCheckOutModalOpen(false);
       }
     } catch (err) {
       console.error('Lỗi khi gửi yêu cầu check-out sớm:', err);
-      showToast(err.response?.data?.message || 'Không thể gửi yêu cầu check-out sớm.', 'error');
+      showToast(t(err.response?.data?.message, t('Không thể gửi yêu cầu check-out sớm.')), 'error');
     } finally {
       setIsSubmittingEarlyCheckOut(false);
     }
@@ -332,7 +332,7 @@ export default function BookingDetail({ setActivePage }) {
       }
     } catch (err) {
       console.error('Lỗi khi hủy đặt phòng:', err);
-      showToast(err.response?.data?.message || t('bd_toast_cancel_error', 'Hủy đặt phòng thất bại.'), 'error');
+      showToast(t(err.response?.data?.message, t('bd_toast_cancel_error', 'Hủy đặt phòng thất bại.')), 'error');
     } finally {
       setIsSubmittingCancel(false);
     }
@@ -405,7 +405,7 @@ export default function BookingDetail({ setActivePage }) {
       setIsFeedbackOpen(false);
     } catch (err) {
       console.error('Error submitting feedback:', err);
-      const errMsg = err.response?.data?.message || t('bd_toast_error_submit', 'Có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại.');
+      const errMsg = t(err.response?.data?.message, t('bd_toast_error_submit', 'Có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại.'));
       showToast(errMsg, 'error');
     } finally {
       setIsSubmittingFeedback(false);

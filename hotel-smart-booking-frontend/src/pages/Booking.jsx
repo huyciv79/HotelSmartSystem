@@ -209,7 +209,7 @@ export default function Booking({ setActivePage }) {
 
   const handleBookingSubmit = async () => {
     if (!agreedToTerms) {
-      showToast('Bạn phải đồng ý với Điều khoản & Điều kiện để tiếp tục.', 'error');
+      showToast(t('Bạn phải đồng ý với Điều khoản & Điều kiện để tiếp tục.'), 'error');
       return;
     }
 
@@ -227,7 +227,7 @@ export default function Booking({ setActivePage }) {
 
       const response = await createBooking(bookingPayload);
       if (response && response.data) {
-        showToast('Đặt phòng thành công! Đang chuyển hướng sang trang thanh toán...', 'success');
+        showToast(t('Đặt phòng thành công! Đang chuyển hướng sang trang thanh toán...'), 'success');
         
         try {
           const existing = JSON.parse(localStorage.getItem('hotel_all_bookings') || '[]');
@@ -253,7 +253,7 @@ export default function Booking({ setActivePage }) {
       }
     } catch (err) {
       const msg = err?.response?.data?.message || 'Có lỗi xảy ra khi tạo đặt phòng. Vui lòng thử lại.';
-      showToast(msg, 'error');
+      showToast(t(msg), 'error');
     } finally {
       setIsLoading(false);
     }

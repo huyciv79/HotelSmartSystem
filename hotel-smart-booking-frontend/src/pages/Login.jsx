@@ -71,8 +71,7 @@ export default function Login({ setActivePage }) {
       }
     } catch (err) {
       const msg =
-        err?.response?.data?.message ||
-        t('login_failed_toast', 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.');
+        t(err?.response?.data?.message, t('login_failed_toast', 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.'));
       setApiError(msg);
       showToast(msg, 'error');
     } finally {

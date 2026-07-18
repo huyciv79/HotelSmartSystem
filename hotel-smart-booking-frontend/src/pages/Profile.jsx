@@ -73,7 +73,7 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
       }
       setIsEditMode(false);
     } catch (err) {
-      const errMsg = err?.response?.data?.message || t('profile_toast_update_error', 'Có lỗi xảy ra khi cập nhật hồ sơ.');
+      const errMsg = t(err?.response?.data?.message, t('profile_toast_update_error', 'Có lỗi xảy ra khi cập nhật hồ sơ.'));
       showToast(errMsg, 'error');
     } finally {
       setIsSaving(false);
@@ -123,7 +123,7 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
       }
     } catch (err) {
       setAvatarPreview(profile.avatar || profile.avatarUrl || '');
-      const errMsg = err?.response?.data?.message || t('profile_toast_avatar_error', 'Có lỗi xảy ra khi tải ảnh đại diện lên.');
+      const errMsg = t(err?.response?.data?.message, t('profile_toast_avatar_error', 'Có lỗi xảy ra khi tải ảnh đại diện lên.'));
       showToast(errMsg, 'error');
     } finally {
       setIsUploading(false);

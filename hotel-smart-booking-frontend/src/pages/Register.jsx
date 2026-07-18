@@ -102,8 +102,7 @@ export default function Register({ setActivePage }) {
         showToast(msg, 'error');
       } else {
         const msg =
-          err?.response?.data?.message ||
-          t('register_err_failed', 'Đăng ký thất bại. Vui lòng thử lại sau.');
+          t(err?.response?.data?.message, t('register_err_failed', 'Đăng ký thất bại. Vui lòng thử lại sau.'));
         setApiError(msg);
         showToast(msg, 'error');
       }
@@ -132,12 +131,11 @@ export default function Register({ setActivePage }) {
       const status = err?.response?.status;
       if (status === 400) {
         setApiError(
-          err?.response?.data?.message ||
-            t('register_err_otp_invalid', 'Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.')
+          t(err?.response?.data?.message, t('register_err_otp_invalid', 'Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.'))
         );
       } else {
         setApiError(
-          err?.response?.data?.message || t('register_err_otp_failed', 'Xác thực thất bại. Vui lòng thử lại sau.')
+          t(err?.response?.data?.message, t('register_err_otp_failed', 'Xác thực thất bại. Vui lòng thử lại sau.'))
         );
       }
     } finally {
@@ -159,7 +157,7 @@ export default function Register({ setActivePage }) {
       showToast(t('register_otp_resent_success', 'Mã OTP mới đã được gửi thành công.'), 'success');
     } catch (err) {
       showToast(
-        err?.response?.data?.message || t('register_otp_resent_failed', 'Không thể gửi lại OTP. Vui lòng thử lại.'),
+        t(err?.response?.data?.message, t('register_otp_resent_failed', 'Không thể gửi lại OTP. Vui lòng thử lại.')),
         'error'
       );
     } finally {

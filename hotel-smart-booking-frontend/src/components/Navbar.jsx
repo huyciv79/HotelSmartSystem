@@ -309,7 +309,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
         <div className="h-full flex items-center pr-6 relative gap-2">
           {isLoggedIn && (
             <NotificationDropdown dark={false} onNewNotification={(n) => {
-              showToast(`${n.title}: ${n.message}`, 'info');
+              showToast(`${t(n.title, n.title)}: ${t(n.message, n.message)}`, 'info');
             }} />
           )}
           {isLoggedIn ? (
@@ -353,7 +353,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                     className="w-full py-2.5 bg-primary-container text-on-primary font-bold text-[10px] tracking-widest uppercase hover:brightness-110 transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 rounded-none"
                   >
                     <span className="material-symbols-outlined text-sm">account_circle</span>
-                    Xem tất cả trang cá nhân
+                    {t('nav_view_profile', 'Xem tất cả trang cá nhân')}
                   </button>
  
                   <div className="h-px bg-slate-200 my-3" />
@@ -368,12 +368,12 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                       className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer border-none bg-transparent rounded-none"
                     >
                       <span className="material-symbols-outlined text-base">vpn_key</span>
-                      <span>Đổi mật khẩu</span>
+                      <span>{t('Đổi mật khẩu')}</span>
                     </button>
 
                     <button
                       onClick={() => {
-                        showToast('Đăng xuất thành công!', 'success');
+                        showToast(t('Đăng xuất thành công!'), 'success');
                         localStorage.removeItem('accessToken');
                         localStorage.removeItem('refreshToken');
                         localStorage.removeItem('user');
@@ -386,7 +386,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                       className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary hover:bg-[#ffe0dd]/30 transition-colors cursor-pointer border-none bg-transparent rounded-none"
                     >
                       <span className="material-symbols-outlined text-base">logout</span>
-                      <span>Đăng xuất</span>
+                      <span>{t('nav_logout', 'Đăng xuất')}</span>
                     </button>
                   </div>
                 </div>

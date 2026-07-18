@@ -67,16 +67,16 @@ export default function Payment({ setActivePage }) {
             checkInMethod: 'FaceID'
           });
         }
-        showToast('Thanh toán PayPal thành công!', 'success');
+        showToast(t('Thanh toán PayPal thành công!'), 'success');
         sessionStorage.removeItem('currentBooking');
         window.history.replaceState({}, document.title, window.location.pathname);
       } else {
-        showToast(result.message || 'Lỗi khi capture đơn hàng PayPal', 'error');
+        showToast(t(result.message, t('Lỗi khi capture đơn hàng PayPal')), 'error');
         const savedBookingStr = sessionStorage.getItem('currentBooking');
         if (savedBookingStr) setBooking(JSON.parse(savedBookingStr));
       }
     } catch (err) {
-      showToast('Lỗi kết nối khi capture thanh toán PayPal', 'error');
+      showToast(t('Lỗi kết nối khi capture thanh toán PayPal'), 'error');
       const savedBookingStr = sessionStorage.getItem('currentBooking');
       if (savedBookingStr) setBooking(JSON.parse(savedBookingStr));
     } finally {
@@ -104,11 +104,11 @@ export default function Payment({ setActivePage }) {
       if (result.success && result.data.approveUrl) {
         window.location.href = result.data.approveUrl;
       } else {
-        showToast(result.message || 'Không thể tạo đơn hàng PayPal.', 'error');
+        showToast(t(result.message, t('Không thể tạo đơn hàng PayPal.')), 'error');
         setIsProcessing(false);
       }
     } catch (err) {
-      showToast('Lỗi kết nối đến server.', 'error');
+      showToast(t('Lỗi kết nối đến server.'), 'error');
       setIsProcessing(false);
     }
   };

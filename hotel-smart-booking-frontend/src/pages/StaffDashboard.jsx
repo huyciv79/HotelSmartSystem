@@ -40,6 +40,7 @@ import { getUserProfile } from '../services/userService';
 import { getDashboardStats } from '../services/statisticService';
 import Profile from './Profile';
 import { useToast, ToastContainer } from '../components/Toast';
+import { useLanguage } from '../context/LanguageContext';
 
 // Staff dashboard sub-components
 import StaffSidebar from '../components/staff/StaffSidebar';
@@ -62,7 +63,11 @@ const INITIAL_MOCK_BOOKINGS = [
 ];
 
 export default function StaffDashboard({ setActivePage }) {
-  const { toasts, showToast, dismissToast } = useToast();
+  const { t } = useLanguage();
+  const { toasts, showToast: rawShowToast, dismissToast } = useToast();
+  const showToast = (message, type, duration) => {
+    rawShowToast(t(message, message), type, duration);
+  };
 
   // Auth state
   const [currentUser, setCurrentUser] = useState(() => {
