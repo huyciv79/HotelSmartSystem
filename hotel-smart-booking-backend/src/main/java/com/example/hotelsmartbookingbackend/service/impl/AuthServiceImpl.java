@@ -207,8 +207,10 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void changePassword(ChangePasswordRequest request) {
-        String email = (String) org.springframework.security.core.context.SecurityContextHolder.getContext()
-                .getAuthentication().getPrincipal();
+        var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String email = (authentication != null && authentication.getPrincipal() != null)
+                ? authentication.getPrincipal().toString()
+                : null;
 
         if (email == null || "anonymousUser".equals(email)) {
             throw new RuntimeException("Bạn cần đăng nhập để thực hiện chức năng này");

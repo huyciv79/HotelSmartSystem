@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   ShieldCheck, IdCard, Camera, CheckCircle2, XCircle,
   ChevronRight, RotateCcw, AlertCircle, Info
@@ -66,20 +66,28 @@ export default function RegisterEkycWizard({ onSubmit, onClose, mode = 'register
   const [images, setImages] = useState({ front: null, back: null, faceFrames: null });
   const [previews, setPreviews] = useState({ front: null, back: null, faceFrames: null });
   const [result, setResult] = useState(null); // { success, message }
+  const imagesRef = useRef({ front: null, back: null, faceFrames: null });
 
   const handleCapture = useCallback((key, nextStep) => (file, previewUrl) => {
+    imagesRef.current[key] = file;
     setImages(prev => ({ ...prev, [key]: file }));
     setPreviews(prev => ({ ...prev, [key]: previewUrl }));
     setStep(nextStep);
   }, []);
 
   const handleLivenessComplete = useCallback(async (faceFrames, facePreviews) => {
+    imagesRef.current.faceFrames = faceFrames;
     setImages(prev => ({ ...prev, faceFrames }));
     setPreviews(prev => ({ ...prev, faceFrames: facePreviews }));
     setStep(5);
 
     try {
-      const res = await onSubmit(images.front, images.back, faceFrames);
+      const front = imagesRef.current.front || images.front;
+      const back = imagesRef.current.back || images.back;
+      if (!front || !back) {
+        throw new Error('Thiếu hình ảnh CCCD. Vui lòng chụp lại mặt trước và mặt sau.');
+      }
+      const res = await onSubmit(front, back, faceFrames);
       const successMessage = res?.data?.message || res?.message || 'Xác minh danh tính thành công! Tài khoản của bạn đã được kích hoạt đầy đủ.';
       setResult({ success: true, message: successMessage });
     } catch (err) {
@@ -94,6 +102,7 @@ export default function RegisterEkycWizard({ onSubmit, onClose, mode = 'register
   }, [images.front, images.back, onSubmit]);
 
   const handleRetry = () => {
+    imagesRef.current = { front: null, back: null, faceFrames: null };
     setStep(1);
     setImages({ front: null, back: null, faceFrames: null });
     setPreviews({ front: null, back: null, faceFrames: null });

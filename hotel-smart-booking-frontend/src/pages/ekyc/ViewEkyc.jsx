@@ -312,28 +312,6 @@ export default function ViewEkyc({ onBack, onRegister, onUpdate }) {
               </button>
             )}
 
-            {/* Action group for existing profile */}
-            {status !== 'NOT_FOUND' && (
-              <div className="flex gap-4 w-full">
-                {(status === 'VERIFIED' || hasImageError) && (
-                  <button
-                    onClick={onUpdate}
-                    className="flex-1 py-4 bg-primary hover:bg-white hover:text-black text-white font-black uppercase text-[10px] tracking-[0.15em] transition-all duration-300 cursor-pointer border-none flex items-center justify-center gap-2 parallelogram-btn rounded-none"
-                  >
-                    <RefreshCcw size={14} />
-                    <span>Cập nhật tài liệu</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setShowStatusPopup(true)}
-                  className="flex-1 py-4 bg-white/5 border border-white/10 text-white font-bold uppercase text-[9px] tracking-widest hover:bg-white/10 transition-all cursor-pointer rounded-none"
-                >
-                  Xem tiến trình
-                </button>
-              </div>
-            )}
- 
             {/* Bottom verified date string (matching image) */}
             {status === 'VERIFIED' && ekycData?.verifiedAt && (
               <p className="text-white/30 text-[9px] uppercase tracking-widest font-black text-center mt-1">

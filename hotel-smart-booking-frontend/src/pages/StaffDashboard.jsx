@@ -621,6 +621,31 @@ export default function StaffDashboard({ setActivePage }) {
     }
   };
 
+  const handleQuickApproveRefund = (refund) => {
+    const formattedAmount = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(refund.newValue));
+    triggerCustomConfirm(
+      'PHÊ DUYỆT HOÀN TIỀN NHANH',
+      `Xác nhận phê duyệt hoàn tiền ${formattedAmount} cho đơn đặt phòng ${refund.bookingReference}? (Sử dụng số tiền tính toán tự động)`,
+      async () => {
+        setIsSubmittingRefundAction(true);
+        try {
+          const response = await approveRefundRequest(refund.requestId, null);
+          if (response && response.success) {
+            showToast('Phê duyệt hoàn tiền thành công!', 'success');
+            fetchPendingRefunds();
+            fetchRealBookings();
+          }
+        } catch (err) {
+          console.error(err);
+          showToast(err.response?.data?.message || 'Lỗi khi phê duyệt hoàn tiền.', 'error');
+        } finally {
+          setIsSubmittingRefundAction(false);
+        }
+      },
+      'Duyệt ngay'
+    );
+  };
+
   const handleApproveRefundSubmit = async (e) => {
     e.preventDefault();
     setIsSubmittingRefundAction(true);
@@ -1683,16 +1708,25 @@ export default function StaffDashboard({ setActivePage }) {
                             </div>
                           </div>
 
-                          <div className="flex gap-3 justify-end border-t border-rose-100 pt-3">
+                          <div className="flex flex-wrap gap-2.5 justify-end border-t border-rose-100 pt-3">
+                            <button
+                              onClick={() => handleQuickApproveRefund(associatedRefund)}
+                              disabled={isSubmittingRefundAction}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer rounded-xl border-none shadow-sm transition-all flex items-center gap-1"
+                            >
+                              <span className="material-symbols-outlined text-xs">bolt</span>
+                              Duyệt nhanh ({new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(associatedRefund.newValue))})
+                            </button>
                             <button
                               onClick={() => {
                                 setSelectedRefund(associatedRefund);
                                 setRefundOverrideAmount(associatedRefund.newValue);
                                 setIsApproveRefundOpen(true);
                               }}
-                              className="bg-white border border-emerald-250 text-emerald-600 hover:bg-emerald-50 text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer rounded-xl transition-all"
+                              className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-[9.5px] font-bold uppercase tracking-wider px-3.5 py-2.5 cursor-pointer rounded-xl transition-all flex items-center gap-1"
                             >
-                              Phê duyệt hoàn tiền
+                              <span className="material-symbols-outlined text-xs">edit</span>
+                              Điều chỉnh số tiền...
                             </button>
                             <button
                               onClick={() => {
@@ -1700,9 +1734,9 @@ export default function StaffDashboard({ setActivePage }) {
                                 setRefundRejectionReason('');
                                 setIsRejectRefundOpen(true);
                               }}
-                              className="bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer rounded-xl transition-all"
+                              className="bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer rounded-xl border-none shadow-sm transition-all flex items-center gap-1"
                             >
-                              Từ chối yêu cầu
+                              Từ chối
                             </button>
                           </div>
                         </div>
@@ -2944,40 +2978,40 @@ export default function StaffDashboard({ setActivePage }) {
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Số lượng</label>
+                <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Số lượng</label>
                 <input
                   type="number"
                   min="1"
                   value={serviceQuantity}
                   onChange={(e) => setServiceQuantity(parseInt(e.target.value) || 1)}
-                  className="w-full bg-[#0f0f12] border border-neutral-800 text-white text-xs px-3 py-2.5 focus:border-primary outline-none"
+                  className="w-full bg-white border border-slate-200/80 text-slate-800 text-xs px-3 py-2.5 focus:border-primary outline-none rounded-xl"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Ghi chú</label>
+                <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Ghi chú</label>
                 <input
                   type="text"
                   value={serviceNote}
                   onChange={(e) => setServiceNote(e.target.value)}
                   placeholder="Ví dụ: Khách gọi thêm từ minibar"
-                  className="w-full bg-[#0f0f12] border border-neutral-800 text-white text-xs px-3 py-2.5 focus:border-primary outline-none"
+                  className="w-full bg-white border border-slate-200/80 text-slate-800 text-xs px-3 py-2.5 focus:border-primary outline-none rounded-xl"
                 />
               </div>
 
-              <div className="flex gap-4 pt-4 border-t border-neutral-900">
+              <div className="flex gap-4 pt-4 border-t border-slate-100">
                 <button
                   type="submit"
                   disabled={isSubmittingService}
-                  className="bg-primary text-white font-bold px-6 py-3 uppercase text-xs tracking-widest hover:brightness-110 transition-all cursor-pointer border-none flex-1 flex items-center justify-center gap-1.5"
+                  className="bg-primary text-white font-bold px-6 py-3 uppercase text-xs tracking-widest hover:brightness-110 transition-all cursor-pointer border-none flex-1 flex items-center justify-center gap-1.5 rounded-xl"
                 >
                   {isSubmittingService ? 'Đang lưu...' : 'Thêm dịch vụ'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsAddServiceModalOpen(false)}
-                  className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-white font-bold px-6 py-3 uppercase text-xs tracking-widest cursor-pointer flex-1"
+                  className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold px-6 py-3 uppercase text-xs tracking-widest cursor-pointer flex-1 rounded-xl transition-all"
                 >
                   Hủy bỏ
                 </button>
@@ -2989,66 +3023,76 @@ export default function StaffDashboard({ setActivePage }) {
 
       {/* APPROVE REFUND MODAL */}
       {isApproveRefundOpen && selectedRefund && (
-        <div className="fixed inset-0 bg-neutral-950/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f0f12] border border-neutral-900 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-white text-left font-['Montserrat']">
-            <div className="flex justify-between items-center border-b border-neutral-850 pb-3">
+        <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-['Montserrat']">
+          <div className="bg-white border border-slate-200/80 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl rounded-2xl animate-scale-in text-slate-800 text-left">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
-                <span className="text-[9px] font-black tracking-widest text-primary uppercase">PHÊ DUYỆT HOÀN TIỀN</span>
-                <h4 className="text-sm font-black uppercase text-white m-0 mt-0.5">{selectedRefund.bookingReference}</h4>
+                <span className="text-[9px] font-black tracking-widest text-emerald-600 uppercase">PHÊ DUYỆT HOÀN TIỀN</span>
+                <h4 className="text-sm font-black uppercase text-slate-900 m-0 mt-0.5">{selectedRefund.bookingReference}</h4>
               </div>
               <button
                 onClick={() => setIsApproveRefundOpen(false)}
-                className="text-slate-400 hover:text-white border-none bg-transparent cursor-pointer flex items-center"
+                className="text-slate-400 hover:text-slate-700 border-none bg-transparent cursor-pointer flex items-center transition-all"
               >
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
             </div>
 
             <form onSubmit={handleApproveRefundSubmit} className="space-y-4">
-              <div className="bg-neutral-950 border border-neutral-855 p-4 space-y-2 text-xs">
+              <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl space-y-2.5 text-xs">
                 <div className="flex justify-between gap-4">
                   <span className="text-slate-500 uppercase font-bold text-[9px] shrink-0">Lý do từ khách:</span>
-                  <span className="text-white font-bold text-right">{selectedRefund.description}</span>
+                  <span className="text-slate-800 font-semibold italic text-right">"{selectedRefund.description || 'Không có lý do'}"</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between border-t border-slate-200/60 pt-2">
                   <span className="text-slate-500 uppercase font-bold text-[9px]">Số tiền ban đầu:</span>
-                  <span className="text-white font-bold">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(selectedRefund.oldValue))}</span>
+                  <span className="text-slate-900 font-bold font-mono">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(selectedRefund.oldValue || 0))}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 uppercase font-bold text-[9px]">Hoàn tiền dự kiến:</span>
-                  <span className="text-primary font-black">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(selectedRefund.newValue))}</span>
+                <div className="flex justify-between border-t border-slate-200/60 pt-1.5">
+                  <span className="text-emerald-600 uppercase font-bold text-[9px]">Hoàn tiền dự kiến:</span>
+                  <strong className="text-emerald-600 font-mono text-xs">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(selectedRefund.newValue || 0))}</strong>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  Số tiền hoàn trả thực tế (đ):
+              {parseFloat(selectedRefund.newValue || 0) === 0 && (
+                <div className="p-3.5 bg-amber-50 border border-amber-200/80 rounded-xl text-amber-800 text-[11px] font-semibold leading-relaxed flex items-start gap-2">
+                  <span className="material-symbols-outlined text-base text-amber-600 shrink-0 mt-0.5">warning</span>
+                  <div>
+                    <strong className="font-bold text-amber-900 block uppercase tracking-wider text-[9.5px] mb-0.5">Cảnh báo hủy sát ngày (0% Hoàn tiền):</strong>
+                    Đơn hàng này được yêu cầu hủy sát ngày/trong ngày Check-in. Theo chính sách khách sạn, tỷ lệ hoàn tiền tự động là <strong>0 VNĐ</strong>. Bạn có thể giữ 0 VNĐ hoặc điều chỉnh số tiền muốn hỗ trợ hoàn cho khách.
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  Số tiền hoàn trả thực tế (VND):
                 </label>
                 <input
                   type="number"
                   value={refundOverrideAmount}
                   onChange={(e) => setRefundOverrideAmount(e.target.value)}
                   placeholder="Nhập số tiền hoàn trả..."
-                  className="w-full bg-transparent border-b border-neutral-855 py-2 font-bold text-xs outline-none text-white focus:border-primary"
+                  className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-emerald-500 focus:bg-white rounded-xl transition-all"
                   required
                 />
-                <span className="text-[9px] text-slate-500 uppercase block leading-relaxed">
+                <span className="text-[9px] text-slate-400 uppercase block leading-relaxed">
                   *Để trống hoặc nhập số tiền khác để ghi đè. Không được vượt quá số tiền ban đầu.
                 </span>
               </div>
 
-              <div className="flex gap-4 pt-4 border-t border-neutral-900">
+              <div className="flex gap-4 pt-4 border-t border-slate-100">
                 <button
                   type="submit"
                   disabled={isSubmittingRefundAction}
-                  className="bg-green-600 text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest hover:bg-green-700 transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-8 py-3.5 uppercase text-xs tracking-widest transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1 rounded-xl shadow-sm"
                 >
                   {isSubmittingRefundAction ? 'Đang xử lý...' : 'Xác nhận duyệt'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsApproveRefundOpen(false)}
-                  className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1"
+                  className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1 rounded-xl transition-all"
                 >
                   Hủy bỏ
                 </button>
@@ -3060,48 +3104,48 @@ export default function StaffDashboard({ setActivePage }) {
 
       {/* REJECT REFUND MODAL */}
       {isRejectRefundOpen && selectedRefund && (
-        <div className="fixed inset-0 bg-neutral-950/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f0f12] border border-neutral-900 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-white text-left font-['Montserrat']">
-            <div className="flex justify-between items-center border-b border-neutral-850 pb-3">
+        <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-['Montserrat']">
+          <div className="bg-white border border-slate-200/80 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl rounded-2xl animate-scale-in text-slate-800 text-left">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
-                <span className="text-[9px] font-black tracking-widest text-primary uppercase">TỪ CHỐI HOÀN TIỀN</span>
-                <h4 className="text-sm font-black uppercase text-white m-0 mt-0.5">{selectedRefund.bookingReference}</h4>
+                <span className="text-[9px] font-black tracking-widest text-rose-600 uppercase">TỪ CHỐI HOÀN TIỀN</span>
+                <h4 className="text-sm font-black uppercase text-slate-900 m-0 mt-0.5">{selectedRefund.bookingReference}</h4>
               </div>
               <button
                 onClick={() => setIsRejectRefundOpen(false)}
-                className="text-slate-400 hover:text-white border-none bg-transparent cursor-pointer flex items-center"
+                className="text-slate-400 hover:text-slate-700 border-none bg-transparent cursor-pointer flex items-center transition-all"
               >
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
             </div>
 
             <form onSubmit={handleRejectRefundSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                   Lý do từ chối yêu cầu:
                 </label>
                 <textarea
                   rows="4"
                   value={refundRejectionReason}
                   onChange={(e) => setRefundRejectionReason(e.target.value)}
-                  placeholder="Vui lòng cung cấp lý do từ chối..."
-                  className="w-full bg-transparent border border-neutral-855 p-3 font-bold text-xs outline-none text-white focus:border-primary resize-none"
+                  placeholder="Vui lòng cung cấp lý do từ chối cụ thể..."
+                  className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-rose-500 focus:bg-white resize-none rounded-xl transition-all"
                   required
                 />
               </div>
 
-              <div className="flex gap-4 pt-4 border-t border-neutral-900">
+              <div className="flex gap-4 pt-4 border-t border-slate-100">
                 <button
                   type="submit"
                   disabled={isSubmittingRefundAction}
-                  className="bg-[#e11d48] text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest hover:brightness-110 transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1"
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-black px-8 py-3.5 uppercase text-xs tracking-widest transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1 rounded-xl shadow-sm"
                 >
                   {isSubmittingRefundAction ? 'Đang xử lý...' : 'Xác nhận từ chối'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsRejectRefundOpen(false)}
-                  className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-855 text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1"
+                  className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1 rounded-xl transition-all"
                 >
                   Hủy bỏ
                 </button>
@@ -3113,24 +3157,24 @@ export default function StaffDashboard({ setActivePage }) {
 
       {/* REJECT ROOM CHANGE MODAL */}
       {isRejectRoomChangeOpen && selectedRoomChange && (
-        <div className="fixed inset-0 bg-neutral-950/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f0f12] border border-neutral-900 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-white text-left font-['Montserrat']">
-            <div className="flex justify-between items-center border-b border-neutral-850 pb-3">
+        <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-['Montserrat']">
+          <div className="bg-white border border-slate-200/80 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl rounded-2xl animate-scale-in text-slate-800 text-left">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
                 <span className="text-[9px] font-black tracking-widest text-primary uppercase">TỪ CHỐI CHUYỂN PHÒNG</span>
-                <h4 className="text-sm font-black uppercase text-white m-0 mt-0.5">{selectedRoomChange.bookingReference}</h4>
+                <h4 className="text-sm font-black uppercase text-slate-900 m-0 mt-0.5">{selectedRoomChange.bookingReference}</h4>
               </div>
               <button
                 onClick={() => setIsRejectRoomChangeOpen(false)}
-                className="text-slate-400 hover:text-white border-none bg-transparent cursor-pointer flex items-center"
+                className="text-slate-400 hover:text-slate-700 border-none bg-transparent cursor-pointer flex items-center transition-all"
               >
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
             </div>
 
             <form onSubmit={(e) => { e.preventDefault(); handleRejectRoomChange(); }} className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                   Lý do từ chối yêu cầu đổi phòng:
                 </label>
                 <textarea
@@ -3138,23 +3182,23 @@ export default function StaffDashboard({ setActivePage }) {
                   value={roomChangeRejectionReason}
                   onChange={(e) => setRoomChangeRejectionReason(e.target.value)}
                   placeholder="Vui lòng cung cấp lý do từ chối cụ thể..."
-                  className="w-full bg-transparent border border-neutral-855 p-3 font-bold text-xs outline-none text-white focus:border-primary resize-none"
+                  className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-primary focus:bg-white resize-none rounded-xl transition-all"
                   required
                 />
               </div>
 
-              <div className="flex gap-4 pt-4 border-t border-neutral-900">
+              <div className="flex gap-4 pt-4 border-t border-slate-100">
                 <button
                   type="submit"
                   disabled={isSubmittingRoomChangeAction}
-                  className="bg-[#e11d48] text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest hover:brightness-110 transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1"
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-black px-8 py-3.5 uppercase text-xs tracking-widest transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1 rounded-xl shadow-sm"
                 >
                   {isSubmittingRoomChangeAction ? 'Đang xử lý...' : 'Xác nhận từ chối'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsRejectRoomChangeOpen(false)}
-                  className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-855 text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1"
+                  className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1 rounded-xl transition-all"
                 >
                   Hủy bỏ
                 </button>
@@ -3166,24 +3210,24 @@ export default function StaffDashboard({ setActivePage }) {
 
       {/* REJECT STAY EXTENSION MODAL */}
       {isRejectStayExtensionOpen && selectedStayExtension && (
-        <div className="fixed inset-0 bg-neutral-950/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f0f12] border border-neutral-900 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-white text-left font-['Montserrat']">
-            <div className="flex justify-between items-center border-b border-neutral-850 pb-3">
+        <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-['Montserrat']">
+          <div className="bg-white border border-slate-200/80 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl rounded-2xl animate-scale-in text-slate-800 text-left">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
                 <span className="text-[9px] font-black tracking-widest text-primary uppercase">TỪ CHỐI GIA HẠN</span>
-                <h4 className="text-sm font-black uppercase text-white m-0 mt-0.5">{selectedStayExtension.bookingReference}</h4>
+                <h4 className="text-sm font-black uppercase text-slate-900 m-0 mt-0.5">{selectedStayExtension.bookingReference}</h4>
               </div>
               <button
                 onClick={() => setIsRejectStayExtensionOpen(false)}
-                className="text-slate-400 hover:text-white border-none bg-transparent cursor-pointer flex items-center"
+                className="text-slate-400 hover:text-slate-700 border-none bg-transparent cursor-pointer flex items-center transition-all"
               >
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
             </div>
 
             <form onSubmit={(e) => { e.preventDefault(); handleRejectStayExtension(); }} className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                   Lý do từ chối gia hạn:
                 </label>
                 <textarea
@@ -3219,24 +3263,24 @@ export default function StaffDashboard({ setActivePage }) {
 
       {/* REJECT EARLY CHECKOUT MODAL */}
       {isRejectEarlyCheckOutOpen && selectedEarlyCheckOut && (
-        <div className="fixed inset-0 bg-neutral-950/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f0f12] border border-neutral-900 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-white text-left font-['Montserrat']">
-            <div className="flex justify-between items-center border-b border-neutral-850 pb-3">
+        <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-['Montserrat']">
+          <div className="bg-white border border-slate-200/80 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl rounded-2xl animate-scale-in text-slate-800 text-left">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
                 <span className="text-[9px] font-black tracking-widest text-primary uppercase">TỪ CHỐI CHECK-OUT SỚM</span>
-                <h4 className="text-sm font-black uppercase text-white m-0 mt-0.5">{selectedEarlyCheckOut.bookingReference}</h4>
+                <h4 className="text-sm font-black uppercase text-slate-900 m-0 mt-0.5">{selectedEarlyCheckOut.bookingReference}</h4>
               </div>
               <button
                 onClick={() => setIsRejectEarlyCheckOutOpen(false)}
-                className="text-slate-400 hover:text-white border-none bg-transparent cursor-pointer flex items-center"
+                className="text-slate-400 hover:text-slate-700 border-none bg-transparent cursor-pointer flex items-center transition-all"
               >
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
             </div>
 
             <form onSubmit={(e) => { e.preventDefault(); handleRejectEarlyCheckOut(); }} className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                   Lý do từ chối check-out sớm:
                 </label>
                 <textarea
@@ -3244,23 +3288,23 @@ export default function StaffDashboard({ setActivePage }) {
                   value={earlyCheckOutRejectionReason}
                   onChange={(e) => setEarlyCheckOutRejectionReason(e.target.value)}
                   placeholder="Vui lòng cung cấp lý do từ chối cụ thể..."
-                  className="w-full bg-transparent border border-neutral-855 p-3 font-bold text-xs outline-none text-white focus:border-primary resize-none"
+                  className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-primary focus:bg-white resize-none rounded-xl transition-all"
                   required
                 />
               </div>
 
-              <div className="flex gap-4 pt-4 border-t border-neutral-900">
+              <div className="flex gap-4 pt-4 border-t border-slate-100">
                 <button
                   type="submit"
                   disabled={isSubmittingEarlyCheckOutAction}
-                  className="bg-[#e11d48] text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest hover:brightness-110 transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1"
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-black px-8 py-3.5 uppercase text-xs tracking-widest transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1 rounded-xl shadow-sm"
                 >
                   {isSubmittingEarlyCheckOutAction ? 'Đang xử lý...' : 'Xác nhận từ chối'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsRejectEarlyCheckOutOpen(false)}
-                  className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-855 text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1"
+                  className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1 rounded-xl transition-all"
                 >
                   Hủy bỏ
                 </button>
@@ -3272,20 +3316,20 @@ export default function StaffDashboard({ setActivePage }) {
 
       {/* CUSTOM CONFIRM DIALOG */}
       {confirmDialog.isOpen && (
-        <div className="fixed inset-0 bg-neutral-950/80 z-[6000] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in text-white text-left font-['Montserrat']">
-          <div className="bg-[#0f0f12] border border-neutral-900 max-w-sm w-full p-6 flex flex-col gap-4 shadow-2xl animate-scale-in">
-            <div className="flex items-center gap-2 text-rose-500">
+        <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-[6000] flex items-center justify-center p-4 font-['Montserrat']">
+          <div className="bg-white border border-slate-200/80 max-w-sm w-full p-6 flex flex-col gap-4 shadow-2xl rounded-2xl animate-scale-in text-slate-800 text-left">
+            <div className="flex items-center gap-2 text-rose-600">
               <span className="material-symbols-outlined text-lg">warning</span>
               <span className="text-[10px] font-black uppercase tracking-widest">{confirmDialog.title || "XÁC NHẬN"}</span>
             </div>
-            <p className="text-xs text-slate-300 font-semibold leading-relaxed m-0">
+            <p className="text-xs text-slate-600 font-semibold leading-relaxed m-0">
               {confirmDialog.message}
             </p>
-            <div className="flex justify-end gap-2.5 pt-2 text-[10px] font-black uppercase tracking-widest">
+            <div className="flex justify-end gap-2.5 pt-2 text-[10px] font-black uppercase tracking-widest border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
-                className="px-4 py-2.5 border border-neutral-800 text-slate-300 bg-transparent hover:bg-neutral-800 transition-all cursor-pointer"
+                className="px-4 py-2.5 border border-slate-200 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
               >
                 Hủy bỏ
               </button>
@@ -3295,7 +3339,7 @@ export default function StaffDashboard({ setActivePage }) {
                   if (confirmDialog.onConfirm) confirmDialog.onConfirm();
                   setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                 }}
-                className="px-4 py-2.5 bg-rose-600 text-white hover:bg-rose-700 transition-all cursor-pointer border-none"
+                className="px-4 py-2.5 bg-rose-600 text-white hover:bg-rose-700 rounded-xl transition-all cursor-pointer border-none shadow-sm"
               >
                 {confirmDialog.confirmText || 'Xác nhận'}
               </button>

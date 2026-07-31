@@ -1,5 +1,5 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
-import { Camera, Loader2, RefreshCcw, AlertTriangle } from 'lucide-react';
+import { Camera, Loader2, RefreshCcw, AlertTriangle, AlertCircle } from 'lucide-react';
 
 /**
  * Tính độ mờ của ảnh dựa trên Laplacian variance.

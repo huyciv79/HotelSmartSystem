@@ -25,6 +25,8 @@ import AiAssistant from './pages/AiAssistant';
 import AiFloatingBubble from './components/AiFloatingBubble';
 import HotelPolicy from './pages/HotelPolicy';
 import HotelTerms from './pages/HotelTerms';
+import EkycHub from './pages/ekyc/EkycHub';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function DashboardRoute() {
   const navigate = useNavigate();
@@ -84,8 +86,8 @@ function MainSite() {
 
   const setActivePage = useCallback(
     (page) => {
-      if (page === 'dashboard') {
-        navigate('/dashboard');
+      if (page === 'dashboard' || page === 'ekyc') {
+        navigate('/dashboard', { state: { tab: page === 'ekyc' ? 'ekyc' : 'overview' } });
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
@@ -125,6 +127,8 @@ function MainSite() {
         return <HotelPolicy />;
       case 'terms-of-service':
         return <HotelTerms />;
+      case 'ekyc':
+        return <EkycHub onBack={() => setActivePage('dashboard')} />;
       default:
         return <Home setActivePage={setActivePage} />;
     }
@@ -148,12 +152,18 @@ function MainSite() {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/dashborad" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/dashboard" element={<DashboardRoute />} />
-      <Route path="*" element={<MainSite />} />
-    </Routes>
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/dashborad" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<DashboardRoute />} />
+        <Route path="/ekyc" element={<Navigate to="/dashboard" state={{ tab: 'ekyc' }} replace />} />
+        <Route path="/register-ekyc" element={<Navigate to="/dashboard" state={{ tab: 'ekyc' }} replace />} />
+        <Route path="/ekyc-register" element={<Navigate to="/dashboard" state={{ tab: 'ekyc' }} replace />} />
+        <Route path="*" element={<MainSite />} />
+      </Routes>
+    </ErrorBoundary>
   );
 }
 
 export default App;
+

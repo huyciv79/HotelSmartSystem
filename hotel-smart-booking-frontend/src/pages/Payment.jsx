@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useToast, ToastContainer } from '../components/Toast';
 import { useLanguage } from '../context/LanguageContext';
 import axiosInstance from '../services/axiosInstance';
@@ -14,6 +14,7 @@ export default function Payment({ setActivePage }) {
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const isCapturingRef = useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -21,6 +22,8 @@ export default function Payment({ setActivePage }) {
     const payerIdParam = params.get('PayerID');
 
     if (tokenParam && payerIdParam) {
+      if (isCapturingRef.current) return;
+      isCapturingRef.current = true;
       setIsProcessing(true);
       capturePaypalPayment(tokenParam);
     } else {
@@ -40,6 +43,8 @@ export default function Payment({ setActivePage }) {
   }, [setActivePage, showToast, t]);
 
   const capturePaypalPayment = async (orderId) => {
+    // Clear URL parameters immediately to prevent duplicate triggers on re-render/refresh
+    window.history.replaceState({}, document.title, window.location.pathname);
     try {
       const response = await axiosInstance.post('/payments/paypal/capture-order', {
         paypalOrderId: orderId

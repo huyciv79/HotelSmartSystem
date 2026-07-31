@@ -110,6 +110,10 @@ public class RefundServiceImpl implements RefundService {
         BigDecimal estimatedRefund = paidAmount.multiply(refundPercentage.divide(new BigDecimal("100.00"), 4, RoundingMode.HALF_UP))
                 .setScale(2, RoundingMode.HALF_UP);
 
+        if (estimatedRefund.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Đơn đặt phòng này không đủ điều kiện hoàn tiền do hủy sát ngày Check-in theo chính sách của khách sạn.");
+        }
+
         CustomerRequest customerRequest = new CustomerRequest();
         customerRequest.setBooking(booking);
         customerRequest.setRequestType("Refund");

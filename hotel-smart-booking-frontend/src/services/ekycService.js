@@ -38,7 +38,7 @@ export const submitEkyc = async (frontImage, backImage, faceFrames) => {
   appendLivenessFrames(formData, faceFrames);
 
   const response = await axiosInstance.post('/v1/ekyc/verify', formData, {
-    headers: { 'Content-Type': undefined },
+    headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 600000,
   });
   return response.data;

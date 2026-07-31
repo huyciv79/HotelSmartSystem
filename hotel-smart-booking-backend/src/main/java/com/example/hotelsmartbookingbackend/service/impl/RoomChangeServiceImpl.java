@@ -90,11 +90,11 @@ public class RoomChangeServiceImpl implements RoomChangeService {
         // ── Bước 5 & 6: Thực hiện chuyển phòng ───────────────────────────────
         Instant now = Instant.now();
         String newRoomPassword = performRoomSwap(
-                booking, detail, currentRoom, newRoom, financialResult, staff, now);
+                booking, detail, currentRoom, newRoom, financialResult, now);
 
         // ── Bước 7: Build và trả về response ─────────────────────────────────
         RoomChangeResponse response = buildResponse(
-                booking, detail, currentRoom, newRoom,
+                booking, currentRoom, newRoom,
                 oldRoomType, newRoomType,
                 financialResult, isSameRoomType,
                 newRoomPassword, staff, now, request.getReason());
@@ -243,7 +243,6 @@ public class RoomChangeServiceImpl implements RoomChangeService {
             Room currentRoom,
             Room newRoom,
             FinancialResult financialResult,
-            User staff,
             Instant now) {
 
         // ── 5a. Cập nhật trạng thái phòng cũ → Available ─────────────────────
@@ -378,7 +377,6 @@ public class RoomChangeServiceImpl implements RoomChangeService {
 
     private RoomChangeResponse buildResponse(
             Booking booking,
-            BookingDetail detail,
             Room oldRoom,
             Room newRoom,
             RoomType oldRoomType,
@@ -535,7 +533,6 @@ public class RoomChangeServiceImpl implements RoomChangeService {
                 staffEmail, requestId, newRoomId);
 
         // 1. Validate quyền staff
-        User staff = validateStaffPermission(staffEmail);
 
         // 2. Fetch request
         CustomerRequest req = customerRequestRepository.findById(requestId)

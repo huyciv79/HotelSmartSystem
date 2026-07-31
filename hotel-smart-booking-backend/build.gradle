@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '4.0.6'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'jacoco'
 }
 
 group = 'com.example'
@@ -44,25 +45,34 @@ dependencies {
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
-
-    // WebFlux - WebClient để gọi Python AI Service (non-blocking HTTP client)
+    testImplementation 'org.mockito:mockito-junit-jupiter'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
-
-    // Thumbnailator
+    testImplementation 'org.assertj:assertj-core'
     implementation 'net.coobird:thumbnailator:0.4.20'
-
-    // OpenPDF for statement PDF generation
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
     implementation 'com.github.librepdf:openpdf:2.0.3'
-
-    // QR code generation for check-in emails
     implementation 'com.google.zxing:core:3.5.3'
     implementation 'com.google.zxing:javase:3.5.3'
 }
 
-tasks.named('test') {
-    useJUnitPlatform()
+jacoco {
+    toolVersion = "0.8.13"
 }
 
+tasks.named('test') {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+
+    reports {
+        html.required = true
+        xml.required = true
+        csv.required = false
+    }
+}
 bootRun {
     jvmArgs = ["-Xms64m", "-Xmx256m", "-XX:MaxMetaspaceSize=128m", "-XX:CICompilerCount=2", "-XX:ParallelGCThreads=2", "-XX:ConcGCThreads=2"]
 }

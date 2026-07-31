@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, Loader2, RefreshCcw, ScanFace, AlertTriangle } from 'lucide-react';
+import { Camera, Loader2, RefreshCcw, ScanFace, AlertTriangle, AlertCircle } from 'lucide-react';
 import { validateLivenessFrame } from '../../services/ekycService';
 
 /* ─── Step definitions ────────────────────────────────────────────────────── */

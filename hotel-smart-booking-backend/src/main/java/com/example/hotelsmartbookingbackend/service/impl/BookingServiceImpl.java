@@ -1218,30 +1218,29 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void validateCheckInDateWindow(BookingDetail detail) {
-        LocalDate today = LocalDate.now(HOTEL_ZONE);
+        Instant now = Instant.now();
+        java.time.ZonedDateTime nowHotelTime = now.atZone(HOTEL_ZONE);
+        LocalDate today = nowHotelTime.toLocalDate();
         LocalDate checkInDate = toLocalDate(detail.getExpectedCheckIn());
         LocalDate checkOutDate = toLocalDate(detail.getExpectedCheckOut());
 
         if (today.isBefore(checkInDate)) {
             throw new RuntimeException("Chưa đến ngày nhận phòng");
         }
+        
+        // Nếu chính là ngày check-in, kiểm tra xem đã qua 14:00 chưa
+        if (today.equals(checkInDate)) {
+            if (nowHotelTime.toLocalTime().isBefore(LocalTime.of(14, 0))) {
+                throw new RuntimeException("Chưa đến giờ nhận phòng tiêu chuẩn (từ 14:00)");
+            }
+        }
+
         if (!today.isBefore(checkOutDate)) {
             throw new RuntimeException("Đơn đặt phòng đã quá thời gian nhận phòng");
         }
     }
 
-    private void validateFaceIdBookingEligibility(User customer) {
-        boolean ekycVerified = ekycProfileRepository.existsVerifiedByUserid(customer);
-        boolean faceRegistered = faceEmbeddingRepository
-                .findEmbeddingTextByUserId(customer.getId())
-                .filter(embedding -> !embedding.isBlank())
-                .isPresent();
 
-        if (!ekycVerified || !faceRegistered) {
-            throw new RuntimeException(
-                    "Ban phai hoan thanh dang ky eKYC va khuon mat truoc khi chon check-in bang FaceID");
-        }
-    }
 
     private void validateQrCodeBookingEligibility(User customer) {
         if (!ekycProfileRepository.existsVerifiedByUserid(customer)) {
@@ -1850,8 +1849,7 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng với ID: " + bookingId));
 
-        User staff = userRepository.findByEmail(staffEmail)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
+
 
         if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.COMPLETED) {
             throw new RuntimeException("Không thể cập nhật đơn đặt phòng đã hủy hoặc đã hoàn thành");
@@ -2068,14 +2066,7 @@ public class BookingServiceImpl implements BookingService {
         return mapToBookingResponse(saved);
     }
 
-    private BookingHistoryResponse mapToBookingHistoryResponse(Booking booking) {
-        BookingDetail detail = bookingDetailRepository.findByBooking_Id(booking.getId()).orElse(null);
-        return mapToBookingHistoryResponse(booking, detail, null);
-    }
 
-    private BookingHistoryResponse mapToBookingHistoryResponse(Booking booking, BookingDetail detail) {
-        return mapToBookingHistoryResponse(booking, detail, null);
-    }
 
     private BookingHistoryResponse mapToBookingHistoryResponse(Booking booking, BookingDetail detail,
             List<BookingRoomAccess> accesses) {

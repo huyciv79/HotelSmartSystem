@@ -117,7 +117,9 @@ public class PaymentServiceImpl implements PaymentService {
         if (cachedValue != null) {
             String[] parts = cachedValue.split(":");
             bookingId = Integer.parseInt(parts[0]);
-            expectedChargeAmount = new BigDecimal(parts[1]);
+            if (parts.length > 1 && !parts[1].isBlank() && !"null".equalsIgnoreCase(parts[1])) {
+                expectedChargeAmount = new BigDecimal(parts[1]);
+            }
             if (parts.length > 2) {
                 paymentOption = parts[2];
             }

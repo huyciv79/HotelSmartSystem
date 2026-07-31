@@ -1599,6 +1599,12 @@ export default function BookingDetail({ setActivePage }) {
             <p className="text-xs text-slate-600 font-semibold leading-relaxed m-0">
               {t('bd_confirm_cancel_message', 'Bạn có chắc chắn muốn hủy đơn đặt phòng này không? Hành động này sẽ thay đổi trạng thái đơn của bạn và không thể hoàn tác.')}
             </p>
+            <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-amber-800 text-[11px] font-semibold leading-relaxed flex items-start gap-2">
+              <span className="material-symbols-outlined text-base text-amber-600 shrink-0 mt-0.5">info</span>
+              <div>
+                <strong>Lưu ý chính sách hủy phòng:</strong> Tỷ lệ hoàn tiền sẽ được tự động tính toán dựa trên số ngày còn lại đến ngày Check-in. Nếu hủy sát ngày hoặc trong ngày nhận phòng, số tiền được hoàn lại có thể là <strong>0%</strong>.
+              </div>
+            </div>
             <div className="flex justify-end gap-2.5 pt-2 text-[10px] font-black uppercase tracking-widest">
               <button
                 type="button"
