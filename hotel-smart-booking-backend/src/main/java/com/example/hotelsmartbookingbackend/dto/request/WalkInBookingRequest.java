@@ -51,8 +51,8 @@ public class WalkInBookingRequest {
     @NotBlank(message = "Vui lòng nhập số điện thoại khách hàng")
     private String customerPhonenumber;
 
-    @NotBlank(message = "Vui long nhap so CCCD khach hang")
-    @Pattern(regexp = "^[0-9]{12}$", message = "So CCCD phai gom dung 12 chu so")
+    @NotBlank(message = "Vui lòng nhập số CCCD khách hàng")
+    @Pattern(regexp = "^[0-9]{12}$", message = "Số CCCD phải gồm đúng 12 chữ số")
     private String customerIdCardNumber;
 
     private BigDecimal paidAmount;

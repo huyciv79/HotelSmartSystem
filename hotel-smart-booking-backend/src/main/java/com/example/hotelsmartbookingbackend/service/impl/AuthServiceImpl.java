@@ -21,6 +21,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import org.springframework.web.util.HtmlUtils;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Random;
@@ -44,11 +45,27 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void registerInit(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (request.getEmail() != null) {
+            request.setEmail(request.getEmail().trim().toLowerCase());
+        }
+        if (request.getPhone() != null) {
+            request.setPhone(request.getPhone().trim());
+        }
+        if (request.getIdCardNumber() != null) {
+            request.setIdCardNumber(request.getIdCardNumber().trim());
+        }
+        if (request.getFullName() != null) {
+            request.setFullName(HtmlUtils.htmlEscape(request.getFullName().trim()));
+        }
+
+        if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
             throw new RuntimeException("Email đã tồn tại trong hệ thống");
         }
+        if (userRepository.existsByPhoneNumber(request.getPhone())) {
+            throw new RuntimeException("Số điện thoại này đã tồn tại trong hệ thống");
+        }
         if (userRepository.existsByIdCardNumber(request.getIdCardNumber())) {
-            throw new RuntimeException("So CCCD nay da ton tai trong he thong");
+            throw new RuntimeException("Số CCCD này đã tồn tại trong hệ thống");
         }
 
         // Generate 6-digit OTP
@@ -64,6 +81,10 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void verifyRegistrationOtp(VerifyOtpRequest request) {
+        if (request.getEmail() != null) {
+            request.setEmail(request.getEmail().trim().toLowerCase());
+        }
+
         String cachedOtp = (String) redisTemplate.opsForValue().get(OTP_PREFIX + request.getEmail());
 
         if (cachedOtp == null || !cachedOtp.equals(request.getOtp())) {
@@ -83,11 +104,30 @@ public class AuthServiceImpl implements AuthService {
             registerRequest = mapper.convertValue(cachedRequestObj, RegisterRequest.class);
         }
 
+        if (registerRequest.getEmail() != null) {
+            registerRequest.setEmail(registerRequest.getEmail().trim().toLowerCase());
+        }
+        if (registerRequest.getPhone() != null) {
+            registerRequest.setPhone(registerRequest.getPhone().trim());
+        }
+        if (registerRequest.getIdCardNumber() != null) {
+            registerRequest.setIdCardNumber(registerRequest.getIdCardNumber().trim());
+        }
+        if (registerRequest.getFullName() != null) {
+            registerRequest.setFullName(HtmlUtils.htmlEscape(registerRequest.getFullName().trim()));
+        }
+
         if (registerRequest.getIdCardNumber() == null || !registerRequest.getIdCardNumber().matches("^[0-9]{12}$")) {
-            throw new RuntimeException("So CCCD phai gom dung 12 chu so");
+            throw new RuntimeException("Số CCCD phải gồm đúng 12 chữ số");
+        }
+        if (userRepository.existsByEmailIgnoreCase(registerRequest.getEmail())) {
+            throw new RuntimeException("Email đã tồn tại trong hệ thống");
+        }
+        if (userRepository.existsByPhoneNumber(registerRequest.getPhone())) {
+            throw new RuntimeException("Số điện thoại này đã tồn tại trong hệ thống");
         }
         if (userRepository.existsByIdCardNumber(registerRequest.getIdCardNumber())) {
-            throw new RuntimeException("So CCCD nay da ton tai trong he thong");
+            throw new RuntimeException("Số CCCD này đã tồn tại trong hệ thống");
         }
 
         User user = new User();
@@ -109,7 +149,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new RuntimeException("Email hoặc mật khẩu không đúng"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
@@ -140,7 +181,10 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void forgotPassword(ForgotPasswordRequest request) {
-        if (!userRepository.existsByEmail(request.getEmail())) {
+        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        request.setEmail(email);
+
+        if (!userRepository.existsByEmailIgnoreCase(email)) {
             throw new RuntimeException("Email không tồn tại trong hệ thống");
         }
 
@@ -149,18 +193,21 @@ public class AuthServiceImpl implements AuthService {
 
         // Lưu OTP vào Redis với TTL là 5 phút
         redisTemplate.opsForValue().set(
-                FORGOT_PASSWORD_OTP_PREFIX + request.getEmail(),
+                FORGOT_PASSWORD_OTP_PREFIX + email,
                 otp,
                 Duration.ofMinutes(OTP_TTL_MINUTES)
         );
 
         // Gửi OTP qua email
-        emailService.sendForgotPasswordOtpEmail(request.getEmail(), otp);
+        emailService.sendForgotPasswordOtpEmail(email, otp);
     }
 
     @Override
     public String verifyForgotOtp(VerifyForgotOtpRequest request) {
-        String cachedOtp = (String) redisTemplate.opsForValue().get(FORGOT_PASSWORD_OTP_PREFIX + request.getEmail());
+        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        request.setEmail(email);
+
+        String cachedOtp = (String) redisTemplate.opsForValue().get(FORGOT_PASSWORD_OTP_PREFIX + email);
 
         if (cachedOtp == null || !cachedOtp.equals(request.getOtp())) {
             throw new RuntimeException("Mã OTP không hợp lệ hoặc đã hết hạn");
@@ -172,12 +219,12 @@ public class AuthServiceImpl implements AuthService {
         // Lưu reset-token vào Redis với thời gian hết hạn (TTL) là 3600000 giây
         redisTemplate.opsForValue().set(
                 RESET_TOKEN_PREFIX + resetToken,
-                request.getEmail(),
+                email,
                 Duration.ofSeconds(3600000)
         );
 
         // Xóa mã OTP đã sử dụng khỏi Redis
-        redisTemplate.delete(FORGOT_PASSWORD_OTP_PREFIX + request.getEmail());
+        redisTemplate.delete(FORGOT_PASSWORD_OTP_PREFIX + email);
 
         return resetToken;
     }
@@ -191,7 +238,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // Tìm người dùng theo email
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
         // Cập nhật mật khẩu mới bằng cách mã hóa bằng BCrypt trước khi lưu

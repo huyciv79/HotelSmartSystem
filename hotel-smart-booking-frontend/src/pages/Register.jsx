@@ -96,13 +96,13 @@ export default function Register({ setActivePage }) {
       setOtp('');
     } catch (err) {
       const status = err?.response?.status;
+      const backendMsg = err?.response?.data?.message;
       if (status === 409) {
-        const msg = t('register_err_conflict', 'Email này đã được đăng ký. Vui lòng sử dụng email khác.');
+        const msg = backendMsg || t('register_err_conflict', 'Email này đã được đăng ký. Vui lòng sử dụng email khác.');
         setApiError(msg);
         showToast(msg, 'error');
       } else {
-        const msg =
-          t(err?.response?.data?.message, t('register_err_failed', 'Đăng ký thất bại. Vui lòng thử lại sau.'));
+        const msg = backendMsg || t('register_err_failed', 'Đăng ký thất bại. Vui lòng thử lại sau.');
         setApiError(msg);
         showToast(msg, 'error');
       }
@@ -129,13 +129,14 @@ export default function Register({ setActivePage }) {
       setTimeout(() => setActivePage('login'), 2500);
     } catch (err) {
       const status = err?.response?.status;
+      const backendMsg = err?.response?.data?.message;
       if (status === 400) {
         setApiError(
-          t(err?.response?.data?.message, t('register_err_otp_invalid', 'Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.'))
+          backendMsg || t('register_err_otp_invalid', 'Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.')
         );
       } else {
         setApiError(
-          t(err?.response?.data?.message, t('register_err_otp_failed', 'Xác thực thất bại. Vui lòng thử lại sau.'))
+          backendMsg || t('register_err_otp_failed', 'Xác thực thất bại. Vui lòng thử lại sau.')
         );
       }
     } finally {
@@ -156,8 +157,9 @@ export default function Register({ setActivePage }) {
       setCountdown(60);
       showToast(t('register_otp_resent_success', 'Mã OTP mới đã được gửi thành công.'), 'success');
     } catch (err) {
+      const backendMsg = err?.response?.data?.message;
       showToast(
-        t(err?.response?.data?.message, t('register_otp_resent_failed', 'Không thể gửi lại OTP. Vui lòng thử lại.')),
+        backendMsg || t('register_otp_resent_failed', 'Không thể gửi lại OTP. Vui lòng thử lại.'),
         'error'
       );
     } finally {

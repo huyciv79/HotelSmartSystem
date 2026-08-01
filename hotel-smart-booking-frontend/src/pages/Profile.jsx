@@ -1,12 +1,23 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, User, Mail, Phone, MapPin, Award, Check, X, IdCard } from 'lucide-react';
+import { Camera, User, Mail, Phone, MapPin, Award, Check, X, IdCard, Eye, EyeOff } from 'lucide-react';
 import { updateUserProfile, uploadAvatar } from '../services/userService';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function Profile({ initialProfile, onProfileUpdate, showToast }) {
   const { t } = useLanguage();
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showIdCard, setShowIdCard] = useState(false);
   const [profile, setProfile] = useState(initialProfile || {});
+
+  const maskIdCardNumber = (idCard) => {
+    if (!idCard) return null;
+    const str = String(idCard).trim();
+    if (str.length <= 5) return str;
+    const start = str.slice(0, 2);
+    const end = str.slice(-3);
+    const maskedCount = str.length - 5;
+    return `${start}${'*'.repeat(maskedCount)}${end}`;
+  };
   const [formData, setFormData] = useState({
     fullName: initialProfile?.fullName || '',
     address: initialProfile?.address || '',
@@ -73,7 +84,7 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
       }
       setIsEditMode(false);
     } catch (err) {
-      const errMsg = t(err?.response?.data?.message, t('profile_toast_update_error', 'Có lỗi xảy ra khi cập nhật hồ sơ.'));
+      const errMsg = err?.response?.data?.message || t('profile_toast_update_error', 'Có lỗi xảy ra khi cập nhật hồ sơ.');
       showToast(errMsg, 'error');
     } finally {
       setIsSaving(false);
@@ -123,7 +134,7 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
       }
     } catch (err) {
       setAvatarPreview(profile.avatar || profile.avatarUrl || '');
-      const errMsg = t(err?.response?.data?.message, t('profile_toast_avatar_error', 'Có lỗi xảy ra khi tải ảnh đại diện lên.'));
+      const errMsg = err?.response?.data?.message || t('profile_toast_avatar_error', 'Có lỗi xảy ra khi tải ảnh đại diện lên.');
       showToast(errMsg, 'error');
     } finally {
       setIsUploading(false);
@@ -299,15 +310,31 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
                   </div>
                 </div>
 
-                {/* ID Card Number (Read Only) */}
+                {/* ID Card Number (Read Only with Masking) */}
                 <div className="space-y-2 text-left">
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 select-none opacity-80">
                     <IdCard size={13} className="text-slate-400" />
-                    {t('profile_label_idcard', 'So CCCD')}
+                    {t('profile_label_idcard', 'Số CCCD')}
                   </label>
                   <div className="border-b border-slate-200/50 py-2 font-bold text-sm tracking-wide text-slate-500 flex items-center justify-between min-h-[38px]">
-                    <span>{profile.idCardNumber || t('profile_update_missing', 'Chưa cập nhật')}</span>
-                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest border border-slate-200 px-1.5 py-0.5 select-none">{t('profile_label_fixed', 'CỐ ĐỊNH')}</span>
+                    <span className="font-mono font-bold tracking-wider">
+                      {profile.idCardNumber
+                        ? (showIdCard ? profile.idCardNumber : maskIdCardNumber(profile.idCardNumber))
+                        : t('profile_update_missing', 'Chưa cập nhật')}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {profile.idCardNumber && (
+                        <button
+                          type="button"
+                          onClick={() => setShowIdCard(!showIdCard)}
+                          className="text-slate-400 hover:text-slate-700 transition-colors p-1 bg-transparent border-none cursor-pointer flex items-center"
+                          title={showIdCard ? t('profile_hide_idcard', 'Ẩn số CCCD') : t('profile_show_idcard', 'Hiện số CCCD')}
+                        >
+                          {showIdCard ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      )}
+                      <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest border border-slate-200 px-1.5 py-0.5 select-none">{t('profile_label_fixed', 'CỐ ĐỊNH')}</span>
+                    </div>
                   </div>
                 </div>
 

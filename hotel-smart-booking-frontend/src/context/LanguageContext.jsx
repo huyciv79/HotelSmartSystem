@@ -14,7 +14,16 @@ export const LanguageProvider = ({ children }) => {
   };
 
   const t = (key, defaultText) => {
-    return translations[language]?.[key] || defaultText || translations['VN']?.[key] || key;
+    if (translations[language]?.[key] !== undefined) {
+      return translations[language][key];
+    }
+    if (language !== 'VN' && translations['EN']?.[key] !== undefined) {
+      return translations['EN'][key];
+    }
+    if (translations['VN']?.[key] !== undefined) {
+      return translations['VN'][key];
+    }
+    return defaultText || key;
   };
 
   return (

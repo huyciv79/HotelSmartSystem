@@ -110,6 +110,7 @@ class AuthServiceImplTest {
         request.setIdCardNumber("123456789012");
 
         when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+        when(userRepository.existsByPhoneNumber("0901234567")).thenReturn(false);
         when(userRepository.existsByIdCardNumber("123456789012")).thenReturn(false);
 
         // Act
@@ -147,12 +148,32 @@ class AuthServiceImplTest {
         request.setIdCardNumber("123456789012");
 
         when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
+        when(userRepository.existsByPhoneNumber(any())).thenReturn(false);
         when(userRepository.existsByIdCardNumber("123456789012")).thenReturn(true);
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> authService.registerInit(request));
-        assertEquals("So CCCD nay da ton tai trong he thong", exception.getMessage());
+        assertEquals("Số CCCD này đã tồn tại trong hệ thống", exception.getMessage());
+        verifyNoInteractions(emailService);
+    }
+
+    @Test
+    @DisplayName("Throw exception when phone number already exists during registration init")
+    void should_throwException_when_registerInitWithExistingPhoneNumber() {
+        // Arrange
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail("new@example.com");
+        request.setPhone("0901234567");
+        request.setIdCardNumber("123456789012");
+
+        when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
+        when(userRepository.existsByPhoneNumber("0901234567")).thenReturn(true);
+
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> authService.registerInit(request));
+        assertEquals("Số điện thoại này đã tồn tại trong hệ thống", exception.getMessage());
         verifyNoInteractions(emailService);
     }
 
@@ -177,6 +198,8 @@ class AuthServiceImplTest {
 
         when(valueOperations.get("register:otp:john@example.com")).thenReturn("123456");
         when(valueOperations.get("register:user:john@example.com")).thenReturn(cachedRequest);
+        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+        when(userRepository.existsByPhoneNumber("0901234567")).thenReturn(false);
         when(userRepository.existsByIdCardNumber("123456789012")).thenReturn(false);
         when(passwordEncoder.encode("rawPass123")).thenReturn("encodedPass123");
 
@@ -218,6 +241,8 @@ class AuthServiceImplTest {
 
         when(valueOperations.get("register:otp:john@example.com")).thenReturn("123456");
         when(valueOperations.get("register:user:john@example.com")).thenReturn(cachedMap);
+        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+        when(userRepository.existsByPhoneNumber("0901234567")).thenReturn(false);
         when(userRepository.existsByIdCardNumber("123456789012")).thenReturn(false);
         when(passwordEncoder.encode("rawPass123")).thenReturn("encodedPass123");
 
@@ -281,7 +306,7 @@ class AuthServiceImplTest {
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> authService.verifyRegistrationOtp(request));
-        assertEquals("So CCCD phai gom dung 12 chu so", exception.getMessage());
+        assertEquals("Số CCCD phải gồm đúng 12 chữ số", exception.getMessage());
     }
 
     @Test
@@ -302,7 +327,7 @@ class AuthServiceImplTest {
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> authService.verifyRegistrationOtp(request));
-        assertEquals("So CCCD phai gom dung 12 chu so", exception.getMessage());
+        assertEquals("Số CCCD phải gồm đúng 12 chữ số", exception.getMessage());
     }
 
     @Test
@@ -323,7 +348,7 @@ class AuthServiceImplTest {
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> authService.verifyRegistrationOtp(request));
-        assertEquals("So CCCD phai gom dung 12 chu so", exception.getMessage());
+        assertEquals("Số CCCD phải gồm đúng 12 chữ số", exception.getMessage());
     }
 
     @Test
@@ -344,7 +369,7 @@ class AuthServiceImplTest {
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> authService.verifyRegistrationOtp(request));
-        assertEquals("So CCCD phai gom dung 12 chu so", exception.getMessage());
+        assertEquals("Số CCCD phải gồm đúng 12 chữ số", exception.getMessage());
     }
 
     @Test
@@ -358,15 +383,65 @@ class AuthServiceImplTest {
         RegisterRequest cachedRequest = new RegisterRequest();
         cachedRequest.setEmail("john@example.com");
         cachedRequest.setIdCardNumber("123456789012");
+        cachedRequest.setPhone("0901234567");
 
         when(valueOperations.get("register:otp:john@example.com")).thenReturn("123456");
         when(valueOperations.get("register:user:john@example.com")).thenReturn(cachedRequest);
+        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+        when(userRepository.existsByPhoneNumber("0901234567")).thenReturn(false);
         when(userRepository.existsByIdCardNumber("123456789012")).thenReturn(true);
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> authService.verifyRegistrationOtp(request));
-        assertEquals("So CCCD nay da ton tai trong he thong", exception.getMessage());
+        assertEquals("Số CCCD này đã tồn tại trong hệ thống", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Throw exception when phone number already exists in DB at verification time")
+    void should_throwException_when_verifyRegistrationOtpWithExistingPhoneNumberInDb() {
+        // Arrange
+        VerifyOtpRequest request = new VerifyOtpRequest();
+        request.setEmail("john@example.com");
+        request.setOtp("123456");
+
+        RegisterRequest cachedRequest = new RegisterRequest();
+        cachedRequest.setEmail("john@example.com");
+        cachedRequest.setIdCardNumber("123456789012");
+        cachedRequest.setPhone("0901234567");
+
+        when(valueOperations.get("register:otp:john@example.com")).thenReturn("123456");
+        when(valueOperations.get("register:user:john@example.com")).thenReturn(cachedRequest);
+        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+        when(userRepository.existsByPhoneNumber("0901234567")).thenReturn(true);
+
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> authService.verifyRegistrationOtp(request));
+        assertEquals("Số điện thoại này đã tồn tại trong hệ thống", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Throw exception when email already exists in DB at verification time")
+    void should_throwException_when_verifyRegistrationOtpWithExistingEmailInDb() {
+        // Arrange
+        VerifyOtpRequest request = new VerifyOtpRequest();
+        request.setEmail("john@example.com");
+        request.setOtp("123456");
+
+        RegisterRequest cachedRequest = new RegisterRequest();
+        cachedRequest.setEmail("john@example.com");
+        cachedRequest.setIdCardNumber("123456789012");
+        cachedRequest.setPhone("0901234567");
+
+        when(valueOperations.get("register:otp:john@example.com")).thenReturn("123456");
+        when(valueOperations.get("register:user:john@example.com")).thenReturn(cachedRequest);
+        when(userRepository.existsByEmail("john@example.com")).thenReturn(true);
+
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> authService.verifyRegistrationOtp(request));
+        assertEquals("Email đã tồn tại trong hệ thống", exception.getMessage());
     }
 
     // ==========================================
@@ -388,7 +463,7 @@ class AuthServiceImplTest {
         user.setRole(Role.customer);
         user.setStatus("Active");
 
-        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("Pass123!", "hashedPass")).thenReturn(true);
         when(jwtUtil.generateAccessToken(user)).thenReturn("mock.jwt.token");
 
@@ -412,7 +487,7 @@ class AuthServiceImplTest {
         request.setEmail("unknown@example.com");
         request.setPassword("Pass123!");
 
-        when(userRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
+        when(userRepository.findByEmailIgnoreCase("unknown@example.com")).thenReturn(Optional.empty());
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class,
@@ -432,7 +507,7 @@ class AuthServiceImplTest {
         user.setEmail("user@example.com");
         user.setPasswordHash("hashedPass");
 
-        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("WrongPass", "hashedPass")).thenReturn(false);
 
         // Act & Assert
@@ -454,7 +529,7 @@ class AuthServiceImplTest {
         user.setPasswordHash("hashedPass");
         user.setStatus("Inactive");
 
-        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("Pass123!", "hashedPass")).thenReturn(true);
 
         // Act & Assert
@@ -476,7 +551,7 @@ class AuthServiceImplTest {
         user.setPasswordHash("hashedPass");
         user.setStatus("Banned");
 
-        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("Pass123!", "hashedPass")).thenReturn(true);
 
         // Act & Assert
@@ -496,7 +571,7 @@ class AuthServiceImplTest {
         ForgotPasswordRequest request = new ForgotPasswordRequest();
         request.setEmail("john@example.com");
 
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(true);
+        when(userRepository.existsByEmailIgnoreCase("john@example.com")).thenReturn(true);
 
         // Act
         authService.forgotPassword(request);
@@ -513,7 +588,7 @@ class AuthServiceImplTest {
         ForgotPasswordRequest request = new ForgotPasswordRequest();
         request.setEmail("notfound@example.com");
 
-        when(userRepository.existsByEmail("notfound@example.com")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("notfound@example.com")).thenReturn(false);
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class,
@@ -595,7 +670,7 @@ class AuthServiceImplTest {
         user.setPasswordHash("oldEncodedHash");
 
         when(valueOperations.get("reset:token:valid-uuid-token")).thenReturn("john@example.com");
-        when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("john@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.encode("NewSecret123!")).thenReturn("newEncodedHash");
 
         // Act
@@ -633,7 +708,7 @@ class AuthServiceImplTest {
         request.setNewPassword("NewSecret123!");
 
         when(valueOperations.get("reset:token:valid-token")).thenReturn("deleted@example.com");
-        when(userRepository.findByEmail("deleted@example.com")).thenReturn(Optional.empty());
+        when(userRepository.findByEmailIgnoreCase("deleted@example.com")).thenReturn(Optional.empty());
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class,

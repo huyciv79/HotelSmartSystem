@@ -50,7 +50,7 @@ const mapRealToBookingHistory = (bookings) =>
   }));
 
 export default function Dashboard({ setActivePage }) {
-  const { t } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => location.state?.tab ?? 'overview');
   const [profile, setProfile] = useState(USER_PROFILE);
@@ -169,6 +169,18 @@ export default function Dashboard({ setActivePage }) {
       />
 
       <div className="ml-72 flex-1 min-h-screen flex flex-col">
+        {/* Top Header Bar with Language Switcher */}
+        <div className="bg-white border-b border-gray-200 px-8 py-3.5 flex justify-between items-center shadow-xs font-['Montserrat']">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActivePage?.('home')}
+              className="text-xs font-bold text-slate-600 hover:text-primary uppercase tracking-widest flex items-center gap-1.5 cursor-pointer bg-transparent border-none py-1"
+            >
+              <span className="material-symbols-outlined text-sm">home</span>
+              <span>{t('nav_home', 'Trang chủ')}</span>
+            </button>
+          </div>
+        </div>
 
         <div className="p-8 flex flex-col gap-8 flex-1">
           {activeTab === 'settings' ? (
@@ -225,16 +237,16 @@ export default function Dashboard({ setActivePage }) {
                                       : 'bg-yellow-100 text-yellow-700'
                             }`}>
                             {bk.status === 'Cancelled'
-                              ? 'Đã Hủy'
+                              ? t('status_cancelled', 'Đã Hủy')
                               : bk.status === 'Checked-in' || bk.status === 'Checked In'
-                                ? 'Đã nhận phòng'
+                                ? t('status_checked_in', 'Đã nhận phòng')
                                 : bk.status === 'Checked-out' || bk.status === 'Checked Out' || bk.status === 'Completed'
-                                  ? 'Đã trả phòng'
+                                  ? t('status_checked_out', 'Đã trả phòng')
                                   : bk.status === 'Paid'
-                                    ? 'Đã thanh toán'
+                                    ? t('status_paid', 'Đã thanh toán')
                                     : bk.status === 'Partially Paid'
-                                      ? 'Đã cọc 30%'
-                                      : 'Chờ thanh toán'}
+                                      ? t('status_partially_paid', 'Đã cọc 30%')
+                                      : t('status_pending_payment', 'Chờ thanh toán')}
                           </span>
                         </div>
                         <button

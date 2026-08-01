@@ -7,6 +7,7 @@ import {
   Settings,
   LogOut,
   ShieldCheck,
+  Globe,
 } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext";
 
@@ -21,20 +22,31 @@ const bottomLinks = [
   { key: "logout", label: "Logout", icon: LogOut },
 ];
 
+const languagesList = [
+  { code: 'VN', label: 'Tiếng Việt', flag: 'https://flagcdn.com/w40/vn.png' },
+  { code: 'EN', label: 'English', flag: 'https://flagcdn.com/w40/us.png' },
+  { code: 'JP', label: '日本語', flag: 'https://flagcdn.com/w40/jp.png' },
+  { code: 'KR', label: '한국어', flag: 'https://flagcdn.com/w40/kr.png' },
+  { code: 'CN', label: '简体中文', flag: 'https://flagcdn.com/w40/cn.png' }
+];
+
 const DashboardSidebar = ({
   activeItem: controlledActive,
   onNavigate,
   setActivePage,
 }) => {
-  const { t } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
   const [internalActive, setInternalActive] = useState("overview");
+  const [isLangOpen, setIsLangOpen] = useState(false);
   const activeItem = controlledActive ?? internalActive;
 
   const handleNavigate = (key) => {
     setInternalActive(key);
     onNavigate?.(key);
   };
+
+  const currentLangObj = languagesList.find(l => l.code === language) || languagesList[0];
 
   const getLabelTranslation = (key, defaultLabel) => {
     switch (key) {
@@ -99,7 +111,52 @@ const DashboardSidebar = ({
         </button>
       </div>
 
-      <div className="px-4 pb-8 flex flex-col gap-3 border-t border-neutral-900/20 pt-6">
+      {/* Language Switcher Dropdown */}
+      <div className="px-4 pt-4 pb-2 border-t border-neutral-900/30 relative">
+        <button
+          type="button"
+          onClick={() => setIsLangOpen(!isLangOpen)}
+          className="w-full flex items-center justify-between px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 text-[10.5px] font-bold uppercase tracking-widest transition-all cursor-pointer rounded-sm"
+        >
+          <div className="flex items-center gap-2.5">
+            <img
+              src={currentLangObj.flag}
+              alt={currentLangObj.label}
+              className="w-4 h-3 object-cover border border-white/20"
+            />
+            <span>{currentLangObj.label}</span>
+          </div>
+          <span className="material-symbols-outlined text-sm leading-none opacity-80">
+            {isLangOpen ? 'expand_less' : 'expand_more'}
+          </span>
+        </button>
+
+        {isLangOpen && (
+          <div className="absolute left-4 right-4 bottom-14 bg-[#141416] border border-neutral-800 shadow-2xl z-50 py-1.5 font-['Montserrat'] rounded-sm">
+            {languagesList.map((lang) => (
+              <button
+                key={lang.code}
+                onClick={() => {
+                  setLanguage(lang.code);
+                  setIsLangOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wider transition-colors hover:bg-white/10 border-none bg-transparent cursor-pointer ${
+                  language === lang.code ? 'text-primary' : 'text-slate-300'
+                }`}
+              >
+                <img
+                  src={lang.flag}
+                  alt={lang.label}
+                  className="w-4 h-3 object-cover border border-white/10"
+                />
+                <span>{lang.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="px-4 pb-8 flex flex-col gap-3 pt-2">
         {bottomLinks.map(({ key, label, icon: Icon }) => {
           const isActive = activeItem === key;
           return (

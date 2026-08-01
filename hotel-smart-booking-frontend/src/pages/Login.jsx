@@ -38,7 +38,11 @@ export default function Login({ setActivePage }) {
     setIsLoading(true);
     setApiError(null);
     try {
-      const response = await loginUser(data);
+      const normalizedData = {
+        ...data,
+        email: data.email ? data.email.trim().toLowerCase() : data.email,
+      };
+      const response = await loginUser(normalizedData);
       
       // Save tokens/user information to localStorage
       let loggedInUser = null;
@@ -71,7 +75,7 @@ export default function Login({ setActivePage }) {
       }
     } catch (err) {
       const msg =
-        t(err?.response?.data?.message, t('login_failed_toast', 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.'));
+        err?.response?.data?.message || t('login_failed_toast', 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.');
       setApiError(msg);
       showToast(msg, 'error');
     } finally {

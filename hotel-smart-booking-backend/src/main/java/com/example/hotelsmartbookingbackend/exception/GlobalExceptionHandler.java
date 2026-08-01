@@ -28,14 +28,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<String>> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
         String detail = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : "";
         if (detail != null) {
-            if (detail.contains("users_idcardnumber_key")) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("So CCCD nay da ton tai trong he thong"));
+            String lowerDetail = detail.toLowerCase();
+            if (lowerDetail.contains("users_email_key") || lowerDetail.contains("email")) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Email đã tồn tại trong hệ thống"));
             }
-            if (detail.contains("users_idcardnumber_check")) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("So CCCD phai gom dung 12 chu so"));
+            if (lowerDetail.contains("users_phonenumber_key") || lowerDetail.contains("phonenumber")) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Số điện thoại này đã tồn tại trong hệ thống"));
+            }
+            if (lowerDetail.contains("users_idcardnumber_key") || lowerDetail.contains("idcardnumber")) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Số CCCD này đã tồn tại trong hệ thống"));
+            }
+            if (lowerDetail.contains("users_idcardnumber_check")) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Số CCCD phải gồm đúng 12 chữ số"));
             }
         }
-        return ResponseEntity.badRequest().body(ApiResponse.error("Du lieu khong hop le hoac bi trung lap"));
+        return ResponseEntity.badRequest().body(ApiResponse.error("Dữ liệu không hợp lệ hoặc bị trùng lặp"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

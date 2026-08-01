@@ -35,6 +35,8 @@ function DashboardRoute() {
     return userStr ? JSON.parse(userStr) : null;
   });
 
+  const token = localStorage.getItem('accessToken');
+
   // Keep state in sync with local storage updates
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -49,6 +51,11 @@ function DashboardRoute() {
     },
     [navigate],
   );
+
+  // Protect route: Redirect unauthenticated users to Login page
+  if (!token || !currentUser) {
+    return <Navigate to="/" state={{ page: 'login' }} replace />;
+  }
 
   if (currentUser && (currentUser.role === 'manager' || currentUser.role === 'receptionist')) {
     return <StaffDashboard setActivePage={setActivePage} />;
@@ -87,6 +94,12 @@ function MainSite() {
   const setActivePage = useCallback(
     (page) => {
       if (page === 'dashboard' || page === 'ekyc') {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          setActivePageState('login');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
         navigate('/dashboard', { state: { tab: page === 'ekyc' ? 'ekyc' : 'overview' } });
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;

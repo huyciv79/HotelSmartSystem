@@ -27,12 +27,12 @@ public class User {
 
     @Size(max = 255)
     @NotNull
-    @Column(name = "email", nullable = false)
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
 
     @Size(max = 20)
     @NotNull
-    @Column(name = "phonenumber", nullable = false, length = 20)
+    @Column(name = "phonenumber", nullable = false, length = 20, unique = true)
     private String phoneNumber;
 
     @Size(min = 12, max = 12)
