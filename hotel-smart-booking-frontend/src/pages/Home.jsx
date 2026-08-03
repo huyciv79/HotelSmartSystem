@@ -99,15 +99,15 @@ export default function Home({ setActivePage }) {
         {/* Experience cards container */}
         <div className="max-w-5xl mx-auto">
 
-          {/* Row 1: two parallelogram cards */}
-          <div className="flex items-start gap-0 scroll-reveal">
+          {/* Row 1: two cards, stacked on mobile, parallelograms on desktop */}
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-0 scroll-reveal">
 
-            {/* LEFT column: image only (label below) */}
-            <div className="flex-[1.1] flex flex-col">
-              {/* Spacer to align image top with right label height */}
-              <div className="h-14"></div>
-              {/* Left parallelogram image */}
-              <div className="overflow-hidden" style={{ clipPath: 'polygon(0% 0%, 88% 0%, 100% 100%, 12% 100%)' }}>
+            {/* LEFT column */}
+            <div className="w-full md:flex-[1.1] flex flex-col">
+              {/* Spacer to align image top with right label height on desktop */}
+              <div className="hidden md:block h-14"></div>
+              {/* Left image */}
+              <div className="overflow-hidden rounded-xl md:rounded-none" style={{ clipPath: window.innerWidth > 768 ? 'polygon(0% 0%, 88% 0%, 100% 100%, 12% 100%)' : 'none' }}>
                 <div className="aspect-[4/3]">
                   <img
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
@@ -116,24 +116,24 @@ export default function Home({ setActivePage }) {
                   />
                 </div>
               </div>
-              {/* STAY24 label – below left image */}
-              <div className="mt-4 pl-1">
+              {/* STAY24 label */}
+              <div className="mt-4 px-2 md:pl-1 text-center md:text-left">
                 <p className="font-extrabold text-[15px] uppercase italic text-on-surface tracking-wide leading-none">STAY24</p>
-                <p className="text-secondary text-[10px] uppercase tracking-[0.18em] mt-1.5 font-semibold">{t('exp_stay24_desc')}</p>
+                <p className="text-secondary text-[11px] md:text-[10px] uppercase tracking-[0.18em] mt-1.5 font-semibold">{t('exp_stay24_desc')}</p>
               </div>
             </div>
 
-            {/* RIGHT column: label above, then image */}
-            <div className="flex-[1] flex flex-col -ml-10">
-              {/* DỊCH VỤ 24/7 label – above right image */}
-              <div className="mb-3 pl-10">
+            {/* RIGHT column */}
+            <div className="w-full md:flex-[1] flex flex-col md:-ml-10">
+              {/* DỊCH VỤ 24/7 label */}
+              <div className="mb-3 px-2 md:pl-10 text-center md:text-left">
                 <p className="font-extrabold text-[15px] uppercase italic text-on-surface tracking-wide leading-none">{t('exp_service247_desc').split(',')[0]}</p>
-                <p className="text-secondary text-[10px] uppercase tracking-[0.15em] mt-1.5 font-semibold leading-snug">
+                <p className="text-secondary text-[11px] md:text-[10px] uppercase tracking-[0.15em] mt-1.5 font-semibold leading-snug">
                   {t('exp_service247_desc')}
                 </p>
               </div>
-              {/* Right parallelogram image */}
-              <div className="overflow-hidden" style={{ clipPath: 'polygon(0% 0%, 88% 0%, 100% 100%, 12% 100%)' }}>
+              {/* Right image */}
+              <div className="overflow-hidden rounded-xl md:rounded-none" style={{ clipPath: window.innerWidth > 768 ? 'polygon(0% 0%, 88% 0%, 100% 100%, 12% 100%)' : 'none' }}>
                 <div className="aspect-[4/3]">
                   <img
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
@@ -147,7 +147,7 @@ export default function Home({ setActivePage }) {
 
           {/* Row 2: single centered card */}
           <div className="flex justify-center mt-8 scroll-reveal">
-            <div className="w-[52%] overflow-hidden" style={{ clipPath: 'polygon(0% 0%, 88% 0%, 100% 100%, 12% 100%)' }}>
+            <div className="w-full md:w-[52%] overflow-hidden rounded-xl md:rounded-none" style={{ clipPath: window.innerWidth > 768 ? 'polygon(0% 0%, 88% 0%, 100% 100%, 12% 100%)' : 'none' }}>
               <div className="aspect-[16/9]">
                 <img
                   className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
@@ -158,10 +158,10 @@ export default function Home({ setActivePage }) {
             </div>
           </div>
 
-          {/* NGHỈ NGƠI label – below center image */}
-          <div className="text-center mt-5 mb-2">
+          {/* NGHỈ NGƠI label */}
+          <div className="text-center mt-5 mb-2 px-2">
             <p className="font-extrabold text-[15px] uppercase italic text-on-surface tracking-wide leading-none">{t('exp_tech')}</p>
-            <p className="text-secondary text-[10px] uppercase tracking-[0.18em] mt-1.5 font-semibold">{t('exp_tech_desc')}</p>
+            <p className="text-secondary text-[11px] md:text-[10px] uppercase tracking-[0.18em] mt-1.5 font-semibold">{t('exp_tech_desc')}</p>
           </div>
 
         </div>

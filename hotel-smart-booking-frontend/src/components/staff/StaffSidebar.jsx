@@ -8,13 +8,27 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleLogout }) => {
+const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleLogout, isOpen = false, onClose }) => {
   const [imgError, setImgError] = useState(false);
   const avatar = currentUser.avatar || currentUser.avatarUrl;
   const hasAvatar = avatar && avatar !== 'null' && avatar !== 'undefined' && !imgError;
 
+  const handleNavClick = (tab) => {
+    setActiveTab(tab);
+    onClose?.();
+  };
+
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-72 bg-white border-r border-slate-100 flex flex-col justify-between z-30 font-['Montserrat'] shadow-[4px_0_24px_rgba(0,0,0,0.015)]">
+    <>
+      {isOpen && (
+        <div 
+          onClick={onClose}
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 md:hidden transition-opacity"
+        />
+      )}
+      <aside className={`fixed left-0 top-0 bottom-0 w-72 bg-white border-r border-slate-100 flex flex-col justify-between z-50 font-['Montserrat'] shadow-[4px_0_24px_rgba(0,0,0,0.08)] transition-transform duration-300 ${
+        isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      }`}>
       <div className="flex-1 flex flex-col overflow-y-auto">
         {/* Header info */}
         <div className="p-6 border-b border-slate-100 flex items-center gap-3">
@@ -150,6 +164,7 @@ const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleL
         </div>
       </div>
     </aside>
+    </>
   );
 };
 

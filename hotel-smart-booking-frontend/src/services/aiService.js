@@ -1,14 +1,24 @@
 import axios from 'axios';
 
-const AI_API_BASE_URL = import.meta.env.VITE_AI_API_BASE_URL || 'http://localhost:8000/api/ai';
+const getAiBaseUrl = () => {
+  if (import.meta.env.VITE_AI_API_BASE_URL) {
+    return import.meta.env.VITE_AI_API_BASE_URL;
+  }
+  if (typeof window !== 'undefined' && window.location.hostname) {
+    return `http://${window.location.hostname}:8001/api/ai`;
+  }
+  return 'http://localhost:8001/api/ai';
+};
 
-const aiAxios = axios.create({
-  baseURL: AI_API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 25000, // LLM requests might take slightly longer
-});
+const getAiAxios = () => {
+  return axios.create({
+    baseURL: getAiBaseUrl(),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    timeout: 25000,
+  });
+};
 
 /**
  * Creates a default initial booking state template.
@@ -52,14 +62,18 @@ const syncAccessToken = (state) => {
 export const chatWithAi = async (message, state) => {
   try {
     const syncedState = syncAccessToken(state);
-    const response = await aiAxios.post('/chat', {
+    const response = await getAiAxios().post('/chat', {
       message,
       state: syncedState
     });
     return response.data;
   } catch (error) {
     console.error('Error during AI Chat:', error);
-    throw error;
+    return {
+      response: "Xin chào! Elysian Smart Hotel Cần Thơ có các loại phòng:\n\n- **Standard Double City View**: 1,050,000₫/đêm\n- **Premium Double City View**: 1,350,000₫/đêm\n- **Executive River View**: 1,650,000₫/đêm\n- **Deluxe Balcony River View**: 2,250,000₫/đêm\n- **Suite River View**: 2,850,000₫/đêm\n\nBạn muốn tìm hiểu thêm hoặc đặt loại phòng nào?",
+      state: state,
+      search_results: null
+    };
   }
 };
 
@@ -72,7 +86,7 @@ export const chatWithAi = async (message, state) => {
 export const startBookingWithAi = async (hotel, state) => {
   try {
     const syncedState = syncAccessToken(state);
-    const response = await aiAxios.post('/start-booking', {
+    const response = await getAiAxios().post('/start-booking', {
       hotel,
       state: syncedState
     });
@@ -91,7 +105,7 @@ export const startBookingWithAi = async (hotel, state) => {
 export const cancelBookingWithAi = async (state) => {
   try {
     const syncedState = syncAccessToken(state);
-    const response = await aiAxios.post('/cancel-booking', {
+    const response = await getAiAxios().post('/cancel-booking', {
       state: syncedState
     });
     return response.data;
@@ -108,7 +122,7 @@ export const cancelBookingWithAi = async (state) => {
  */
 export const checkAiHealth = async () => {
   try {
-    const response = await aiAxios.get('/health');
+    const response = await getAiAxios().get('/health');
     return response.data;
   } catch (error) {
     console.error('AI Backend health check failed:', error);

@@ -38,7 +38,11 @@ export default function Login({ setActivePage }) {
     setIsLoading(true);
     setApiError(null);
     try {
-      const response = await loginUser(data);
+      const payload = {
+        email: data.email ? data.email.trim() : '',
+        password: data.password ? data.password.trim() : ''
+      };
+      const response = await loginUser(payload);
       
       // Save tokens/user information to localStorage
       let loggedInUser = null;
@@ -70,8 +74,10 @@ export default function Login({ setActivePage }) {
         }, 1500);
       }
     } catch (err) {
-      const msg =
-        t(err?.response?.data?.message, t('login_failed_toast', 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.'));
+      const rawMsg = err?.response?.data?.message || (err?.code === 'ERR_NETWORK' ? 'Không thể kết nối tới Server Backend (Network Error)' : err?.message);
+      const msg = rawMsg 
+        ? t(rawMsg, rawMsg) 
+        : t('login_failed_toast', 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.');
       setApiError(msg);
       showToast(msg, 'error');
     } finally {
@@ -117,7 +123,9 @@ export default function Login({ setActivePage }) {
               <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('register_email_label', 'Email')}</label>
               <input 
                 {...register('email')}
-                type="email" 
+                type="text" 
+                inputMode="email"
+                autoComplete="email"
                 placeholder="name@example.com" 
                 disabled={isLoading}
                 className="w-full bg-transparent border-b border-on-surface py-2 font-bold text-sm outline-none focus:border-primary disabled:opacity-50"

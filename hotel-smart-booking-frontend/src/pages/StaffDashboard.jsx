@@ -320,7 +320,8 @@ export default function StaffDashboard({ setActivePage }) {
     
     const connectWebSocket = () => {
       try {
-        socket = new WebSocket('ws://localhost:8080/ws/websocket');
+        const wsHost = typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? window.location.hostname : 'localhost';
+        socket = new WebSocket(`ws://${wsHost}:8080/ws/websocket`);
         
         socket.onopen = () => {
           socket.send("CONNECT\naccept-version:1.1,1.2\n\n\x00");
@@ -672,7 +673,8 @@ export default function StaffDashboard({ setActivePage }) {
     
     const connectWebSocket = () => {
       try {
-        socket = new WebSocket('ws://localhost:8080/ws/websocket');
+        const wsHost = typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? window.location.hostname : 'localhost';
+        socket = new WebSocket(`ws://${wsHost}:8080/ws/websocket`);
         
         socket.onopen = () => {
           socket.send("CONNECT\naccept-version:1.1,1.2\n\n\x00");
@@ -1325,7 +1327,7 @@ export default function StaffDashboard({ setActivePage }) {
     <>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
-      <div className="min-h-screen bg-slate-50 flex font-['Montserrat'] text-slate-800 text-left pt-0">
+      <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-['Montserrat'] text-slate-800 text-left pt-0 overflow-x-hidden w-full">
 
         {/* SIDEBAR */}
         <StaffSidebar
@@ -1337,7 +1339,7 @@ export default function StaffDashboard({ setActivePage }) {
         />
 
         {/* MAIN PANEL CONTENT */}
-        <div className="ml-72 flex-1 min-h-screen flex flex-col">
+        <div className="ml-0 md:ml-72 flex-1 min-h-screen flex flex-col w-full max-w-full overflow-x-hidden">
 
           {/* HEADER */}
           <StaffHeader
@@ -1347,7 +1349,7 @@ export default function StaffDashboard({ setActivePage }) {
             setSearchQuery={setSearchQuery}
           />
 
-          <main className="p-10 flex flex-col gap-8 flex-1 overflow-y-auto">
+          <main className="p-4 md:p-10 flex flex-col gap-6 md:gap-8 flex-1 overflow-y-auto w-full max-w-full">
 
             {/* TỔNG QUAN (OVERVIEW) */}
             {activeTab === 'overview' && (

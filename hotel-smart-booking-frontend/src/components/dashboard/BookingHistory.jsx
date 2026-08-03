@@ -5,9 +5,9 @@ const BookingHistory = ({ bookings, onViewDetail, onViewAll }) => {
   const { t } = useLanguage();
 
   return (
-    <div className="bg-white rounded-none border border-outline-variant shadow-lg overflow-hidden font-['Montserrat'] text-left">
-      <div className="p-6 border-b border-neutral-300/30 flex justify-between items-center bg-slate-50">
-        <h2 className="text-black font-black uppercase text-sm tracking-wider m-0">
+    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden font-['Montserrat'] text-left">
+      <div className="p-4 sm:p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/70">
+        <h2 className="text-slate-900 font-black uppercase text-xs sm:text-sm tracking-wider m-0">
           {t("db_history_title", "Lịch sử đặt phòng")}
         </h2>
         <button 
@@ -19,7 +19,7 @@ const BookingHistory = ({ bookings, onViewDetail, onViewAll }) => {
         </button>
       </div>
 
-      <div className="flex flex-col divide-y divide-neutral-100">
+      <div className="flex flex-col divide-y divide-slate-100">
         {bookings.length === 0 ? (
           <div className="p-8 text-center text-slate-400 font-bold text-[10px] uppercase tracking-wider">
             {t("db_history_empty", "Không có lịch sử đặt phòng")}
@@ -27,58 +27,58 @@ const BookingHistory = ({ bookings, onViewDetail, onViewAll }) => {
         ) : (
           bookings.map((booking, index) => {
             let statusText = booking.status || 'Confirmed';
-            let statusClass = 'bg-green-100 text-green-700';
+            let statusClass = 'bg-emerald-100 text-emerald-700 border-emerald-200';
 
             const normalizedStatus = (booking.status || '').toLowerCase().replace(/[^a-z]/g, '');
             if (normalizedStatus === 'cancelled') {
               statusText = t("status_cancelled", "Đã hủy");
-              statusClass = 'bg-red-100 text-red-700';
+              statusClass = 'bg-rose-100 text-rose-700 border-rose-200';
             } else if (normalizedStatus === 'checkedout' || normalizedStatus === 'completed') {
               statusText = t("status_checked_out", "Đã trả phòng");
-              statusClass = 'bg-slate-200 text-slate-700';
+              statusClass = 'bg-slate-200 text-slate-700 border-slate-300';
             } else if (normalizedStatus === 'checkedin') {
               statusText = t("status_checked_in", "Đã nhận phòng");
-              statusClass = 'bg-blue-100 text-blue-700';
+              statusClass = 'bg-sky-100 text-sky-700 border-sky-200';
             } else if (normalizedStatus === 'paid') {
               statusText = 'Đã thanh toán';
-              statusClass = 'bg-green-100 text-green-700';
+              statusClass = 'bg-emerald-100 text-emerald-700 border-emerald-200';
             } else if (normalizedStatus === 'partiallypaid' || normalizedStatus === 'depositpaid') {
               statusText = 'Đã cọc 30%';
-              statusClass = 'bg-indigo-100 text-indigo-700';
+              statusClass = 'bg-indigo-100 text-indigo-700 border-indigo-200';
             } else {
               statusText = 'Chờ thanh toán';
-              statusClass = 'bg-yellow-100 text-yellow-700';
+              statusClass = 'bg-amber-100 text-amber-700 border-amber-200';
             }
 
             return (
               <div
                 key={index}
                 onClick={() => onViewDetail && onViewDetail(booking.id)}
-                className="p-5 flex flex-col gap-3.5 hover:bg-slate-50 transition-colors cursor-pointer"
+                className="p-4 sm:p-5 flex flex-col gap-3 hover:bg-slate-50/80 transition-all duration-200 cursor-pointer"
               >
                 {/* Top Row: Room name & Status */}
-                <div className="flex justify-between items-start gap-4">
+                <div className="flex justify-between items-start gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-zinc-900 font-black text-xs uppercase tracking-wide truncate">{booking.name}</p>
-                    <p className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider mt-0.5">
-                      <span className="keep-font-bold font-bold text-slate-600">{booking.roomType}</span>
+                    <p className="text-slate-900 font-black text-xs sm:text-sm uppercase tracking-wide truncate m-0">{booking.name}</p>
+                    <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider mt-0.5 m-0">
+                      <span className="font-bold text-slate-600">{booking.roomType}</span>
                     </p>
                   </div>
-                  <span className={`px-2.5 py-1 text-[8px] font-black uppercase tracking-widest shrink-0 ${statusClass}`}>
+                  <span className={`px-2.5 py-1 text-[8.5px] font-extrabold uppercase tracking-wider shrink-0 rounded-full border ${statusClass}`}>
                     {statusText}
                   </span>
                 </div>
 
                 {/* Bottom Row: Period & Amount */}
-                <div className="flex justify-between items-end border-t border-dashed border-slate-100 pt-2.5">
-                  <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                <div className="flex justify-between items-end border-t border-slate-100 pt-2.5">
+                  <div className="text-[10px] text-slate-500 font-medium">
                     {booking.period}
                   </div>
                   <div className="text-right">
-                    <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider block leading-none mb-0.5">
+                    <span className="text-[8.5px] text-slate-400 font-bold uppercase tracking-wider block leading-none mb-1">
                       {t("db_history_total_cost", "TỔNG TIỀN")}
                     </span>
-                    <span className="text-primary text-xs font-black">{booking.amount}</span>
+                    <span className="text-primary text-xs sm:text-sm font-black tracking-tight">{booking.amount}</span>
                   </div>
                 </div>
               </div>

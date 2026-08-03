@@ -52,7 +52,8 @@ export default function NotificationDropdown({ dark = false, onNewNotification }
         const token = localStorage.getItem('accessToken');
         if (!token) return;
 
-        socket = new WebSocket('ws://localhost:8080/ws/websocket');
+        const wsHost = typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? window.location.hostname : 'localhost';
+        socket = new WebSocket(`ws://${wsHost}:8080/ws/websocket`);
         
         socket.onopen = () => {
           socket.send(`CONNECT\naccept-version:1.1,1.2\nAuthorization:Bearer ${token}\n\n\x00`);

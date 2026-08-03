@@ -142,6 +142,9 @@ export default function EkycCamera({ overlayType = 'id', hint, onCapture, mirror
     const fallbackFacing = 'user';
 
     const tryGetStream = async (facingMode) => {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Camera API not available');
+      }
       return navigator.mediaDevices.getUserMedia({
         video: { ...baseConstraints, facingMode },
         audio: false,

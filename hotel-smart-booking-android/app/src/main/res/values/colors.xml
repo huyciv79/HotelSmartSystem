@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <!-- Elysian Web Aligned Theme Palette -->
+    <color name="primary">#D4AF37</color>
+    <color name="navy_primary">#0B192C</color>
+    <color name="background">#F8FAFC</color>
+</resources>

@@ -1,0 +1,26 @@
+# Log files
+*.log
+hs_err_pid*
+replay_pid*
+
+# Build directories across all modules
+build/
+**/build/
+hotel-smart-booking-android/build/
+hotel-smart-booking-android/app/build/
+
+# Android IDE artifacts
+.gradle/
+**/.gradle/
+hotel-smart-booking-android/.gradle/
+hotel-smart-booking-android/.idea/
+hotel-smart-booking-android/local.properties
+
+# Node & Python caches
+node_modules/
+**/node_modules/
+__pycache__/
+**/__pycache__/
+.venv/
+.cache/
+**/dist/

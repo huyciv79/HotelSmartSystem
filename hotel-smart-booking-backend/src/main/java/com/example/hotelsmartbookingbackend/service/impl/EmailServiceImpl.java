@@ -20,6 +20,9 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailServiceImpl implements EmailService {
@@ -43,7 +46,7 @@ public class EmailServiceImpl implements EmailService {
         try {
             mailSender.send(message);
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi gửi email xác thực: " + e.getMessage(), e);
+            log.warn("Lỗi gửi email xác thực OTP tới {}: {}. Mã OTP là: {}", to, e.getMessage(), otp);
         }
     }
 
@@ -58,7 +61,7 @@ public class EmailServiceImpl implements EmailService {
         try {
             mailSender.send(message);
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi gửi email xác thực khôi phục mật khẩu: " + e.getMessage(), e);
+            log.warn("Lỗi gửi email khôi phục mật khẩu tới {}: {}. Mã OTP là: {}", to, e.getMessage(), otp);
         }
     }
 

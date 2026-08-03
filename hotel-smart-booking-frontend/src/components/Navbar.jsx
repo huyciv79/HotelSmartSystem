@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import hotelLogo from '../assets/hotel_logo.png';
 import Profile from '../pages/Profile';
 import ChangePassword from '../pages/ChangePassword';
 import { useToast, ToastContainer } from './Toast';
@@ -9,15 +10,25 @@ import { getRoomTypes, getRoomTypeDetail } from '../services/roomService';
 import RoomDetailModern from './room/RoomDetailModern';
 import { useLanguage } from '../context/LanguageContext';
 
+const defaultRoomTypes = [
+  { id: 17, name: 'Standard No Window', basePrice: 850000, primaryImageUrl: 'https://oblnnzyndmubiednvaqf.supabase.co/storage/v1/object/sign/roomtype-images/Standard%20No%20Window/Standard%20No%20Window%20.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85MDUyMzRkMy01MDY3LTQ3NDgtOWViYS0xOThkOWIyZjE4NWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJyb29tdHlwZS1pbWFnZXMvU3RhbmRhcmQgTm8gV2luZG93L1N0YW5kYXJkIE5vIFdpbmRvdyAuanBnIiwiaWF0IjoxNzgwNDY1MjkwLCJleHAiOjE4MTIwMDEyOTB9.4neMHzSAVG90PHsmwr1_nreyjB9L5RzTEgChopDYmZU' },
+  { id: 22, name: 'Standard Double City View', basePrice: 1050000, primaryImageUrl: 'https://oblnnzyndmubiednvaqf.supabase.co/storage/v1/object/sign/roomtype-images/Standard%20Double%20City%20View/Standard%20Double%20City%20View1.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85MDUyMzRkMy01MDY3LTQ3NDgtOWViYS0xOThkOWIyZjE4NWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJyb29tdHlwZS1pbWFnZXMvU3RhbmRhcmQgRG91YmxlIENpdHkgVmlldy9TdGFuZGFyZCBEb3VibGUgQ2l0eSBWaWV3MS5qcGciLCJpYXQiOjE3ODA0Njc1MDUsImV4cCI6MTgxMjAwMzUwNX0.3R-rkQnv9o3CISiotUnXnbEhZTjVzg8KM2Jgf1tKRc4' },
+  { id: 18, name: 'Premium Double with City View', basePrice: 1350000, primaryImageUrl: 'https://oblnnzyndmubiednvaqf.supabase.co/storage/v1/object/sign/roomtype-images/Premium%20Double%20with%20City%20View/PremiumDoublewithCityView01.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85MDUyMzRkMy01MDY3LTQ3NDgtOWViYS0xOThkOWIyZjE4NWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJyb29tdHlwZS1pbWFnZXMvUHJlbWl1bSBEb3VibGUgd2l0aCBDaXR5IFZpZXcvUHJlbWl1bURvdWJsZXdpdGhDaXR5VmlldzAxLmpwZyIsImlhdCI6MTc4MDQ2NTc1MSwiZXhwIjoxODEyMDAxNzUxfQ.6M5udbivH5nARLnCG7qyXIix_8bCucNXIWMRLrSpA6k' },
+  { id: 19, name: 'Executive Double with River View', basePrice: 1650000, primaryImageUrl: 'https://oblnnzyndmubiednvaqf.supabase.co/storage/v1/object/sign/roomtype-images/Executive%20Double%20with%20River%20View/Executive%20Double%20with%20River%20View1.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85MDUyMzRkMy01MDY3LTQ3NDgtOWViYS0xOThkOWIyZjE4NWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJyb29tdHlwZS1pbWFnZXMvRXhlY3V0aXZlIERvdWJsZSB3aXRoIFJpdmVyIFZpZXcvRXhlY3V0aXZlIERvdWJsZSB3aXRoIFJpdmVyIFZpZXcxLmpwZyIsImlhdCI6MTc4MDQ2NjQ4OSwiZXhwIjoxODEyMDAyNDg5fQ.dIq1CS91-j72dc3wKMmZ2pIv0fsYz6s3XRwB9-1-Ozg' },
+  { id: 23, name: 'Premium Triple Room City View', basePrice: 1950000, primaryImageUrl: 'https://oblnnzyndmubiednvaqf.supabase.co/storage/v1/object/sign/roomtype-images/Premium%20Triple%20Room%20City%20View/Premium%20Triple%20Room%20City%20View2.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85MDUyMzRkMy01MDY3LTQ3NDgtOWViYS0xOThkOWIyZjE4NWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJyb29tdHlwZS1pbWFnZXMvUHJlbWl1bSBUcmlwbGUgUm9vbSBDaXR5IFZpZXcvUHJlbWl1bSBUcmlwbGUgUm9vbSBDaXR5IFZpZXcyLmpwZyIsImlhdCI6MTc4MDQ2NTkxNiwiZXhwIjoxODEyMDAxOTE2fQ.HV2cX-JB5_wdm9oahpM5_UYqrkl2k0EVuS01uM0c5XY' },
+  { id: 20, name: 'Deluxe River View with Balcony', basePrice: 2250000, primaryImageUrl: 'https://oblnnzyndmubiednvaqf.supabase.co/storage/v1/object/sign/roomtype-images/Deluxe%20River%20View%20with%20Balcony/Deluxe%20River%20View%20with%20Balcony1.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85MDUyMzRkMy01MDY3LTQ3NDgtOWViYS0xOThkOWIyZjE4NWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJyb29tdHlwZS1pbWFnZXMvRGVsdXhlIFJpdmVyIFZpZXcgd2l0aCBCYWxjb255L0RlbHV4ZSBSaXZlciBWaWV3IHdpdGggQmFsY29ueTEuanBnIiwiaWF0IjoxNzgwNDY2Njg6LCJleHAiOjE4MTIwMDI2ODZ9.7v2w3hKuDe_lxygX-i3kHWYIIjrRp6Rl1AQezgVTERc' },
+  { id: 21, name: 'Suite River View', basePrice: 2850000, primaryImageUrl: 'https://oblnnzyndmubiednvaqf.supabase.co/storage/v1/object/sign/roomtype-images/Suite%20River%20View/SuiteRiverView01.avif?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85MDUyMzRkMy01MDY3LTQ3NDgtOWViYS0xOThkOWIyZjE4NWUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJyb29tdHlwZS1pbWFnZXMvU3VpdGUgUml2ZXIgVmlldy9TdWl0ZVJpdmVyVmlldzAxLmF2aWYiLCJpYXQiOjE3ODA0Njc4NzYsImV4cCI6MTgxMjAwMjg3Nn0.izuI7mdcYzSrEE_7biJlc5vBZgew70A7rb5PZadFBF8' }
+];
+
 export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, setIsMobileMenuOpen }) {
   const { language, setLanguage, t } = useLanguage();
   const [menuState, setMenuState] = useState('idle'); // 'idle' | 'open' | 'closed'
   const [isScrolled, setIsScrolled] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null); // 'profile' | null
-  const [roomTypes, setRoomTypes] = useState([]);
+  const [roomTypes, setRoomTypes] = useState(defaultRoomTypes);
   const [showRoomTypes, setShowRoomTypes] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [selectedRoom, setSelectedRoom] = useState(defaultRoomTypes[0]);
   const [prevRoom, setPrevRoom] = useState(null);
   const [slideDirection, setSlideDirection] = useState('right'); // 'left' | 'right'
   const [roomDetailData, setRoomDetailData] = useState(null);
@@ -88,18 +99,27 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
   }, [isLoggedIn, activeModal]);
 
   // Fetch room types data on load
-  useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        const response = await getRoomTypes();
-        if (response && response.data && response.data.content) {
-          setRoomTypes(response.data.content);
-          setSelectedRoom(response.data.content[0]);
-        }
-      } catch (err) {
-        console.error('Lỗi khi tải danh sách loại phòng:', err);
+  const fetchRooms = async () => {
+    try {
+      const response = await getRoomTypes();
+      let roomsList = [];
+      if (response?.data?.content) {
+        roomsList = response.data.content;
+      } else if (Array.isArray(response?.data)) {
+        roomsList = response.data;
+      } else if (Array.isArray(response)) {
+        roomsList = response;
       }
-    };
+      if (roomsList.length > 0) {
+        setRoomTypes(roomsList);
+        setSelectedRoom(roomsList[0]);
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải danh sách loại phòng:', err);
+    }
+  };
+
+  useEffect(() => {
     fetchRooms();
   }, []);
 
@@ -135,20 +155,20 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
     setSelectedRoom(roomTypes[prevIndex]);
   };
   const handleOpenRoomDetail = async (roomId) => {
-    if (!roomId) return;
-    setIsLoadingRoomDetail(true);
+    const targetId = roomId || selectedRoom?.id || defaultRoomTypes[0].id;
+    const initialData = roomTypes.find(r => r.id === targetId) || selectedRoom || defaultRoomTypes[0];
+    setRoomDetailData(initialData);
     setActiveModal('roomDetail');
+    setIsLoadingRoomDetail(false);
+
     try {
-      const response = await getRoomTypeDetail(roomId);
-      if (response && response.data) {
-        setRoomDetailData(response.data);
+      const response = await getRoomTypeDetail(targetId);
+      const detailData = response?.data || response;
+      if (detailData && detailData.name) {
+        setRoomDetailData(detailData);
       }
     } catch (err) {
-      console.error('Lỗi khi tải chi tiết phòng:', err);
-      showToast('Không thể tải thông tin chi tiết phòng.', 'error');
-      setActiveModal(null);
-    } finally {
-      setIsLoadingRoomDetail(false);
+      console.warn('Sử dụng thông tin phòng có sẵn:', err);
     }
   };
 
@@ -216,7 +236,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
       <div className="bg-black text-white h-12 flex justify-between items-center px-4 md:px-margin-desktop relative">
         <div className="flex-1"></div>
         {/* Brand Logo centered */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center justify-center h-full pt-1">
+        <div className="flex-1 flex justify-center items-center flex-col">
           <button 
             onClick={() => handleNavClick('home')} 
             className="font-headline-lg text-lg font-black tracking-widest hover:text-primary transition-colors cursor-pointer bg-transparent border-none p-0 text-white leading-none"
@@ -405,7 +425,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
     </header>
       
     {/* Drawer Navigation - outside header to cover full landing page correctly */}
-    <div className={`fixed left-0 right-0 bottom-0 bg-background z-10 overflow-y-auto drawer-menu ${
+    <div className={`fixed left-0 right-0 bottom-0 bg-[#0B192C] md:bg-background z-10 overflow-y-auto drawer-menu ${
       isScrolled ? 'top-12' : 'top-24'
     } ${
       isMobileMenuOpen ? 'open' : ''
@@ -413,57 +433,25 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
         <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-0 min-h-full items-stretch">
           
           {/* Left Column: Menu Items & Secondary Links (col-span-4) */}
-          <div className="md:col-span-4 flex flex-col justify-start min-h-[450px] py-12 px-margin-mobile md:pl-margin-desktop md:pr-12 self-stretch bg-background">
+          <div className="md:col-span-4 flex flex-col justify-start min-h-[300px] md:min-h-[450px] py-8 md:py-12 px-margin-mobile md:pl-margin-desktop md:pr-12 self-stretch bg-[#0B192C] md:bg-background">
             {/* Main Navigation List */}
             <div className="flex flex-col space-y-7 text-left font-['Montserrat'] select-none">
 
-              {/* LOẠI PHÒNG (Toggles room types list underneath) */}
+              {/* LOẠI PHÒNG (Triggers automatic Room Detail Popup) */}
               <div className="flex flex-col text-left">
                 <button
                   onClick={() => {
-                    setShowRoomTypes(!showRoomTypes);
+                    setIsMobileMenuOpen(false);
+                    const targetRoomId = selectedRoom?.id || (roomTypes.length > 0 ? roomTypes[0].id : 17);
+                    handleOpenRoomDetail(targetRoomId);
                   }}
                   className="group text-left font-semibold text-[17px] md:text-[22px] uppercase tracking-widest cursor-pointer bg-transparent border-none w-fit transition-all duration-300"
                 >
-                  <span className={`relative pb-1 transition-colors duration-300 font-semibold ${
-                    (showRoomTypes || activePage === 'home') ? 'text-primary' : 'text-slate-800 group-hover:text-primary'
-                  }`}>
+                  <span className="relative pb-1 transition-colors duration-300 font-semibold text-white md:text-slate-800 hover:text-primary">
                     {t('nav_room_types')}
-                    <span className={`absolute bottom-0 left-0 right-0 h-[2.5px] bg-primary transition-transform duration-300 origin-left ${
-                      (showRoomTypes || activePage === 'home') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
-                    }`} />
+                    <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-primary transition-transform duration-300 origin-left scale-x-0 group-hover:scale-x-100" />
                   </span>
                 </button>
-                
-                {/* Expandable sub-list of room names */}
-                {showRoomTypes && roomTypes.length > 0 && (
-                  <div className="pl-5 mt-3.5 flex flex-col space-y-3 border-l border-slate-300">
-                    {roomTypes.map((room) => (
-                      <button
-                        key={room.id}
-                        onMouseEnter={() => {
-                          const currentIndex = roomTypes.findIndex(r => r.id === selectedRoom?.id);
-                          const newIndex = roomTypes.findIndex(r => r.id === room.id);
-                          if (newIndex > currentIndex) {
-                            setSlideDirection('right');
-                          } else if (newIndex < currentIndex) {
-                            setSlideDirection('left');
-                          }
-                          setSelectedRoom(room);
-                        }}
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          setActivePage('home');
-                        }}
-                        className={`text-left text-[13px] font-semibold uppercase tracking-wider cursor-pointer bg-transparent border-none transition-all duration-200 hover:text-primary ${
-                          selectedRoom?.id === room.id ? 'text-primary font-bold translate-x-0.5' : 'text-slate-600'
-                        }`}
-                      >
-                        {room.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* Other items */}
@@ -477,7 +465,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                   className="group text-left font-semibold text-[17px] md:text-[22px] uppercase tracking-widest cursor-pointer bg-transparent border-none w-fit transition-all duration-300"
                 >
                   <span className={`relative pb-1 transition-colors duration-300 font-semibold ${
-                    (activePage === item.id && !showRoomTypes) ? 'text-primary' : 'text-slate-800 group-hover:text-primary'
+                    (activePage === item.id && !showRoomTypes) ? 'text-primary' : 'text-white md:text-slate-800 group-hover:text-primary'
                   }`}>
                     {item.label}
                     <span className={`absolute bottom-0 left-0 right-0 h-[2.5px] bg-primary transition-transform duration-300 origin-left ${
@@ -532,7 +520,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                   </h3>
                   {selectedRoom && (
                     <p className="text-xs font-semibold text-white/95 uppercase tracking-widest mt-1.5">
-                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedRoom.basePrice)} / ĐÊM
+                      {selectedRoom?.basePrice != null && !isNaN(selectedRoom.basePrice) ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedRoom.basePrice) : '1.350.000 ₫'} / ĐÊM
                     </p>
                   )}
                 </div>
@@ -639,6 +627,18 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
             onClose={() => {
               setActiveModal(null);
               setRoomDetailData(null);
+            }}
+            onPrevRoomType={() => {
+              if (!roomTypes || roomTypes.length === 0) return;
+              const currIdx = roomTypes.findIndex(r => r.id === roomDetailData?.id);
+              const prevIdx = currIdx <= 0 ? roomTypes.length - 1 : currIdx - 1;
+              handleOpenRoomDetail(roomTypes[prevIdx].id);
+            }}
+            onNextRoomType={() => {
+              if (!roomTypes || roomTypes.length === 0) return;
+              const currIdx = roomTypes.findIndex(r => r.id === roomDetailData?.id);
+              const nextIdx = currIdx === -1 || currIdx >= roomTypes.length - 1 ? 0 : currIdx + 1;
+              handleOpenRoomDetail(roomTypes[nextIdx].id);
             }}
             onBookingPersonal={(room) => {
               setActiveModal(null);

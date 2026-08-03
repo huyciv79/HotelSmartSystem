@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import DashboardSidebar from '../components/dashboard/DashboardSidebar';
+import hotelLogo from '../assets/hotel_logo.png';
 import HeroBanner from '../components/dashboard/HeroBanner';
 import CurrentBooking from '../components/dashboard/CurrentBooking';
 import BookingHistory from '../components/dashboard/BookingHistory';
@@ -158,19 +159,46 @@ export default function Dashboard({ setActivePage }) {
     ? new Date(currentBooking.checkInDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : t('db_stays_none', 'Chưa có lịch trình');
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-gray-50 flex text-slate-800 dashboard-font-semibold">
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row text-slate-800 dashboard-font-semibold overflow-x-hidden w-full">
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
+      {/* Mobile Header Bar */}
+      <div className="md:hidden bg-[#141416] text-white p-4 flex items-center justify-between sticky top-0 z-30 border-b border-neutral-800 shadow-md">
+        <div 
+          onClick={() => setActivePage('home')}
+          className="cursor-pointer"
+        >
+          <h1 className="font-black text-lg tracking-[0.2em] uppercase m-0 leading-none text-white">
+            ELYSIAN
+          </h1>
+          <span className="text-[6.5px] tracking-[0.3em] text-primary font-black uppercase leading-none mt-1 block">HOTELS & RESORTS</span>
+        </div>
+
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="p-2 rounded-lg bg-neutral-800 text-white hover:bg-neutral-700 active:scale-95 transition-all cursor-pointer border-none flex items-center justify-center"
+          aria-label="Toggle Menu"
+        >
+          <span className="material-symbols-outlined text-2xl">
+            {isSidebarOpen ? 'close' : 'menu'}
+          </span>
+        </button>
+      </div>
 
       <DashboardSidebar
         activeItem={activeTab}
         setActivePage={setActivePage}
         onNavigate={handleSidebarNavigate}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
 
-      <div className="ml-72 flex-1 min-h-screen flex flex-col">
+      <div className="ml-0 md:ml-72 flex-1 min-h-screen flex flex-col w-full max-w-full overflow-x-hidden">
 
-        <div className="p-8 flex flex-col gap-8 flex-1">
+        <div className="p-4 md:p-8 flex flex-col gap-6 md:gap-8 flex-1 w-full max-w-full">
           {activeTab === 'settings' ? (
             <Profile
               initialProfile={profile}
@@ -181,67 +209,103 @@ export default function Dashboard({ setActivePage }) {
               showToast={showToast}
             />
           ) : activeTab === 'stays' ? (
-            <div className="bg-white border border-outline-variant shadow-lg p-8 md:p-10 flex flex-col font-['Montserrat']">
-              <h2 className="font-headline-lg text-headline-md text-primary uppercase italic tracking-wider m-0 mb-1">
-                {t('db_stays_title', 'LỊCH SỬ ĐẶT PHÒNG CỦA TÔI')}
-              </h2>
-              <p className="text-secondary text-[10px] font-bold uppercase tracking-widest border-b border-gray-100 pb-4 mb-6">
-                {t('db_stays_subtitle', 'Danh sách các phòng nghỉ bạn đã đăng ký lưu trú tại Elysian')}
-              </p>
+            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4 sm:p-6 md:p-8 flex flex-col font-['Montserrat'] w-full max-w-full">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-2xl">hotel</span>
+                </div>
+                <div>
+                  <h2 className="font-headline-lg text-lg sm:text-2xl font-black text-slate-900 uppercase tracking-wider m-0 leading-tight">
+                    {t('db_stays_title', 'LỊCH SỬ ĐẶT PHÒNG CỦA TÔI')}
+                  </h2>
+                  <p className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-widest m-0 mt-0.5">
+                    {t('db_stays_subtitle', 'Danh sách các phòng nghỉ bạn đã đăng ký lưu trú tại Elysian')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="h-px bg-slate-100 w-full my-4 sm:my-6" />
 
               {realBookings.length === 0 ? (
-                <div className="text-center py-16">
-                  <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">hotel</span>
+                <div className="text-center py-16 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                  <span className="material-symbols-outlined text-5xl text-slate-300 mb-2 block">hotel</span>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('db_stays_empty', 'Bạn chưa có phòng nào được đặt.')}</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="flex flex-col gap-4 w-full">
                   {realBookings.map((bk) => (
-                    <div key={bk.bookingId} className="border border-slate-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:border-primary transition-all duration-150 bg-white">
-                      <div>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('booking_ref_code_label', 'Mã đặt phòng')}</span>
-                        <span className="text-sm font-black text-slate-900 uppercase tracking-widest">{bk.bookingNumber || bk.bookingReference || `BK-${bk.bookingId}`}</span>
-                        <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider mt-1.5">{bk.roomType}</h4>
-                        <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wide">{t('booking_summary_duration', 'Thời gian')}: {bk.checkInDate} {t('booking_summary_date_to', 'đến')} {bk.checkOutDate} ({bk.nights} {t('booking_summary_nights', 'đêm')})</p>
-                      </div>
-
-                      <div className="flex items-center gap-6 self-stretch md:self-auto justify-between md:justify-end">
-                        <div className="text-right">
-                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('db_total_cost_label', 'Tổng chi phí')}</span>
-                          <span className="text-xs font-black text-primary">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(bk.totalAmount)}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('db_status_label', 'Trạng thái')}</span>
-                          <span className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest ${bk.status === 'Cancelled'
-                              ? 'bg-red-100 text-red-700'
-                              : bk.status === 'Checked-in' || bk.status === 'Checked In'
-                                ? 'bg-blue-100 text-blue-700'
-                                : bk.status === 'Checked-out' || bk.status === 'Checked Out' || bk.status === 'Completed'
-                                  ? 'bg-slate-200 text-slate-700'
-                                  : bk.status === 'Paid'
-                                    ? 'bg-green-100 text-green-700'
-                                    : bk.status === 'Partially Paid'
-                                      ? 'bg-indigo-100 text-indigo-700'
-                                      : 'bg-yellow-100 text-yellow-700'
-                            }`}>
-                            {bk.status === 'Cancelled'
-                              ? 'Đã Hủy'
-                              : bk.status === 'Checked-in' || bk.status === 'Checked In'
-                                ? 'Đã nhận phòng'
-                                : bk.status === 'Checked-out' || bk.status === 'Checked Out' || bk.status === 'Completed'
-                                  ? 'Đã trả phòng'
-                                  : bk.status === 'Paid'
-                                    ? 'Đã thanh toán'
-                                    : bk.status === 'Partially Paid'
-                                      ? 'Đã cọc 30%'
-                                      : 'Chờ thanh toán'}
+                    <div 
+                      key={bk.bookingId} 
+                      className="bg-slate-50/60 hover:bg-white border border-slate-200/80 hover:border-primary/40 rounded-xl p-4 sm:p-5 transition-all duration-300 shadow-xs hover:shadow-md flex flex-col gap-4 w-full"
+                    >
+                      {/* Top Header: Booking Code & Status Badge */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{t('booking_ref_code_label', 'Mã đặt phòng')}:</span>
+                          <span className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-widest bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-2xs">
+                            {bk.bookingNumber || bk.bookingReference || `BK-${bk.bookingId}`}
                           </span>
                         </div>
+
+                        <span className={`px-3 py-1 text-[9.5px] font-extrabold uppercase tracking-wider rounded-full shadow-2xs whitespace-nowrap ${
+                          bk.status === 'Cancelled'
+                            ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                            : bk.status === 'Checked-in' || bk.status === 'Checked In'
+                              ? 'bg-sky-100 text-sky-700 border border-sky-200'
+                              : bk.status === 'Checked-out' || bk.status === 'Checked Out' || bk.status === 'Completed'
+                                ? 'bg-slate-200 text-slate-700 border border-slate-300'
+                                : bk.status === 'Paid'
+                                  ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                  : bk.status === 'Partially Paid'
+                                    ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                                    : 'bg-amber-100 text-amber-700 border border-amber-200'
+                        }`}>
+                          {bk.status === 'Cancelled'
+                            ? 'Đã Hủy'
+                            : bk.status === 'Checked-in' || bk.status === 'Checked In'
+                              ? 'Đã nhận phòng'
+                              : bk.status === 'Checked-out' || bk.status === 'Checked Out' || bk.status === 'Completed'
+                                ? 'Đã trả phòng'
+                                : bk.status === 'Paid'
+                                  ? 'Đã thanh toán'
+                                  : bk.status === 'Partially Paid'
+                                    ? 'Đã cọc 30%'
+                                    : 'Chờ thanh toán'}
+                        </span>
+                      </div>
+
+                      {/* Middle Content: Room Type & Stay Duration */}
+                      <div className="flex flex-col gap-1">
+                        <h4 className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wide m-0">
+                          {bk.roomType}
+                        </h4>
+                        <p className="text-xs text-slate-500 font-semibold m-0 flex items-center gap-1.5 flex-wrap">
+                          <span className="material-symbols-outlined text-base text-primary/80">calendar_month</span>
+                          <span>{t('booking_summary_duration', 'Thời gian')}</span>
+                          <span className="font-bold text-slate-700">{bk.checkInDate}</span>
+                          <span>{t('booking_summary_date_to', 'đến')}</span>
+                          <span className="font-bold text-slate-700">{bk.checkOutDate}</span>
+                          <span className="text-slate-400 font-normal">({bk.nights} {t('booking_summary_nights', 'đêm')})</span>
+                        </p>
+                      </div>
+
+                      {/* Bottom Footer: Price & Action Button */}
+                      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 pt-3 border-t border-slate-200/60">
+                        <div>
+                          <span className="text-[9.5px] text-slate-400 font-bold uppercase tracking-wider block leading-none mb-1">
+                            {t('db_total_cost_label', 'Tổng chi phí')}
+                          </span>
+                          <span className="text-sm sm:text-base font-black text-primary tracking-tight">
+                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(bk.totalAmount)}
+                          </span>
+                        </div>
+
                         <button
                           onClick={() => handleViewBookingDetail(bk.bookingId)}
-                          className="bg-primary hover:bg-slate-900 text-white font-bold py-3 px-8 uppercase text-[10px] tracking-widest transition-all cursor-pointer border-none flex items-center justify-center h-10 parallelogram-btn"
+                          className="w-full sm:w-auto px-5 py-2.5 bg-primary hover:bg-slate-900 active:scale-97 text-white font-bold uppercase text-[10.5px] tracking-wider rounded-xl transition-all duration-200 cursor-pointer border-none shadow-xs hover:shadow-md flex items-center justify-center gap-1.5"
                         >
-                          {t('db_btn_view_detail', 'Xem Chi Tiết')}
+                          <span>{t('db_btn_view_detail', 'Xem Chi Tiết')}</span>
+                          <span className="material-symbols-outlined text-base">arrow_forward</span>
                         </button>
                       </div>
                     </div>

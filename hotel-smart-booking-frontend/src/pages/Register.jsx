@@ -245,7 +245,9 @@ export default function Register({ setActivePage }) {
               <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('register_email_label', 'Email')}</label>
               <input 
                 {...register('email')}
-                type="email" 
+                type="text" 
+                inputMode="email"
+                autoComplete="email"
                 placeholder="name@example.com" 
                 disabled={isLoading}
                 className="w-full bg-transparent border-b border-on-surface py-2 font-bold text-sm outline-none focus:border-primary disabled:opacity-50"
@@ -259,7 +261,9 @@ export default function Register({ setActivePage }) {
               <label className="block text-xs font-bold text-secondary uppercase tracking-widest">{t('register_phone_label', 'Số điện thoại')}</label>
               <input 
                 {...register('phone')}
-                type="text" 
+                type="tel" 
+                inputMode="tel"
+                autoComplete="tel"
                 placeholder="0987654321" 
                 disabled={isLoading}
                 className="w-full bg-transparent border-b border-on-surface py-2 font-bold text-sm outline-none focus:border-primary disabled:opacity-50"

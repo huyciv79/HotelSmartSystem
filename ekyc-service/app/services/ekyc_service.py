@@ -314,10 +314,20 @@ def _ensure_yolo_model_file() -> Path:
     try:
         return _download_hf_file(settings.HF_REPO_ID, settings.HF_ONNX_MODEL_FILE, revision)
     except Exception as exc:
-        raise RuntimeError(
-            "Khong tai duoc YOLO model tu Hugging Face. Hay upload file "
-            f"{settings.HF_ONNX_MODEL_FILE} vao repo {settings.HF_REPO_ID}."
-        ) from exc
+        logger.warning(
+            "Could not download %s from Hugging Face repo %s (%s). Trying %s...",
+            settings.HF_ONNX_MODEL_FILE,
+            settings.HF_REPO_ID,
+            exc,
+            settings.HF_MODEL_FILE,
+        )
+        try:
+            return _download_hf_file(settings.HF_REPO_ID, settings.HF_MODEL_FILE, revision)
+        except Exception as exc2:
+            raise RuntimeError(
+                "Khong tai duoc YOLO model tu Hugging Face. Hay upload file "
+                f"{settings.HF_ONNX_MODEL_FILE} hoac {settings.HF_MODEL_FILE} vao repo {settings.HF_REPO_ID}."
+            ) from exc2
 
 
 @_cache_resource

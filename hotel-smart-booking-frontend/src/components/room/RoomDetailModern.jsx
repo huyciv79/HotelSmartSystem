@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Maximize, Users, Check, X } from 'lucide-react';
+import { Maximize, Users, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import ReviewSection from './ReviewSection';
 import { useToast } from '../Toast';
 import { useLanguage } from '../../context/LanguageContext';
 
-export default function RoomDetailModern({ roomDetailData, onClose, onBookingPersonal, onBookingGroup }) {
+export default function RoomDetailModern({ roomDetailData, onClose, onBookingPersonal, onBookingGroup, onPrevRoomType, onNextRoomType }) {
   const { showToast } = useToast();
   const { t } = useLanguage();
   
@@ -26,6 +26,40 @@ export default function RoomDetailModern({ roomDetailData, onClose, onBookingPer
   }
 
   const [activeIndex, setActiveIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+
+  const minSwipeDistance = 40;
+
+  const handleTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      if (activeIndex < allImages.length - 1) {
+        setActiveIndex(prev => prev + 1);
+      } else if (onNextRoomType) {
+        onNextRoomType();
+      }
+    } else if (isRightSwipe) {
+      if (activeIndex > 0) {
+        setActiveIndex(prev => prev - 1);
+      } else if (onPrevRoomType) {
+        onPrevRoomType();
+      }
+    }
+  };
 
   // Reset active index when roomDetailData changes
   useEffect(() => {
@@ -51,10 +85,15 @@ export default function RoomDetailModern({ roomDetailData, onClose, onBookingPer
       <div className="overflow-y-auto flex-grow overscroll-contain -m-[1px]" style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
           
-          {/* Left Column: Interactive Image Gallery (lg:col-span-7 - fully bled out sliding track) */}
+          {/* Left Column: Interactive Image Gallery */}
           <div className="lg:col-span-7 bg-[#111] relative h-[320px] sm:h-[450px] lg:h-auto lg:min-h-[500px] -mt-[1px] -ml-[1px] -mr-[1px] lg:mr-0 lg:-mb-[1px] lg:-mt-[1px] lg:-ml-[1px]">
-            {/* Active Display Image (Filled completely with sliding track) */}
-            <div className="w-full h-full overflow-hidden relative group">
+            {/* Active Display Image with Touch Swipe Support */}
+            <div 
+              className="w-full h-full overflow-hidden relative group touch-pan-y"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
               <div 
                 className="flex h-full w-full transition-transform duration-500 ease-out"
                 style={{ 
@@ -73,6 +112,28 @@ export default function RoomDetailModern({ roomDetailData, onClose, onBookingPer
                 ))}
               </div>
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none z-10" />
+
+              {/* Room Type Switcher Arrows */}
+              {onPrevRoomType && (
+                <button
+                  onClick={onPrevRoomType}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center transition-all cursor-pointer border border-white/20 shadow-lg"
+                  title="Xem loại phòng trước"
+                  aria-label="Previous room type"
+                >
+                  <ChevronLeft size={22} />
+                </button>
+              )}
+              {onNextRoomType && (
+                <button
+                  onClick={onNextRoomType}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center transition-all cursor-pointer border border-white/20 shadow-lg"
+                  title="Xem loại phòng kế tiếp"
+                  aria-label="Next room type"
+                >
+                  <ChevronRight size={22} />
+                </button>
+              )}
 
               {/* Thin Carousel Indicators */}
               {allImages.length > 1 && (

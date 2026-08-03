@@ -24,8 +24,16 @@ from app.services.face_service import warm_face_models
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Hiển thị các URL dành cho developer khi ứng dụng khởi động."""
-    warm_face_models()
-    warm_ocr_models()
+    try:
+        warm_face_models()
+    except Exception as e:
+        print(f"Warning: Failed to warm face models on startup: {e}", flush=True)
+
+    try:
+        warm_ocr_models()
+    except Exception as e:
+        print(f"Warning: Failed to warm OCR models on startup: {e}", flush=True)
+
     print("\n" + "=" * 60, flush=True)
     print("eKYC AI Service is running", flush=True)
     print(f"Swagger UI : http://localhost:{settings.PORT}/docs", flush=True)
