@@ -175,8 +175,8 @@ public class FeedbackServiceImpl implements FeedbackService {
     private FeedbackResponse mapToResponse(Feedback feedback, Booking booking, User user, List<String> images) {
         return FeedbackResponse.builder()
                 .feedbackId(feedback.getId())
-                .bookingId(booking.getId())
-                .bookingReference(booking.getBookingReference())
+                .bookingId(booking != null ? booking.getId() : null)
+                .bookingReference(booking != null ? booking.getBookingReference() : null)
                 .rating(feedback.getRating())
                 .comment(feedback.getComment())
                 .pros(feedback.getPros())
@@ -184,8 +184,9 @@ public class FeedbackServiceImpl implements FeedbackService {
                 .status(feedback.getStatus())
                 .createdAt(feedback.getCreatedAt())
                 .updatedAt(feedback.getUpdatedAt())
-                .customerName(user.getFullName())
-                .customerAvatar(user.getAvatar())
+                .customerName(user != null ? user.getFullName() : "Hội viên Elysian")
+                .customerEmail(user != null ? user.getEmail() : null)
+                .customerAvatar(user != null ? user.getAvatar() : null)
                 .images(images)
                 .build();
     }

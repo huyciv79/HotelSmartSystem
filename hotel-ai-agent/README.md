@@ -39,16 +39,16 @@ GEMINI_MODEL=gemini-2.0-flash
 ### 4. Chạy ứng dụng
 
 ```bash
-streamlit run hotel_agent_app.py
+uvicorn hotel_agent_api:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Mở trình duyệt tại: **http://localhost:8501**
+FastAPI server sẽ chạy tại: **http://localhost:8000** (Swagger UI tại **http://localhost:8000/docs**)
 
 ## 🧠 Kiến Trúc
 
 ```
 hotel-ai-agent/
-├── hotel_agent_app.py          # Streamlit main (UI, routing)
+├── hotel_agent_api.py          # FastAPI REST API main (Endpoints & routing)
 ├── agents/
 │   ├── hotel_search_agent.py   # HotelSearchAgent: search + price enrich
 │   └── booking_agent.py        # BookingAgent: multi-step conversation + API
@@ -86,4 +86,4 @@ hotel-ai-agent/
 docker-compose up ai-agent
 ```
 
-Service sẽ chạy tại: **http://localhost:8501**
+Service sẽ chạy tại: **http://localhost:8000**

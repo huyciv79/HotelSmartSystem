@@ -24,6 +24,7 @@ public class FeedbackResponse {
     private Instant createdAt;
     private Instant updatedAt;
     private String customerName;
+    private String customerEmail;
     private String customerAvatar;
     private List<String> images;
 }
