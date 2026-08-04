@@ -11,7 +11,6 @@ import json
 import logging
 import os
 import re
-import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from enum import Enum
@@ -75,6 +74,8 @@ class BookingState:
     cached_bookings: list          = field(default_factory=list)
     # Số lượng phòng muốn đặt (mặc định là 1 phòng, >=2 là đặt phòng nhóm)
     quantity: int                  = 1
+    # Locale hiện tại của giao diện khách hàng: VN, EN, JP, KR, CN
+    language: str                  = "VN"
 
     @property
     def nights(self) -> int:
@@ -127,14 +128,170 @@ Nhiệm vụ:
 5. KHI VÀ CHỈ KHI ĐÃ CÓ ĐỦ CÁC THÔNG TIN TRÊN, bạn BẮT BUỘC PHẢI GỌI HÀM (Function Call) `create_booking_summary` để tạo tóm tắt đặt phòng. KHÔNG tự trả lời bằng văn bản khi đã đủ thông tin.
 6. SAU KHI ĐÃ TẠO TÓM TẮT ĐẶT Phòng, hãy chờ khách hàng xác nhận. NẾU khách hàng đồng ý (ví dụ: "ok", "xác nhận"), BẮT BUỘC GỌI HÀM `submit_final_booking` để chốt đơn. NẾU khách hàng từ chối hoặc muốn hủy, BẮT BUỘC GỌI HÀM `cancel_booking`.
 7. Hỗ trợ khách hàng KIỂM TRA thông tin cá nhân và lịch sử đặt phòng nếu họ hỏi (dựa trên Ngữ Cảnh Hệ Thống).
-8. Hệ thống CHỈ HỖ TRỢ THANH TOÁN TRỰC TUYẾN QUA CỔNG PAYPAL.
+8. AI Assistant KHÔNG xử lý thanh toán, KHÔNG tạo link thanh toán và KHÔNG gọi API thanh toán. Nếu khách hỏi về thanh toán, hãy hướng dẫn khách mở trang Payment hoặc trang chi tiết đơn đặt phòng trong ứng dụng.
 9. Hỗ trợ khách HỦY đặt phòng ĐÃ THÀNH CÔNG bằng cách gọi `cancel_completed_booking` (yêu cầu mã BK...).
 10. Hỗ trợ khách XEM HÓA ĐƠN bằng cách gọi `get_booking_invoice` (yêu cầu mã BK...).
 11. Hỗ trợ khách TẠO MÃ QR CHECK-IN bằng cách gọi `generate_qr_checkin_token` (yêu cầu mã BK...).
 12. Hỗ trợ khách ĐỔI PHÒNG, GIA HẠN, CHECK-OUT SỚM bằng cách gọi tương ứng `submit_room_change_request`, `submit_stay_extension_request`, `submit_early_checkout_request` (yêu cầu mã BK..., loại phòng/ngày muốn đổi và lý do).
 13. Hỗ trợ khách YÊU CẦU HOÀN TIỀN (Refund) bằng cách gọi `submit_refund_request` (yêu cầu mã BK... và lý do).
-14. Hỗ trợ khách THANH TOÁN (tạo link PayPal) bằng cách gọi `generate_payment_link` (yêu cầu mã BK...).
 """
+
+_LANGUAGE_LABELS = {
+    "VN": "Vietnamese (Tiếng Việt)",
+    "EN": "English",
+    "JP": "Japanese (日本語)",
+    "KR": "Korean (한국어)",
+    "CN": "Simplified Chinese (简体中文)",
+}
+
+
+def _normalize_language(language: Optional[str]) -> str:
+    lang = (language or "VN").upper()
+    return lang if lang in _LANGUAGE_LABELS else "EN"
+
+
+def _normalize_check_in_method(method: Optional[str]) -> str:
+    """Convert UI-friendly check-in labels into the backend's accepted values."""
+    normalized = re.sub(r"[\\s_-]+", " ", (method or "").strip().casefold())
+
+    if normalized in {
+        "faceid",
+        "face id",
+        "face recognition",
+        "nhận diện khuôn mặt",
+        "nhan dien khuon mat",
+    }:
+        return "FaceID"
+    if normalized in {"qr", "qr code", "mã qr", "ma qr"}:
+        return "QR Code"
+    if normalized in {
+        "manual",
+        "tại quầy",
+        "tai quay",
+        "at counter",
+        "counter",
+        "reception",
+        "front desk",
+    }:
+        return "Manual"
+
+    return "Manual"
+
+
+def _language_instruction(language: Optional[str]) -> str:
+    lang = _normalize_language(language)
+    target = _LANGUAGE_LABELS[lang]
+    return (
+        f"Ngôn ngữ giao diện hiện tại của khách là {lang}. "
+        f"Hãy trả lời khách hàng bằng {target}. "
+        "Giữ nguyên cú pháp kỹ thuật của các thẻ [ROOM_CARD: ...] và [ACTIONS: ...], "
+        "nhưng dịch phần chữ hiển thị bên trong thẻ sang ngôn ngữ của khách khi phù hợp."
+    )
+
+
+def _localized_static(language: Optional[str], key: str, **values: Any) -> str:
+    lang = _normalize_language(language)
+    texts = {
+        "no_client": {
+            "VN": (
+                "Xin chào! Tôi là trợ lý đặt phòng Elysian AI.\n\n"
+                "Tôi có thể giúp bạn:\n"
+                "- **Tìm phòng** tại Elysian Smart Hotel Cần Thơ\n"
+                "- **Đặt phòng** trực tiếp\n\n"
+                "Hãy thử: _'Đặt phòng tại Elysian Cần Thơ'_"
+            ),
+            "EN": (
+                "Hello! I am the Elysian AI booking assistant.\n\n"
+                "I can help you:\n"
+                "- **Find rooms** at Elysian Smart Hotel Can Tho\n"
+                "- **Book directly**\n\n"
+                "Try: _'Book a room at Elysian Can Tho'_"
+            ),
+            "JP": (
+                "こんにちは！Elysian AI予約アシスタントです。\n\n"
+                "以下をお手伝いできます:\n"
+                "- Elysian Smart Hotel Can Thoの**客室検索**\n"
+                "- **直接予約**\n\n"
+                "例: _「Elysian Can Thoで部屋を予約したい」_"
+            ),
+            "KR": (
+                "안녕하세요! Elysian AI 예약 어시스턴트입니다.\n\n"
+                "다음 작업을 도와드릴 수 있습니다:\n"
+                "- Elysian Smart Hotel Can Tho **객실 검색**\n"
+                "- **직접 예약**\n\n"
+                "예: _'Elysian Can Tho 객실 예약'_"
+            ),
+            "CN": (
+                "您好！我是Elysian AI预订助手。\n\n"
+                "我可以帮助您:\n"
+                "- 查找 Elysian Smart Hotel Can Tho 的**客房**\n"
+                "- **直接预订**\n\n"
+                "示例: _“预订 Elysian Can Tho 的房间”_"
+            ),
+        },
+        "done": {
+            "VN": "Đặt phòng đã hoàn thành! Bạn muốn tìm khách sạn khác không?",
+            "EN": "Your booking is complete. Would you like to search for another room?",
+            "JP": "予約が完了しました。別の客室もお探ししますか？",
+            "KR": "예약이 완료되었습니다. 다른 객실도 찾아드릴까요?",
+            "CN": "预订已完成。还需要查找其他房间吗？",
+        },
+        "cancelled": {
+            "VN": "Đã hủy yêu cầu đặt phòng hiện tại. Bạn cần hỗ trợ gì thêm không?",
+            "EN": "I have cancelled the current booking request. Is there anything else I can help with?",
+            "JP": "現在の予約リクエストをキャンセルしました。他にお手伝いできることはありますか？",
+            "KR": "현재 예약 요청을 취소했습니다. 추가로 도와드릴 일이 있을까요?",
+            "CN": "当前预订请求已取消。还需要其他帮助吗？",
+        },
+        "default_confirm": {
+            "VN": "Xác nhận yêu cầu.",
+            "EN": "Request confirmed.",
+            "JP": "ご依頼を確認しました。",
+            "KR": "요청을 확인했습니다.",
+            "CN": "已确认您的请求。",
+        },
+        "generic_chat_error": {
+            "VN": "Xin lỗi, tôi gặp sự cố kết nối khi trò chuyện với AI. Bạn hãy thử lại nhé!",
+            "EN": "Sorry, I had trouble connecting to the AI chat. Please try again.",
+            "JP": "申し訳ありません。AIチャットへの接続で問題が発生しました。もう一度お試しください。",
+            "KR": "죄송합니다. AI 채팅 연결에 문제가 발생했습니다. 다시 시도해 주세요.",
+            "CN": "抱歉，AI聊天连接出现问题。请重试。",
+        },
+        "quota_error": {
+            "VN": (
+                "**Giới hạn lưu lượng API Gemini (Rate Limit / Quota Exceeded)**\n\n"
+                "API Key của bạn đã vượt quá hạn mức miễn phí cho phép.\n"
+                "1. Vui lòng đợi khoảng 10-15 giây rồi gửi lại tin nhắn.\n"
+                "2. Kiểm tra hoặc cập nhật khóa API trả phí ở biến `GOOGLE_API_KEY` trong file `hotel-ai-agent/.env`."
+            ),
+            "EN": (
+                "**Gemini API rate limit or quota exceeded**\n\n"
+                "Your API key has exceeded the allowed free-tier quota.\n"
+                "1. Please wait 10-15 seconds, then send the message again.\n"
+                "2. Check or update the paid API key in `GOOGLE_API_KEY` inside `hotel-ai-agent/.env`."
+            ),
+            "JP": (
+                "**Gemini APIのレート制限またはクォータを超過しました**\n\n"
+                "APIキーが無料枠の上限を超えています。\n"
+                "1. 10-15秒ほど待ってから、もう一度メッセージを送信してください。\n"
+                "2. `hotel-ai-agent/.env` の `GOOGLE_API_KEY` を確認、または有料APIキーに更新してください。"
+            ),
+            "KR": (
+                "**Gemini API 요청 한도 또는 할당량을 초과했습니다**\n\n"
+                "API 키가 무료 사용 한도를 초과했습니다.\n"
+                "1. 10-15초 정도 기다린 뒤 다시 메시지를 보내 주세요.\n"
+                "2. `hotel-ai-agent/.env`의 `GOOGLE_API_KEY`를 확인하거나 유료 API 키로 업데이트해 주세요."
+            ),
+            "CN": (
+                "**Gemini API 请求频率或配额已超限**\n\n"
+                "您的 API Key 已超过免费额度限制。\n"
+                "1. 请等待 10-15 秒后重新发送消息。\n"
+                "2. 请检查或更新 `hotel-ai-agent/.env` 中的 `GOOGLE_API_KEY`。"
+            ),
+        },
+    }
+    template = texts.get(key, {}).get(lang) or texts.get(key, {}).get("EN") or key
+    return template.format(**values)
 
 
 # ── Structured Output Models ──────────────────────────────────────────────────
@@ -217,10 +374,6 @@ def submit_refund_request(booking_number: str, reason: str = "Yêu cầu hoàn t
     """Gọi hàm này khi khách hàng muốn YÊU CẦU HOÀN TIỀN (Refund) cho một đơn đặt phòng (cần mã booking dạng BK... và lý do)."""
     return "submit_refund_request"
 
-def generate_payment_link(booking_number: str) -> str:
-    """Gọi hàm này khi khách hàng muốn THANH TOÁN cho đơn đặt phòng, hàm sẽ tạo liên kết PayPal."""
-    return "generate_payment_link"
-
 
 def _get_backend_room_types() -> list[dict]:
     """Lấy danh sách loại phòng từ backend."""
@@ -293,32 +446,36 @@ class BookingAgent:
 
     # ── Public API ───────────────────────────────────────────────────────────
 
-    def process(self, user_input: str, state: BookingState) -> tuple[str, BookingState]:
+    def process(self, user_input: str, state: BookingState, language: Optional[str] = None) -> tuple[str, BookingState]:
         """Xử lý input người dùng và cập nhật state."""
+        state.language = _normalize_language(language or state.language)
 
         if state.step == BookingStep.DONE:
-            return "Đặt phòng đã hoàn thành! Bạn muốn tìm khách sạn khác không?", state
+            return _localized_static(state.language, "done"), state
 
         # Không reset step về IDLE nếu đang ở CONFIRM
         if state.step not in (BookingStep.CONFIRM, BookingStep.DONE):
             state.step = BookingStep.IDLE
             
-        return self._chat_reply(user_input, state), state
+        return self._chat_reply(user_input, state, state.language), state
 
-    def process_stream(self, user_input: str, state: BookingState) -> Generator[str, None, None]:
+    def process_stream(self, user_input: str, state: BookingState, language: Optional[str] = None) -> Generator[str, None, None]:
         """
         Phiên bản Streaming của process. Trả về Generator giúp hiển thị chữ chạy thời gian thực.
         """
+        state.language = _normalize_language(language or state.language)
+
         if state.step == BookingStep.DONE:
-            yield "Đặt phòng đã hoàn thành! Bạn muốn tìm khách sạn khác không?"
+            yield _localized_static(state.language, "done")
             return
 
         if state.step not in (BookingStep.CONFIRM, BookingStep.DONE):
             state.step = BookingStep.IDLE
 
-        yield self._chat_reply(user_input, state)
+        yield self._chat_reply(user_input, state, state.language)
 
-    def _process_booking_summary_tool(self, args: dict, state: BookingState) -> str:
+    def _process_booking_summary_tool(self, args: dict, state: BookingState, language: Optional[str] = None) -> str:
+        state.language = _normalize_language(language or state.language)
         # 1. Cập nhật state
         state.step = BookingStep.CONFIRM
         state.room_type_name = args.get("room_type", "Standard")
@@ -332,7 +489,7 @@ class BookingAgent:
             
         state.adults = int(args.get("adults", 1))
         state.children = int(args.get("children", 0))
-        state.check_in_method = args.get("checkin_method", "Manual")
+        state.check_in_method = _normalize_check_in_method(args.get("checkin_method"))
         state.quantity = int(args.get("quantity", 1))
         
         # 2. Lấy giá từ DB
@@ -353,9 +510,10 @@ class BookingAgent:
         }
         
         # 3. Trả về tóm tắt (Human in the loop)
-        return self._booking_summary(state)
+        return self._booking_summary(state, state.language)
 
-    def _booking_summary(self, state: BookingState) -> str:
+    def _booking_summary(self, state: BookingState, language: Optional[str] = None) -> str:
+        lang = _normalize_language(language or state.language)
         hotel_name = state.hotel["name"] if state.hotel else "N/A"
         ci = state.check_in.strftime("%d/%m/%Y") if state.check_in else "N/A"
         co = state.check_out.strftime("%d/%m/%Y") if state.check_out else "N/A"
@@ -363,22 +521,101 @@ class BookingAgent:
         
         room_desc = f"{state.room_type_name or 'Standard'}"
         if state.quantity > 1:
-            room_desc += f" (x{state.quantity} phòng - Đặt phòng Nhóm)"
+            group_labels = {
+                "VN": "phòng - Đặt phòng Nhóm",
+                "EN": "rooms - Group booking",
+                "JP": "室 - グループ予約",
+                "KR": "객실 - 단체 예약",
+                "CN": "间 - 团体预订",
+            }
+            room_desc += f" (x{state.quantity} {group_labels.get(lang, group_labels['EN'])})"
+
+        labels = {
+            "VN": {
+                "title": "Tóm tắt đặt phòng",
+                "hotel": "Khách sạn",
+                "room": "Phòng",
+                "time": "Thời gian",
+                "nights": "đêm",
+                "guests": "Khách",
+                "adults": "người lớn",
+                "children": "trẻ em",
+                "estimate": "Ước tính",
+                "tax": "chưa thuế",
+                "confirm": "Bạn có đồng ý với thông tin trên không? Hãy phản hồi để mình chốt đơn cho bạn nhé!",
+            },
+            "EN": {
+                "title": "Booking summary",
+                "hotel": "Hotel",
+                "room": "Room",
+                "time": "Stay",
+                "nights": "nights",
+                "guests": "Guests",
+                "adults": "adults",
+                "children": "children",
+                "estimate": "Estimated total",
+                "tax": "before tax",
+                "confirm": "Do you agree with the details above? Please reply so I can finalize the booking.",
+            },
+            "JP": {
+                "title": "予約内容の確認",
+                "hotel": "ホテル",
+                "room": "客室",
+                "time": "宿泊期間",
+                "nights": "泊",
+                "guests": "宿泊人数",
+                "adults": "大人",
+                "children": "子供",
+                "estimate": "概算料金",
+                "tax": "税抜",
+                "confirm": "上記の内容でよろしいでしょうか？確認のご返信をいただければ、予約を確定します。",
+            },
+            "KR": {
+                "title": "예약 요약",
+                "hotel": "호텔",
+                "room": "객실",
+                "time": "숙박 기간",
+                "nights": "박",
+                "guests": "인원",
+                "adults": "성인",
+                "children": "아동",
+                "estimate": "예상 금액",
+                "tax": "세금 별도",
+                "confirm": "위 정보로 진행할까요? 답장해 주시면 예약을 확정하겠습니다.",
+            },
+            "CN": {
+                "title": "预订摘要",
+                "hotel": "酒店",
+                "room": "房间",
+                "time": "入住时间",
+                "nights": "晚",
+                "guests": "入住人数",
+                "adults": "成人",
+                "children": "儿童",
+                "estimate": "预估金额",
+                "tax": "未含税",
+                "confirm": "以上信息是否确认？请回复确认，我会为您完成预订。",
+            },
+        }
+        l = labels.get(lang, labels["EN"])
 
         return (
-            f"**Tóm tắt đặt phòng:**\n\n"
-            f"- **Khách sạn:** {hotel_name}\n"
-            f"- **Phòng:** {room_desc}\n"
-            f"- **Thời gian:** {ci} → {co} ({state.nights} đêm)\n"
-            f"- **Khách:** {state.adults} người lớn, {state.children} trẻ em\n"
+            f"**{l['title']}:**\n\n"
+            f"- **{l['hotel']}:** {hotel_name}\n"
+            f"- **{l['room']}:** {room_desc}\n"
+            f"- **{l['time']}:** {ci} → {co} ({state.nights} {l['nights']})\n"
+            f"- **{l['guests']}:** {state.adults} {l['adults']}, {state.children} {l['children']}\n"
             f"- **Check-in:** {state.check_in_method}\n"
-            f"- **Ước tính:** **{amt:.2f}M ₫** (chưa thuế)\n\n"
-            f"Bạn có đồng ý với thông tin trên không? Hãy phản hồi để mình chốt đơn cho bạn nhé!"
+            f"- **{l['estimate']}:** **{amt:.2f}M ₫** ({l['tax']})\n\n"
+            f"{l['confirm']}"
         )
 
     # ── Backend Integration ──────────────────────────────────────────────────
 
-    def _submit_booking(self, state: BookingState) -> tuple[str, BookingState]:
+    def _submit_booking(self, state: BookingState, language: Optional[str] = None) -> tuple[str, BookingState]:
+        lang = _normalize_language(language or state.language)
+        state.language = lang
+        state.check_in_method = _normalize_check_in_method(state.check_in_method)
         if not state.access_token:
             # Mô phỏng khi chưa đăng nhập
             state.step = BookingStep.DONE
@@ -387,14 +624,67 @@ class BookingAgent:
                 "bookingReference": ref,
                 "status": "Confirmed (Demo)",
             }
-            booking_type_demo = "Đặt phòng nhóm" if state.quantity >= 2 else "Đặt phòng đơn"
+            booking_type_demo = {
+                "VN": "Đặt phòng nhóm" if state.quantity >= 2 else "Đặt phòng đơn",
+                "EN": "Group booking" if state.quantity >= 2 else "Individual booking",
+                "JP": "グループ予約" if state.quantity >= 2 else "個人予約",
+                "KR": "단체 예약" if state.quantity >= 2 else "개인 예약",
+                "CN": "团体预订" if state.quantity >= 2 else "个人预订",
+            }.get(lang)
+            labels = {
+                "VN": {
+                    "title": "Đặt phòng thành công! (Chế độ Demo)",
+                    "ref": "Mã đặt phòng",
+                    "type": "Loại đặt phòng",
+                    "quantity": "Số lượng",
+                    "room_unit": "phòng",
+                    "status": "Trạng thái",
+                    "note": "Lưu ý: Để đặt phòng thực tế, vui lòng **đăng nhập** qua sidebar.",
+                },
+                "EN": {
+                    "title": "Booking successful! (Demo mode)",
+                    "ref": "Booking reference",
+                    "type": "Booking type",
+                    "quantity": "Quantity",
+                    "room_unit": "room(s)",
+                    "status": "Status",
+                    "note": "Note: To create a real booking, please **log in** from the sidebar.",
+                },
+                "JP": {
+                    "title": "予約が完了しました！（デモモード）",
+                    "ref": "予約番号",
+                    "type": "予約タイプ",
+                    "quantity": "客室数",
+                    "room_unit": "室",
+                    "status": "ステータス",
+                    "note": "注: 実際に予約するには、サイドバーから**ログイン**してください。",
+                },
+                "KR": {
+                    "title": "예약이 완료되었습니다! (데모 모드)",
+                    "ref": "예약 번호",
+                    "type": "예약 유형",
+                    "quantity": "수량",
+                    "room_unit": "객실",
+                    "status": "상태",
+                    "note": "참고: 실제 예약을 진행하려면 사이드바에서 **로그인**해 주세요.",
+                },
+                "CN": {
+                    "title": "预订成功！（演示模式）",
+                    "ref": "预订编号",
+                    "type": "预订类型",
+                    "quantity": "数量",
+                    "room_unit": "间",
+                    "status": "状态",
+                    "note": "提示: 如需创建真实预订，请通过侧边栏**登录**。",
+                },
+            }.get(lang)
             return (
-                f"**Đặt phòng thành công! (Chế độ Demo)**\n\n"
-                f"- Mã đặt phòng: **`{ref}`**\n"
-                f"- Loại đặt phòng: **{booking_type_demo}**\n"
-                f"- Số lượng: {state.quantity} phòng\n"
-                f"- Trạng thái: Confirmed\n\n"
-                f"_Lưu ý: Để đặt phòng thực tế, vui lòng **đăng nhập** qua sidebar._",
+                f"**{labels['title']}**\n\n"
+                f"- {labels['ref']}: **`{ref}`**\n"
+                f"- {labels['type']}: **{booking_type_demo}**\n"
+                f"- {labels['quantity']}: {state.quantity} {labels['room_unit']}\n"
+                f"- {labels['status']}: Confirmed\n\n"
+                f"_{labels['note']}_",
                 state,
             )
 
@@ -440,16 +730,74 @@ class BookingAgent:
             state.booking_result = booking_data
             ref = booking_data.get("bookingReference", "N/A")
 
-            booking_type_str = "Đặt phòng nhóm" if is_group else "Đặt phòng đơn"
+            booking_type_str = {
+                "VN": "Đặt phòng nhóm" if is_group else "Đặt phòng đơn",
+                "EN": "Group booking" if is_group else "Individual booking",
+                "JP": "グループ予約" if is_group else "個人予約",
+                "KR": "단체 예약" if is_group else "개인 예약",
+                "CN": "团体预订" if is_group else "个人预订",
+            }.get(lang)
+            labels = {
+                "VN": {
+                    "title": "Đặt phòng thành công!",
+                    "ref": "Mã đặt phòng",
+                    "type": "Loại đặt phòng",
+                    "quantity": "Số lượng",
+                    "room_unit": "phòng",
+                    "status": "Trạng thái",
+                    "total": "Tổng tiền",
+                    "next": "Vui lòng kiểm tra email để nhận xác nhận và hướng dẫn check-in!",
+                },
+                "EN": {
+                    "title": "Booking successful!",
+                    "ref": "Booking reference",
+                    "type": "Booking type",
+                    "quantity": "Quantity",
+                    "room_unit": "room(s)",
+                    "status": "Status",
+                    "total": "Total",
+                    "next": "Please check your email for confirmation and check-in instructions.",
+                },
+                "JP": {
+                    "title": "予約が完了しました！",
+                    "ref": "予約番号",
+                    "type": "予約タイプ",
+                    "quantity": "客室数",
+                    "room_unit": "室",
+                    "status": "ステータス",
+                    "total": "合計金額",
+                    "next": "確認メールとチェックイン案内をご確認ください。",
+                },
+                "KR": {
+                    "title": "예약이 완료되었습니다!",
+                    "ref": "예약 번호",
+                    "type": "예약 유형",
+                    "quantity": "수량",
+                    "room_unit": "객실",
+                    "status": "상태",
+                    "total": "총액",
+                    "next": "확인 메일과 체크인 안내를 확인해 주세요.",
+                },
+                "CN": {
+                    "title": "预订成功！",
+                    "ref": "预订编号",
+                    "type": "预订类型",
+                    "quantity": "数量",
+                    "room_unit": "间",
+                    "status": "状态",
+                    "total": "总金额",
+                    "next": "请查看电子邮件中的确认信息和入住指南。",
+                },
+            }.get(lang)
 
             return (
-                f"**Đặt phòng thành công!**\n\n"
-                f"- Mã đặt phòng: **`{ref}`**\n"
-                f"- Loại đặt phòng: **{booking_type_str}**\n"
-                f"- Số lượng: **{state.quantity} phòng**\n"
-                f"- Trạng thái: {booking_data.get('status', 'Confirmed')}\n"
-                f"- Tổng tiền: **{float(booking_data.get('finalAmount', 0))/1_000_000:.2f}M ₫**\n\n"
-                f"Vui lòng kiểm tra email để nhận xác nhận và hướng dẫn check-in!",
+                f"**{labels['title']}**\n\n"
+                f"- {labels['ref']}: **`{ref}`**\n"
+                f"- {labels['type']}: **{booking_type_str}**\n"
+                f"- {labels['quantity']}: **{state.quantity} {labels['room_unit']}**\n"
+                f"- {labels['status']}: {booking_data.get('status', 'Confirmed')}\n"
+                f"- {labels['total']}: **{float(booking_data.get('finalAmount', 0))/1_000_000:.2f}M ₫**\n\n"
+                f"{labels['next']}",
                 state,
             )
 
@@ -468,15 +816,10 @@ class BookingAgent:
 
     # ── Chat fallback ────────────────────────────────────────────────────────
 
-    def _chat_reply(self, user_input: str, state: BookingState) -> str:
+    def _chat_reply(self, user_input: str, state: BookingState, language: Optional[str] = None) -> str:
+        state.language = _normalize_language(language or state.language)
         if not self._client:
-            return (
-                "Xin chào! Tôi là trợ lý đặt phòng Elysian AI. 🏨\n\n"
-                "Tôi có thể giúp bạn:\n"
-                "🔍 **Tìm phòng** tại Elysian Smart Hotel Cần Thơ\n"
-                "🛎️ **Đặt phòng** trực tiếp\n\n"
-                "Hãy thử: _'Đặt phòng tại Elysian Cần Thơ'_"
-            )
+            return _localized_static(state.language, "no_client")
         try:
             # Query backend room types database dynamically
             rooms = _get_backend_room_types()
@@ -499,7 +842,7 @@ class BookingAgent:
             user_context, fetched_bookings = _get_user_context(state.access_token)
             if fetched_bookings:
                 state.cached_bookings = fetched_bookings  # Cập nhật cache
-            system_instruction = f"{_BOOKING_SYSTEM}\n\n{rooms_info}\n\n{user_context}"
+            system_instruction = f"{_BOOKING_SYSTEM}\n\n{_language_instruction(state.language)}\n\n{rooms_info}\n\n{user_context}"
             
             contents = _build_contents_with_history(user_input, state.chat_history, max_history_len=6)
             
@@ -530,7 +873,7 @@ class BookingAgent:
                 tools=[create_booking_summary, submit_final_booking, cancel_booking,
                        cancel_completed_booking, get_booking_invoice, generate_qr_checkin_token,
                        submit_room_change_request, submit_stay_extension_request, submit_early_checkout_request,
-                       submit_refund_request, generate_payment_link],
+                       submit_refund_request],
             )
             
             response = self._client.models.generate_content(
@@ -546,13 +889,13 @@ class BookingAgent:
                     if function_call.name == "create_booking_summary":
                         # Convert args to dict
                         args_dict = dict(function_call.args) if function_call.args else {}
-                        return self._process_booking_summary_tool(args_dict, state)
+                        return self._process_booking_summary_tool(args_dict, state, state.language)
                     elif function_call.name == "submit_final_booking":
-                        msg, _ = self._submit_booking(state)
+                        msg, _ = self._submit_booking(state, state.language)
                         return msg
                     elif function_call.name == "cancel_booking":
                         state.step = BookingStep.CANCELLED
-                        return "Đã hủy yêu cầu đặt phòng hiện tại. Bạn cần hỗ trợ gì thêm không?"
+                        return _localized_static(state.language, "cancelled")
                     elif function_call.name == "cancel_completed_booking":
                         args_dict = dict(function_call.args) if function_call.args else {}
                         return self._process_cancel_completed_booking(args_dict, state)
@@ -574,9 +917,6 @@ class BookingAgent:
                     elif function_call.name == "submit_refund_request":
                         args_dict = dict(function_call.args) if function_call.args else {}
                         return self._process_submit_refund_request(args_dict, state)
-                    elif function_call.name == "generate_payment_link":
-                        args_dict = dict(function_call.args) if function_call.args else {}
-                        return self._process_generate_payment_link(args_dict, state)
                         
             text_resp = response.text
             if text_resp:
@@ -605,25 +945,19 @@ class BookingAgent:
                             state.check_in_method = data["extracted_checkin_method"]
                         if data.get("extracted_quantity"):
                             state.quantity = int(data["extracted_quantity"])
-                        return data.get("reply_message", "Xác nhận yêu cầu.")
+                        return data.get("reply_message", _localized_static(state.language, "default_confirm"))
                 except Exception:
                     pass
                 # Plain text response (expected when tools are enabled)
                 return text_resp.strip()
                     
-            return "Xác nhận yêu cầu."
+            return _localized_static(state.language, "default_confirm")
         except Exception as e:
             logger.error("Chat reply error: %s", e)
             err_msg = str(e).lower()
             if "429" in err_msg or "quota" in err_msg or "resource_exhausted" in err_msg or "exhausted" in err_msg:
-                return (
-                    "⚠️ **Giới hạn lưu lượng API Gemini (Rate Limit / Quota Exceeded)**\n\n"
-                    "API Key của bạn đã vượt quá hạn mức miễn phí (Free Tier) cho phép mỗi phút hoặc mỗi ngày.\n"
-                    "👉 *Cách khắc phục:*\n"
-                    "1. Vui lòng **đợi khoảng 10-15 giây** rồi gửi lại tin nhắn.\n"
-                    "2. Kiểm tra hoặc cập nhật khóa API trả phí ở biến `GOOGLE_API_KEY` trong file `hotel-ai-agent/.env`."
-                )
-            return "Xin lỗi, tôi gặp sự cố kết nối khi trò chuyện với AI. Bạn hãy thử lại nhé!"
+                return _localized_static(state.language, "quota_error")
+            return _localized_static(state.language, "generic_chat_error")
 
     # ── Customer Self-Service Handlers ───────────────────────────────────────
 
@@ -818,33 +1152,6 @@ class BookingAgent:
             if resp.status_code == 200:
                 return f"Đã gửi yêu cầu hoàn tiền cho mã `{b_num}` thành công. Vui lòng chờ bộ phận kế toán duyệt."
             return f"Lỗi yêu cầu hoàn tiền: {resp.json().get('message', 'Lỗi không xác định')}."
-        except Exception as e:
-            return f"Lỗi kết nối: {e}"
-
-    def _process_generate_payment_link(self, args: dict, state: BookingState) -> str:
-        if not state.access_token:
-            return "Vui lòng đăng nhập để thanh toán."
-        b_num = args.get("booking_number")
-        b_id = self._get_booking_id(b_num, state.access_token, state)
-        if not b_id:
-            return f"Không tìm thấy mã `{b_num}`."
-        
-        payload = {"bookingId": b_id, "paymentOption": "FULL"}
-        idem_key = str(uuid.uuid4())
-        headers = {
-            "Authorization": f"Bearer {state.access_token}",
-            "Idempotency-Key": idem_key
-        }
-        try:
-            resp = requests.post(f"{_BACKEND_URL}/payments/paypal/create-order",
-                                 json=payload, headers=headers, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json().get("data", {})
-                approve_url = data.get("approveUrl", "")
-                if approve_url:
-                    return f"Vui lòng nhấn vào [Đường link này]({approve_url}) để tiến hành thanh toán an toàn qua PayPal cho đơn `{b_num}`."
-                return "Lỗi: Không tìm thấy đường link thanh toán trong phản hồi."
-            return f"Lỗi tạo link thanh toán: {resp.json().get('message', 'Có thể do đơn đã thanh toán hoặc lỗi hệ thống')}."
         except Exception as e:
             return f"Lỗi kết nối: {e}"
 

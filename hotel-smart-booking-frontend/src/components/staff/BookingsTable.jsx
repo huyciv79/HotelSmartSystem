@@ -242,11 +242,11 @@ const BookingsTable = ({
                 <button
                   onClick={() => onFaceCheckInSelect(bk.id)}
                   disabled={!isManager}
-                  title={!isManager ? "Yêu cầu tài khoản Quản lý để thực hiện FaceID check-in" : "Check-in bằng nhận diện khuôn mặt"}
+                  title={!isManager ? "Cần quyền quản lý để thực hiện check-in bằng khuôn mặt" : "Check-in bằng khuôn mặt"}
                   className="bg-white border border-primary/20 text-primary hover:bg-primary/5 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed text-[8.5px] font-black uppercase tracking-widest px-3 py-1.5 cursor-pointer flex items-center gap-1.5 rounded-lg transition-all"
                 >
                   <span className="material-symbols-outlined text-[10px]">face</span>
-                  {isManager ? 'FaceID' : 'Cần Manager'}
+                  {isManager ? 'Khuôn mặt' : 'Cần quyền'}
                 </button>
               )}
 

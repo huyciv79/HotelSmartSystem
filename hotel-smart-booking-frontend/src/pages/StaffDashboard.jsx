@@ -40,7 +40,6 @@ import { getUserProfile } from '../services/userService';
 import { getDashboardStats } from '../services/statisticService';
 import Profile from './Profile';
 import { useToast, ToastContainer } from '../components/Toast';
-import { useLanguage } from '../context/LanguageContext';
 
 // Staff dashboard sub-components
 import StaffSidebar from '../components/staff/StaffSidebar';
@@ -62,12 +61,67 @@ const INITIAL_MOCK_BOOKINGS = [
   { id: 104, bookingReference: 'BK20260615104499120', guestName: 'Phạm Minh Đức', email: 'duc.pham@example.com', roomType: 'Suite River View', quantity: 2, checkInDate: '2026-06-16', checkOutDate: '2026-06-20', nights: 4, totalAmount: 40000000, status: 'Confirmed', checkInMethod: 'Face Recognition', bookingType: 'Group' },
 ];
 
+const LOCAL_BOOKINGS_KEY = 'hotel_all_bookings';
+const LOCAL_BOOKING_KEY_PREFIXES = [
+  'booking_status_',
+  'booking_actualcheckin_',
+  'booking_actualcheckout_',
+];
+
+const formatLocalDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getNextDate = (dateString) => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return formatLocalDate(new Date(year, month - 1, day + 1));
+};
+
+const isInternalWalkInContact = (value) => (
+  /^walkin-[0-9a-f]{32}@guest\.local$/i.test(value || '')
+  || /^walkin-[0-9a-f]{12}$/i.test(value || '')
+);
+
+const formatGuestContacts = (email, phone) => {
+  const contacts = [email, phone].filter((value) => value && !isInternalWalkInContact(value));
+  return contacts.length > 0 ? contacts.join(' • ') : 'Chưa cung cấp thông tin liên hệ';
+};
+
+const getBookingIdFromLocalKey = (key) => {
+  const prefix = LOCAL_BOOKING_KEY_PREFIXES.find((item) => key.startsWith(item));
+  return prefix ? key.slice(prefix.length) : null;
+};
+
+const clearLocalBookingCache = (serverBookings = []) => {
+  localStorage.removeItem(LOCAL_BOOKINGS_KEY);
+
+  const serverBookingIds = new Set(
+    serverBookings
+      .map((booking) => booking.bookingId ?? booking.id)
+      .filter((id) => id !== null && id !== undefined)
+      .map(String),
+  );
+
+  const keysToRemove = [];
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index);
+    if (!key) continue;
+
+    const bookingId = getBookingIdFromLocalKey(key);
+    if (bookingId && (serverBookingIds.size === 0 || !serverBookingIds.has(bookingId))) {
+      keysToRemove.push(key);
+    }
+  }
+
+  keysToRemove.forEach((key) => localStorage.removeItem(key));
+};
+
 export default function StaffDashboard({ setActivePage }) {
-  const { t } = useLanguage();
   const { toasts, showToast: rawShowToast, dismissToast } = useToast();
-  const showToast = (message, type, duration) => {
-    rawShowToast(t(message, message), type, duration);
-  };
+  const showToast = rawShowToast;
 
   // Auth state
   const [currentUser, setCurrentUser] = useState(() => {
@@ -156,9 +210,9 @@ export default function StaffDashboard({ setActivePage }) {
     customerEmail: '',
     customerPhonenumber: '',
     customerIdCardNumber: '',
-    paidAmount: '',
-    paymentMethod: 'Cash'
+    paidAmount: ''
   });
+  const [walkInErrors, setWalkInErrors] = useState({});
 
   // Invoice modal states
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
@@ -372,10 +426,89 @@ export default function StaffDashboard({ setActivePage }) {
     };
   }, []);
 
+  const validateWalkInForm = () => {
+    const errors = {};
+    const quantity = Number(walkInFormData.quantity || 1);
+    const adults = Number(walkInFormData.numberOfAdults);
+    const children = Number(walkInFormData.numberOfChildren);
+    const selectedRoomType = roomTypes.find(
+      (roomType) => String(roomType.id) === String(walkInFormData.roomTypeId),
+    );
+    const today = formatLocalDate(new Date());
+
+    if (!walkInFormData.roomTypeId) {
+      errors.roomTypeId = 'Vui lòng chọn loại phòng.';
+    }
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      errors.quantity = 'Số lượng phòng phải là số nguyên lớn hơn 0.';
+    }
+    if (!walkInFormData.checkInDate) {
+      errors.checkInDate = 'Vui lòng chọn ngày nhận phòng.';
+    } else if (walkInFormData.checkInDate < today) {
+      errors.checkInDate = 'Ngày nhận phòng không thể ở trong quá khứ.';
+    }
+    if (!walkInFormData.checkOutDate) {
+      errors.checkOutDate = 'Vui lòng chọn ngày trả phòng.';
+    } else if (walkInFormData.checkInDate && walkInFormData.checkOutDate <= walkInFormData.checkInDate) {
+      errors.checkOutDate = 'Ngày trả phòng phải sau ngày nhận phòng.';
+    }
+    if (!Number.isInteger(adults) || adults < 1) {
+      errors.numberOfAdults = 'Số người lớn phải lớn hơn 0.';
+    }
+    if (!Number.isInteger(children) || children < 0) {
+      errors.numberOfChildren = 'Số trẻ em không được âm.';
+    }
+
+    if (selectedRoomType && Number.isInteger(quantity) && quantity > 0) {
+      const adultCapacity = Number(selectedRoomType.adultCapacity ?? selectedRoomType.adultcapacity ?? 0) * quantity;
+      const childCapacity = Number(selectedRoomType.childCapacity ?? selectedRoomType.childcapacity ?? 0) * quantity;
+      if (adultCapacity > 0 && adults > adultCapacity) {
+        errors.numberOfAdults = `Số người lớn không được vượt quá ${adultCapacity}.`;
+      }
+      if (childCapacity >= 0 && children > childCapacity) {
+        errors.numberOfChildren = `Số trẻ em không được vượt quá ${childCapacity}.`;
+      }
+    }
+
+    if (walkInFormData.customerFullname.trim().length < 2) {
+      errors.customerFullname = 'Vui lòng nhập họ và tên khách.';
+    }
+    if (walkInFormData.customerEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(walkInFormData.customerEmail.trim())) {
+      errors.customerEmail = 'Email không hợp lệ.';
+    }
+    if (walkInFormData.customerPhonenumber.trim() && !/^(?:\+84|0)\d{9,10}$/.test(walkInFormData.customerPhonenumber.trim())) {
+      errors.customerPhonenumber = 'Số điện thoại không hợp lệ.';
+    }
+    if (!/^\d{12}$/.test(walkInFormData.customerIdCardNumber)) {
+      errors.customerIdCardNumber = 'CCCD phải gồm đúng 12 chữ số.';
+    }
+    if (walkInFormData.paidAmount !== '' &&
+      (!Number.isFinite(Number(walkInFormData.paidAmount)) || Number(walkInFormData.paidAmount) < 0)) {
+      errors.paidAmount = 'Số tiền đóng trước không được âm.';
+    }
+
+    return errors;
+  };
+
   const handleWalkInSubmit = async (e) => {
     e.preventDefault();
-    if (!walkInFormData.roomTypeId || !walkInFormData.checkInDate || !walkInFormData.checkOutDate || !walkInFormData.customerFullname || !walkInFormData.customerEmail || !walkInFormData.customerPhonenumber || !walkInFormData.customerIdCardNumber) {
+    const validationErrors = validateWalkInForm();
+    setWalkInErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) {
+      showToast('Vui lòng kiểm tra lại thông tin Walk-in.', 'warning');
+      return;
+    }
+    if (!walkInFormData.roomTypeId || !walkInFormData.checkInDate || !walkInFormData.checkOutDate || !walkInFormData.customerFullname || !walkInFormData.customerIdCardNumber) {
       showToast('Vui lòng điền đầy đủ các thông tin bắt buộc', 'warning');
+      return;
+    }
+    const today = formatLocalDate(new Date());
+    if (walkInFormData.checkInDate < today) {
+      showToast('Ngày nhận phòng không thể ở trong quá khứ.', 'warning');
+      return;
+    }
+    if (walkInFormData.checkOutDate <= walkInFormData.checkInDate) {
+      showToast('Ngày trả phòng phải sau ngày nhận phòng.', 'warning');
       return;
     }
     if (!/^[0-9]{12}$/.test(walkInFormData.customerIdCardNumber)) {
@@ -391,6 +524,8 @@ export default function StaffDashboard({ setActivePage }) {
         numberOfAdults: parseInt(walkInFormData.numberOfAdults || 1),
         numberOfChildren: parseInt(walkInFormData.numberOfChildren || 0),
         paidAmount: walkInFormData.paidAmount ? parseFloat(walkInFormData.paidAmount) : 0,
+        customerEmail: walkInFormData.customerEmail.trim() || null,
+        customerPhonenumber: walkInFormData.customerPhonenumber.trim() || null,
       });
       if (response && response.success) {
         showToast('Đặt phòng Walk-in và nhận phòng thành công!', 'success');
@@ -799,15 +934,7 @@ export default function StaffDashboard({ setActivePage }) {
         } catch (e2) { }
       }
 
-      // Always merge local storage created bookings
-      try {
-        const localCreated = JSON.parse(localStorage.getItem('hotel_all_bookings') || '[]');
-        localCreated.forEach(localBk => {
-          if (!allBookings.some(b => b.bookingId === localBk.bookingId)) {
-            allBookings.push(localBk);
-          }
-        });
-      } catch (e3) { }
+      clearLocalBookingCache(allBookings);
 
       if (allBookings.length > 0) {
         const realMapped = allBookings.map(bk => {
@@ -817,7 +944,7 @@ export default function StaffDashboard({ setActivePage }) {
             id: bk.bookingId,
             bookingReference: bk.bookingNumber || bk.bookingReference || `BK-${bk.bookingId}`,
             guestName: bk.guestName || 'Khách hàng Elysian',
-            email: bk.guestEmail || bk.email || '',
+            email: isInternalWalkInContact(bk.guestEmail || bk.email) ? '' : (bk.guestEmail || bk.email || ''),
             roomType: bk.roomType || bk.roomTypeName,
             roomTypeId: bk.roomTypeId || '',
             quantity: bk.quantity || 1,
@@ -844,7 +971,7 @@ export default function StaffDashboard({ setActivePage }) {
             ekycIdentity: bk.ekycIdentity || null,
             checkInMethod: bk.checkInMethod || 'Manual',
             bookingType: bk.bookingType || 'Online',
-            guestPhone: bk.guestPhone || '',
+            guestPhone: isInternalWalkInContact(bk.guestPhone) ? '' : (bk.guestPhone || ''),
             specialRequests: bk.specialRequests || '',
             numberOfAdults: bk.numberOfAdults || 1,
             numberOfChildren: bk.numberOfChildren || 0,
@@ -1386,7 +1513,10 @@ export default function StaffDashboard({ setActivePage }) {
                 setSelectedBooking={(bk) => handleViewDetail(bk, 'overview')}
                 startScanner={startScanner}
                 handleDirectCheckInOut={handleDirectCheckInOut}
-                handleOpenWalkIn={() => setIsWalkInModalOpen(true)}
+                handleOpenWalkIn={() => {
+                  setWalkInErrors({});
+                  setIsWalkInModalOpen(true);
+                }}
                 stats={stats}
               />
             )}
@@ -1406,7 +1536,7 @@ export default function StaffDashboard({ setActivePage }) {
                     <div className="flex flex-col items-center justify-center gap-4 py-6">
                       <span className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></span>
                       <h4 className="text-sm font-black uppercase tracking-widest text-primary m-0">
-                        {scanType === 'face' ? 'ĐANG QUÉT KHUÔN MẶT eKYC...' : 'ĐANG ĐỌC MÃ QR ĐOÀN...'}
+                        {scanType === 'face' ? 'ĐANG XÁC MINH KHUÔN MẶT...' : 'ĐANG ĐỌC MÃ QR ĐOÀN...'}
                       </h4>
                       <p className="text-xs text-slate-400 font-bold uppercase tracking-wider max-w-sm">
                         Đang xác thực thông tin đối sánh của khách hàng: {scanningBooking.guestName}
@@ -1514,7 +1644,7 @@ export default function StaffDashboard({ setActivePage }) {
                                       </span>
                                       {usesFaceId
                                         ? isManager
-                                          ? 'FaceID tại sảnh'
+                                          ? 'Xác minh tại sảnh'
                                           : 'Cần Manager'
                                         : usesQrCode
                                         ? 'Quét QR'
@@ -1558,7 +1688,10 @@ export default function StaffDashboard({ setActivePage }) {
                     setActiveTab('face-check-in');
                   }}
                   triggerCustomConfirm={triggerCustomConfirm}
-                  handleOpenWalkIn={() => setIsWalkInModalOpen(true)}
+                  handleOpenWalkIn={() => {
+                    setWalkInErrors({});
+                    setIsWalkInModalOpen(true);
+                  }}
                 />
               </div>
             )}
@@ -1951,7 +2084,7 @@ export default function StaffDashboard({ setActivePage }) {
                             <div className="flex flex-col gap-1.5 bg-slate-50 p-4 border border-slate-100 rounded-xl">
                               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Khách hàng</span>
                               <strong className="text-slate-800 text-sm uppercase">{selectedBooking.guestName}</strong>
-                              <span className="text-slate-500 text-[10px] mt-0.5">{selectedBooking.email || selectedBooking.guestEmail || 'N/A'} • {selectedBooking.guestPhone || 'N/A'}</span>
+                              <span className="text-slate-500 text-[10px] mt-0.5">{formatGuestContacts(selectedBooking.email || selectedBooking.guestEmail, selectedBooking.guestPhone)}</span>
                             </div>
 
                             <div className="flex flex-col gap-1.5 bg-slate-50 p-4 border border-slate-100 rounded-xl">
@@ -1993,7 +2126,7 @@ export default function StaffDashboard({ setActivePage }) {
                                 </span>
                                 {selectedBooking.checkInMethod === 'FaceID' || selectedBooking.checkInMethod === 'Face Recognition' ? (
                                   <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[8.5px] font-extrabold text-primary bg-primary/10 border border-primary/20 uppercase tracking-widest rounded-lg">
-                                    FaceID eKYC
+                                    Xác minh khuôn mặt
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[8.5px] font-extrabold text-slate-500 bg-slate-100 border border-slate-200 uppercase tracking-widest rounded-lg">
@@ -2260,7 +2393,17 @@ export default function StaffDashboard({ setActivePage }) {
               </button>
             </div>
 
-            <form onSubmit={handleWalkInSubmit} className="space-y-4">
+            <form onSubmit={handleWalkInSubmit} noValidate className="space-y-4">
+              {Object.keys(walkInErrors).length > 0 && (
+                <div className="border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+                  <p className="mb-1 font-bold">Vui lòng kiểm tra lại:</p>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    {Object.values(walkInErrors).map((message) => (
+                      <li key={message}>{message}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Room type selection */}
                 <div className="space-y-1.5">
@@ -2297,7 +2440,18 @@ export default function StaffDashboard({ setActivePage }) {
                   <input
                     type="date"
                     value={walkInFormData.checkInDate}
-                    onChange={(e) => setWalkInFormData(prev => ({ ...prev, checkInDate: e.target.value }))}
+                    min={formatLocalDate(new Date())}
+                    onChange={(e) => {
+                      const checkInDate = e.target.value;
+                      const minimumCheckOutDate = checkInDate ? getNextDate(checkInDate) : '';
+                      setWalkInFormData(prev => ({
+                        ...prev,
+                        checkInDate,
+                        checkOutDate: checkInDate && prev.checkOutDate >= minimumCheckOutDate
+                          ? prev.checkOutDate
+                          : '',
+                      }));
+                    }}
                     className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
                     required
                   />
@@ -2308,6 +2462,7 @@ export default function StaffDashboard({ setActivePage }) {
                   <input
                     type="date"
                     value={walkInFormData.checkOutDate}
+                    min={getNextDate(walkInFormData.checkInDate || formatLocalDate(new Date()))}
                     onChange={(e) => setWalkInFormData(prev => ({ ...prev, checkOutDate: e.target.value }))}
                     className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
                     required
@@ -2356,26 +2511,24 @@ export default function StaffDashboard({ setActivePage }) {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Email *</label>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Email</label>
                     <input
                       type="email"
                       value={walkInFormData.customerEmail}
                       onChange={(e) => setWalkInFormData(prev => ({ ...prev, customerEmail: e.target.value }))}
                       placeholder="email@example.com"
                       className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
-                      required
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Số điện thoại *</label>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Số điện thoại</label>
                     <input
                       type="tel"
                       value={walkInFormData.customerPhonenumber}
                       onChange={(e) => setWalkInFormData(prev => ({ ...prev, customerPhonenumber: e.target.value }))}
                       placeholder="0901234567"
                       className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
-                      required
                     />
                   </div>
 
@@ -2395,7 +2548,7 @@ export default function StaffDashboard({ setActivePage }) {
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="border-t border-slate-100 pt-4">
                 <div className="space-y-1.5">
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Số tiền đóng trước (đ)</label>
                   <input
@@ -2407,18 +2560,6 @@ export default function StaffDashboard({ setActivePage }) {
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Phương thức thanh toán</label>
-                  <select
-                    value={walkInFormData.paymentMethod}
-                    onChange={(e) => setWalkInFormData(prev => ({ ...prev, paymentMethod: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all [&>option]:bg-white [&>option]:text-slate-800"
-                  >
-                    <option value="Cash">Tiền mặt (Cash)</option>
-                    <option value="Card">Thẻ (Card)</option>
-                    <option value="Transfer">Chuyển khoản (Transfer)</option>
-                  </select>
-                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -2624,7 +2765,7 @@ export default function StaffDashboard({ setActivePage }) {
                   <div>
                     <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Khách hàng</span>
                     <strong className="text-slate-800 text-sm block mt-1 uppercase font-black">{invoiceData.customerName}</strong>
-                    <span className="block mt-0.5">{invoiceData.customerEmail} • {invoiceData.customerPhone}</span>
+                    <span className="block mt-0.5">{formatGuestContacts(invoiceData.customerEmail, invoiceData.customerPhone)}</span>
                   </div>
                   <div>
                     <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Thời gian lưu trú</span>

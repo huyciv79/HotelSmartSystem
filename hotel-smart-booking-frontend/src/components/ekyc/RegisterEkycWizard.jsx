@@ -109,6 +109,13 @@ export default function RegisterEkycWizard({ onSubmit, onClose, mode = 'register
     setResult(null);
   };
 
+  const errorDetails = result?.success === false
+    ? String(result.message || '')
+      .split(';')
+      .map((message) => message.trim())
+      .filter(Boolean)
+    : [];
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}>
@@ -157,10 +164,6 @@ export default function RegisterEkycWizard({ onSubmit, onClose, mode = 'register
                   <div className="flex items-start gap-2.5 text-xs text-slate-700 font-semibold uppercase tracking-wide">
                     <Info size={14} className="text-primary shrink-0 mt-0.5" />
                     <span>Chọn nơi đủ sáng, tránh ngược sáng</span>
-                  </div>
-                  <div className="flex items-start gap-2.5 text-xs text-slate-700 font-semibold uppercase tracking-wide">
-                    <AlertCircle size={14} className="text-primary shrink-0 mt-0.5" />
-                    <span>Không đeo kính, khẩu trang khi chụp selfie</span>
                   </div>
                   <div className="flex items-start gap-2.5 text-xs text-slate-700 font-semibold uppercase tracking-wide">
                     <CheckCircle2 size={14} className="text-primary shrink-0 mt-0.5" />
@@ -298,12 +301,22 @@ export default function RegisterEkycWizard({ onSubmit, onClose, mode = 'register
                   <div className="w-16 h-16 rounded-none bg-red-50 border border-red-100 flex items-center justify-center text-red-600 shadow-sm">
                     <XCircle size={32} />
                   </div>
-                  <div>
-                    <h2 className="text-xl font-semibold text-slate-900 uppercase tracking-wider mb-2">Xác minh thất bại</h2>
-                    <div className="flex items-start gap-2 bg-red-50 border border-red-150 rounded-none p-4 text-left">
-                      <AlertCircle size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
-                      <p className="text-red-700 text-xs font-semibold uppercase tracking-wider leading-relaxed">{result.message}</p>
+                  <div className="w-full text-center">
+                    <h2 className="mb-2 text-xl font-semibold tracking-wide text-slate-900">Chưa thể xác minh danh tính</h2>
+                    <p className="mx-auto max-w-sm text-sm leading-relaxed text-slate-500">
+                      Hãy kiểm tra các thông tin dưới đây, sau đó chụp lại ảnh CCCD rõ nét và đầy đủ.
+                    </p>
+                  </div>
+                  <div className="w-full rounded-none border border-red-200 bg-red-50 p-4 text-left">
+                    <div className="flex items-center gap-2 text-red-800">
+                      <AlertCircle size={17} className="shrink-0" />
+                      <span className="text-sm font-semibold">Thông tin cần khắc phục</span>
                     </div>
+                    <ul className="mt-3 space-y-2 pl-5 text-sm leading-relaxed text-red-700 marker:text-red-400 list-disc">
+                      {errorDetails.map((detail, index) => (
+                        <li key={`${detail}-${index}`}>{detail}</li>
+                      ))}
+                    </ul>
                   </div>
                   <div className="flex gap-3 w-full">
                     <button

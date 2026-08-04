@@ -717,10 +717,27 @@ public class EkycServiceImpl implements EkycService {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("File '" + prefix + "' không được để trống.");
         }
+        String contentType = file.getContentType();
+        String originalFilename = file.getOriginalFilename();
+        String ext = (originalFilename != null && originalFilename.contains("."))
+                ? originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase()
+                : "";
+
+        boolean isValidType = (contentType != null && (
+                contentType.equalsIgnoreCase("image/jpeg") ||
+                contentType.equalsIgnoreCase("image/jpg") ||
+                contentType.equalsIgnoreCase("image/png") ||
+                contentType.equalsIgnoreCase("image/webp")
+        )) || List.of("jpg", "jpeg", "png", "webp").contains(ext);
+
+        if (!isValidType) {
+            throw new IllegalArgumentException("Invalid file format. Only accepts .jpg, .png, .webp");
+        }
+
         try {
-            String contentType = file.getContentType() != null ? file.getContentType() : "image/jpeg";
-            String originalName = prefix + "_" + file.getOriginalFilename();
-            return supabaseStorageService.uploadEkycDocument(file.getBytes(), originalName, contentType);
+            String mimeType = contentType != null ? contentType : "image/jpeg";
+            String originalName = prefix + "_" + (originalFilename != null ? originalFilename : "image.jpg");
+            return supabaseStorageService.uploadEkycDocument(file.getBytes(), originalName, mimeType);
         } catch (IOException e) {
             throw new RuntimeException("Lỗi khi đọc file upload: " + e.getMessage(), e);
         }

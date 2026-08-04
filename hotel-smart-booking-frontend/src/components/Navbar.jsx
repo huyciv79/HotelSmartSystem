@@ -91,7 +91,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const response = await getRoomTypes();
+        const response = await getRoomTypes('Active');
         if (response && response.data && response.data.content) {
           setRoomTypes(response.data.content);
           setSelectedRoom(response.data.content[0]);

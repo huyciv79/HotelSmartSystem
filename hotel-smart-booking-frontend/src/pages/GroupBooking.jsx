@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { getRoomTypes } from '../services/roomService';
+import { getRoomAvailability, getRoomTypes } from '../services/roomService';
 import { createGroupBooking } from '../services/groupBookingService';
 import { getEkycProfile } from '../services/ekycService';
 import { useToast, ToastContainer } from '../components/Toast';
@@ -24,10 +24,6 @@ export default function GroupBooking({ setActivePage }) {
   const [adults, setAdults] = useState(2);
   const [childrenCount, setChildrenCount] = useState(0);
   
-  // Availability Check State
-  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
-  const [isAvailable, setIsAvailable] = useState(null); // null | true | false
-  
   // Step 2 & 3 States
   const [checkInMethod, setCheckInMethod] = useState('Manual'); // 'Manual' | 'Face ID' | 'QR Code'
   const [isEkycVerified, setIsEkycVerified] = useState(false);
@@ -37,11 +33,13 @@ export default function GroupBooking({ setActivePage }) {
   
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [availability, setAvailability] = useState(null);
+  const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
 
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const response = await getRoomTypes();
+        const response = await getRoomTypes('Active');
         if (response && response.data && response.data.content) {
           // Filter only active room types
           const activeRooms = response.data.content.filter(r => r.status === 'Active' || !r.status);
@@ -88,6 +86,48 @@ export default function GroupBooking({ setActivePage }) {
     fetchEkycStatus();
   }, []);
 
+  useEffect(() => {
+    if (!selectedRoom || !startDate || !endDate) {
+      return undefined;
+    }
+
+    let isCurrentRequest = true;
+    const toDateParam = (date) => {
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const checkAvailability = async () => {
+      setIsAvailabilityLoading(true);
+      try {
+        const response = await getRoomAvailability(
+          selectedRoom.id,
+          toDateParam(startDate),
+          toDateParam(endDate),
+        );
+        if (isCurrentRequest) {
+          setAvailability(response?.data ?? null);
+        }
+      } catch (error) {
+        console.error('Unable to check room availability:', error);
+        if (isCurrentRequest) {
+          setAvailability(null);
+        }
+      } finally {
+        if (isCurrentRequest) {
+          setIsAvailabilityLoading(false);
+        }
+      }
+    };
+
+    checkAvailability();
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [selectedRoom, startDate, endDate]);
+
   const handleFaceIdSelection = () => {
     if (isEkycLoading) {
       showToast(t('group_ekyc_checking', 'Đang kiểm tra trạng thái eKYC, vui lòng chờ.'), 'info');
@@ -106,13 +146,25 @@ export default function GroupBooking({ setActivePage }) {
     setCheckInMethod('Face ID');
   };
 
-  // Reset availability status when dates or room changes
-  useEffect(() => {
-    setIsAvailable(null);
-  }, [startDate, endDate, selectedRoom, quantity]);
+  const handleQrCodeSelection = () => {
+    if (isEkycLoading) {
+      showToast(t('group_ekyc_checking', 'Đang kiểm tra trạng thái eKYC, vui lòng chờ.'), 'info');
+      return;
+    }
+    if (!isEkycVerified) {
+      showToast(
+        'Vui lòng hoàn thành đăng ký eKYC trước khi sử dụng check-in bằng QR Code.',
+        'warning',
+      );
+      return;
+    }
+    setCheckInMethod('QR Code');
+  };
 
   const handleRoomSelection = (room) => {
     setSelectedRoom(room);
+    setAvailability(null);
+    setIsAvailabilityLoading(false);
     
     // Adjust quantities and capacities to match the new room type
     const adultCapPerRoom = room.adultCapacity || room.adultcapacity || 2;
@@ -137,6 +189,10 @@ export default function GroupBooking({ setActivePage }) {
       showToast(t('group_toast_min_qty', 'Đặt phòng nhóm yêu cầu tối thiểu là 2 phòng.'), 'warning');
       return;
     }
+    if (availability && newQty > availability.availableRooms) {
+      showToast(`${availability.availableRooms} rooms available for the selected stay.`, 'warning');
+      return;
+    }
     setQuantity(newQty);
     
     // Dynamically adjust adults and children if they exceed new capacity limit
@@ -154,25 +210,6 @@ export default function GroupBooking({ setActivePage }) {
         setChildrenCount(maxChildren);
       }
     }
-  };
-
-  const checkAvailability = () => {
-    if (!startDate || !endDate) {
-      showToast(t('group_toast_error_dates', 'Vui lòng chọn khoảng ngày lưu trú trước.'), 'error');
-      return;
-    }
-    if (!selectedRoom) {
-      showToast(t('group_toast_error_select_room', 'Vui lòng chọn một loại phòng từ danh sách.'), 'error');
-      return;
-    }
-    
-    setIsCheckingAvailability(true);
-    // Simulate API call to check room availability for group qty
-    setTimeout(() => {
-      setIsCheckingAvailability(false);
-      setIsAvailable(true);
-      showToast(`${t('group_toast_available_success_prefix', 'Chúc mừng! Đủ số lượng')} ${quantity} ${t('group_toast_available_success_suffix', 'phòng trống cho loại')} ${selectedRoom.name}!`, 'success');
-    }, 1000);
   };
 
   // Calculate nights
@@ -200,6 +237,8 @@ export default function GroupBooking({ setActivePage }) {
     return `${yyyy}-${mm}-${dd}`;
   };
 
+  const hasEnoughRooms = availability && quantity <= availability.availableRooms;
+
   const handleStep1Submit = () => {
     const tempErrors = {};
     if (!startDate || !endDate) {
@@ -212,6 +251,12 @@ export default function GroupBooking({ setActivePage }) {
       tempErrors.quantity = t('group_error_qty_required', 'Số lượng phòng cho đặt nhóm phải từ 2 trở lên');
     }
     
+    if (!hasEnoughRooms) {
+      tempErrors.quantity = availability
+        ? `${availability.availableRooms} rooms available for the selected stay.`
+        : 'Unable to confirm room availability. Please try again.';
+    }
+
     if (selectedRoom) {
       const maxAdults = getAdultCapacity(selectedRoom) * quantity;
       const maxChildren = getChildCapacity(selectedRoom) * quantity;
@@ -229,9 +274,6 @@ export default function GroupBooking({ setActivePage }) {
 
     setErrors(tempErrors);
     if (Object.keys(tempErrors).length === 0) {
-      if (isAvailable === null) {
-        setIsAvailable(true);
-      }
       setCurrentStep(2);
     } else {
       showToast(t('group_toast_error_step1', 'Vui lòng kiểm tra lại thông tin bước 1.'), 'error');
@@ -445,6 +487,8 @@ export default function GroupBooking({ setActivePage }) {
                           const [start, end] = dates;
                           setStartDate(start);
                           setEndDate(end);
+                          setAvailability(null);
+                          setIsAvailabilityLoading(false);
                         }}
                         minDate={new Date()}
                         placeholderText={t('booking_dates_placeholder', 'Chọn khoảng ngày nhận và trả phòng')}
@@ -469,11 +513,21 @@ export default function GroupBooking({ setActivePage }) {
                         <button
                           type="button"
                           onClick={() => handleQuantityChange(quantity + 1)}
-                          className="w-8 h-8 border border-slate-350 bg-white text-slate-800 hover:bg-slate-100 font-black flex items-center justify-center cursor-pointer"
+                          disabled={isAvailabilityLoading || Boolean(availability && quantity >= availability.availableRooms)}
+                          className="w-8 h-8 border border-slate-350 bg-white text-slate-800 hover:bg-slate-100 font-black flex items-center justify-center cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           +
                         </button>
                       </div>
+                      {startDate && endDate && (
+                        <p className={`text-xs font-semibold mt-2 ${hasEnoughRooms ? 'text-emerald-700' : 'text-error'}`}>
+                          {isAvailabilityLoading
+                            ? t('booking_checking_availability', 'Checking availability...')
+                            : availability
+                              ? `${availability.availableRooms} rooms available.`
+                              : 'Availability could not be checked. Please try again.'}
+                        </p>
+                      )}
                       {errors.quantity && <p className="text-xs text-error font-medium mt-1">{errors.quantity}</p>}
                     </div>
                   </div>
@@ -633,37 +687,11 @@ export default function GroupBooking({ setActivePage }) {
                     </div>
                   )}
 
-                  {/* Check Availability panel */}
-                  {startDate && endDate && selectedRoom && (
-                    <div className="bg-slate-50 border border-slate-200 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                      <div>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('group_availability_status_label', 'Tình trạng quỹ phòng trống đoàn')}</span>
-                        {isCheckingAvailability ? (
-                          <span className="text-xs font-bold text-slate-600 flex items-center gap-1.5 mt-1">
-                            <span className="w-3.5 h-3.5 border border-slate-400 border-t-slate-800 rounded-full animate-spin"></span> {t('booking_checking_availability', 'Đang kiểm tra phòng trống...')}
-                          </span>
-                        ) : isAvailable ? (
-                          <span className="text-xs font-bold text-green-600 flex items-center gap-1 mt-1">
-                            <span className="material-symbols-outlined text-base">check_circle</span> {t('group_available_success_status', 'Đủ phòng trống cho đoàn')} ({quantity} {t('group_toast_available_success_suffix', 'phòng trống')})
-                          </span>
-                        ) : (
-                          <span className="text-xs font-bold text-slate-500 mt-1 block">{t('booking_not_checked', 'Chưa kiểm tra')}</span>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={checkAvailability}
-                        className="bg-slate-900 hover:bg-primary text-white text-[10px] font-black uppercase tracking-widest px-4 py-2.5 border-none cursor-pointer transition-all duration-200"
-                      >
-                        {t('group_btn_check_availability', 'Kiểm tra quỹ phòng trống')}
-                      </button>
-                    </div>
-                  )}
-
                   <button
                     type="button"
                     onClick={handleStep1Submit}
-                    className="w-full bg-primary text-on-primary font-bold py-4 uppercase tracking-widest hover:brightness-110 active:scale-98 transition-all cursor-pointer border-none flex items-center justify-center h-12"
+                    disabled={!selectedRoom || !startDate || !endDate || isAvailabilityLoading || !hasEnoughRooms}
+                    className="w-full bg-primary text-on-primary font-bold py-4 uppercase tracking-widest hover:brightness-110 active:scale-98 transition-all cursor-pointer border-none flex items-center justify-center h-12 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {t('group_btn_continue_checkin', 'Tiếp tục sang phương thức Check-in')}
                   </button>
@@ -681,11 +709,14 @@ export default function GroupBooking({ setActivePage }) {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* QR Code */}
                     <div 
-                      onClick={() => setCheckInMethod('QR Code')}
+                      onClick={handleQrCodeSelection}
+                      aria-disabled={isEkycLoading || !isEkycVerified}
                       className={`border p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 ${
                         checkInMethod === 'QR Code' 
                           ? 'border-primary bg-primary/5 text-primary shadow-md' 
-                          : 'border-slate-200 hover:border-primary/50 text-slate-700 bg-white'
+                          : isEkycLoading || !isEkycVerified
+                            ? 'border-slate-200 text-slate-400 bg-slate-100 cursor-not-allowed opacity-70'
+                            : 'border-slate-200 hover:border-primary/50 text-slate-700 bg-white'
                       }`}
                     >
                       <span className="material-symbols-outlined text-3xl mb-3">qr_code_2</span>

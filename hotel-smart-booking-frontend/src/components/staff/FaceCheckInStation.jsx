@@ -163,7 +163,7 @@ function IdentitySummaryPanel({ identity }) {
           <FileText size={18} className="mt-0.5 text-amber-300" />
           <div>
             <span className="block text-[10px] font-black uppercase tracking-widest text-amber-300">
-              Chưa có dữ liệu eKYC
+              Chưa có dữ liệu hồ sơ
             </span>
             <p className="mt-1 mb-0 text-[10px] font-bold uppercase tracking-wider leading-relaxed text-amber-100/60">
               Booking này chưa trả về hồ sơ danh tính để đối chiếu nhanh tại quầy.
@@ -186,12 +186,12 @@ function IdentitySummaryPanel({ identity }) {
           </div>
           <div>
             <span className="block text-[10px] font-black uppercase tracking-[0.22em] text-green-400">
-              {verified ? 'ĐÃ XÁC MINH DANH TÍNH' : 'HỒ SƠ eKYC ĐANG THEO DÕI'}
+              {verified ? 'ĐÃ XÁC MINH DANH TÍNH' : 'HỒ SƠ ĐANG THEO DÕI'}
             </span>
             <span className="mt-1.5 block text-[10px] font-black uppercase tracking-widest text-white">
               {verified
-                ? 'ĐÃ KÍCH HOẠT FACEID EXPRESS CHECK-IN'
-                : 'FACEID CHECK-IN CẦN HỒ SƠ VERIFIED'}
+                ? 'ĐÃ KÍCH HOẠT XÁC MINH KHUÔN MẶT'
+                : 'CẦN HỒ SƠ XÁC MINH'}
             </span>
             {identity.verifiedAt && (
               <span className="mt-2 block text-[8px] font-bold uppercase tracking-widest text-slate-500">
@@ -281,7 +281,7 @@ export default function FaceCheckInStation({
         pageSize: 60,
         statuses: ['Confirmed', 'Paid', 'Partially Paid'],
         checkInMethod: 'FaceID',
-        sortBy: 'createdat',
+        sortBy: 'id',
         sortDirection: 'DESC',
       });
 
@@ -289,10 +289,7 @@ export default function FaceCheckInStation({
       setStationBookings(content.map(mapBookingForStation));
     } catch (error) {
       console.error('Cannot load FaceID bookings:', error);
-      setFaceBookingsError(
-        error?.response?.data?.message ||
-          'Không thể tải danh sách booking FaceID.',
-      );
+      setFaceBookingsError('Chưa thể tải danh sách booking. Vui lòng thử làm mới lại sau ít phút.');
     } finally {
       setIsLoadingFaceBookings(false);
     }
@@ -377,7 +374,7 @@ export default function FaceCheckInStation({
 
   const startCamera = useCallback(async () => {
     if (!selectedBooking) {
-      showToast('Vui lòng chọn booking FaceID trước.', 'warning');
+      showToast('Vui lòng chọn booking trước.', 'warning');
       return;
     }
 
@@ -491,7 +488,7 @@ export default function FaceCheckInStation({
         const response = await checkFaceReadiness(preview);
         const readinessData = response?.data;
         if (!readinessData) {
-          throw new Error('Backend không trả về trạng thái camera FaceID.');
+          throw new Error('Hệ thống không trả về trạng thái camera.');
         }
 
         if (scanRunRef.current !== readinessRunId || !streamRef.current) {
@@ -750,22 +747,11 @@ export default function FaceCheckInStation({
             Manager Lobby Station
           </span>
           <h3 className="text-slate-800 font-black text-xl uppercase tracking-wider mt-2 mb-0">
-            FaceID Check-in tại sảnh
+            Check-in tại sảnh
           </h3>
           <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-2">
-            Kiểm tra người thật, đối chiếu eKYC và cấp mật khẩu phòng
+            Kiểm tra khách và cấp mã phòng
           </p>
-        </div>
-        <div className="flex items-center gap-3 bg-green-50 border border-green-200 px-4 py-3">
-          <ShieldCheck size={18} className="text-green-700" />
-          <div>
-            <span className="block text-[9px] font-black uppercase tracking-widest text-green-700">
-              Liveness + Face Matching
-            </span>
-            <span className="block text-[9px] text-slate-500 mt-0.5">
-              Spring Boot → Python Face AI
-            </span>
-          </div>
         </div>
       </div>
 
@@ -775,7 +761,7 @@ export default function FaceCheckInStation({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h4 className="text-xs font-black uppercase tracking-widest text-slate-800 m-0">
-                  Booking chờ FaceID
+                  Booking chờ xác minh
                 </h4>
                 <p className="text-[9px] text-slate-500 uppercase tracking-wider mt-1">
                   {isLoadingFaceBookings
@@ -814,24 +800,38 @@ export default function FaceCheckInStation({
 
           <div className="max-h-[515px] overflow-y-auto divide-y divide-slate-150">
             {faceBookingsError ? (
-              <div className="p-10 text-center">
-                <UserRound size={32} className="mx-auto text-red-500" />
-                <p className="text-[10px] text-red-750 uppercase tracking-widest font-bold mt-4 leading-relaxed">
+              <div className="p-8 text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center border border-red-200 bg-red-50 text-red-600">
+                  <RefreshCcw size={20} />
+                </div>
+                <h5 className="mt-4 mb-0 text-xs font-black uppercase tracking-widest text-slate-800">
+                  Danh sách chưa sẵn sàng
+                </h5>
+                <p className="mx-auto mt-2 max-w-[240px] text-[11px] font-semibold leading-relaxed text-slate-500">
                   {faceBookingsError}
                 </p>
+                <button
+                  type="button"
+                  onClick={refreshFaceBookings}
+                  disabled={isLoadingFaceBookings}
+                  className="mt-5 inline-flex items-center justify-center gap-2 border border-primary/20 bg-primary/10 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-primary disabled:opacity-50"
+                >
+                  <RefreshCcw size={12} className={isLoadingFaceBookings ? 'animate-spin' : ''} />
+                  Thử lại
+                </button>
               </div>
             ) : isLoadingFaceBookings && filteredBookings.length === 0 ? (
               <div className="p-10 text-center">
                 <Loader2 size={32} className="mx-auto text-primary animate-spin" />
                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-4 leading-relaxed">
-                  Đang tải booking FaceID...
+                  Đang tải booking...
                 </p>
               </div>
             ) : filteredBookings.length === 0 ? (
               <div className="p-10 text-center">
                 <UserRound size={32} className="mx-auto text-slate-400" />
                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-4 leading-relaxed">
-                  Không có booking FaceID đã xác nhận phù hợp
+                  Không có booking đã xác nhận phù hợp
                 </p>
               </div>
             ) : (
@@ -901,7 +901,7 @@ export default function FaceCheckInStation({
                 Chọn booking của khách
               </h4>
               <p className="text-[10px] text-slate-500 uppercase tracking-wider max-w-sm mt-3 leading-relaxed">
-                Booking Confirmed sử dụng FaceID, bao gồm cả đặt phòng nhóm, sẽ được hiển thị.
+                Các booking đã xác nhận, bao gồm cả đặt phòng nhóm, sẽ được hiển thị.
               </p>
             </div>
           ) : (
@@ -919,7 +919,7 @@ export default function FaceCheckInStation({
                   </p>
                 </div>
                 <span className="px-3 py-1.5 bg-green-50 border border-green-200 text-green-700 text-[9px] font-black uppercase tracking-widest">
-                  eKYC required
+                  Cần xác minh
                 </span>
               </div>
 
@@ -1068,7 +1068,7 @@ export default function FaceCheckInStation({
                         </span>
                         <strong className="block text-sm text-slate-800 mt-1">
                           {isVerifying
-                            ? 'Đang đối chiếu với hồ sơ eKYC'
+                            ? 'Đang đối chiếu với hồ sơ khách hàng'
                             : isScanning
                               ? scanPhase === 'readiness'
                                 ? 'Đang xác nhận chỉ có một khuôn mặt'
@@ -1082,7 +1082,7 @@ export default function FaceCheckInStation({
                         <p className="text-[10px] text-slate-500 mt-1.5 mb-0">
                           {isScanning
                             ? `Bước ${livenessStep + 1}/${scanSteps.length} · Giữ tư thế đến khi hệ thống tự chuyển bước.`
-                            : 'Express liveness chỉ yêu cầu nhìn thẳng và một hướng quay ngẫu nhiên.'}
+                            : 'Xác minh nhanh chỉ yêu cầu nhìn thẳng và quay theo hướng được hướng dẫn.'}
                         </p>
                         <div className="flex items-center gap-1.5 mt-3">
                           {scanSteps.map((step, index) => {
@@ -1135,11 +1135,11 @@ export default function FaceCheckInStation({
                             <ScanFace size={17} />
                           )}
                           {isVerifying
-                            ? 'Đang xác minh FaceID...'
+                            ? 'Đang xác minh...'
                             : isScanning
                               ? currentLivenessStep.instruction
                               : readiness.ready
-                                ? 'Bắt đầu quét liveness'
+                                ? 'Bắt đầu xác minh'
                                 : 'Chờ camera sẵn sàng'}
                         </button>
                         <button

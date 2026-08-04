@@ -15,6 +15,7 @@ import com.example.hotelsmartbookingbackend.dto.response.InvoiceResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
 import com.example.hotelsmartbookingbackend.dto.response.QrTokenResponse;
 import com.example.hotelsmartbookingbackend.dto.response.RoomAccessResponse;
+import com.example.hotelsmartbookingbackend.dto.response.RoomAvailabilityResponse;
 import com.example.hotelsmartbookingbackend.entity.Booking;
 import com.example.hotelsmartbookingbackend.enums.BookingStatus;
 import com.example.hotelsmartbookingbackend.entity.BookingRoomAccess;
@@ -89,6 +90,9 @@ public class BookingServiceImpl implements BookingService {
     private static final String ROOM_KEY_STATUS_EXPIRED = "Expired";
     private static final int DEFAULT_SINGLE_BOOKING_QUANTITY = 1;
     private static final int QR_TOKEN_RANDOM_BYTES = 32;
+    private static final long EKYC_VALIDITY_DAYS = 365;
+    private static final String EXPIRED_EKYC_FACE_ID_MESSAGE =
+            "Your eKYC verification has expired (365 days). Please re-verify eKYC to use FaceID.";
 
     private static final ZoneId HOTEL_ZONE = ZoneId.of("Asia/Bangkok");
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
@@ -349,6 +353,53 @@ public class BookingServiceImpl implements BookingService {
         }
 
         return mapToResponse(savedBooking, detail, roomtype);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RoomAvailabilityResponse getRoomAvailability(
+            Integer roomTypeId,
+            LocalDate checkInDate,
+            LocalDate checkOutDate) {
+        validateDates(checkInDate, checkOutDate);
+
+        RoomType roomType = roomTypeRepository.findById(roomTypeId)
+                .orElseThrow(() -> new RuntimeException("Room type not found"));
+
+        if (!ACTIVE_STATUS.equalsIgnoreCase(roomType.getStatus())) {
+            throw new RuntimeException("Room type is not active");
+        }
+
+        int totalRooms = Math.toIntExact(roomRepository.countByRoomType_IdAndStatus(
+                roomTypeId, AVAILABLE_ROOM_STATUS));
+        int availableRooms = totalRooms;
+        LocalDate lowestAvailabilityDate = checkInDate;
+
+        for (LocalDate stayDate = checkInDate;
+             stayDate.isBefore(checkOutDate);
+             stayDate = stayDate.plusDays(1)) {
+            long bookedRooms = bookingDetailRepository.sumBookedQuantity(
+                    roomTypeId,
+                    toInstant(stayDate),
+                    toInstant(stayDate.plusDays(1)),
+                    INVENTORY_HOLDING_BOOKING_STATUSES,
+                    INVENTORY_HOLDING_DETAIL_STATUSES);
+            int roomsAvailableOnDate = Math.max(0, totalRooms - Math.toIntExact(bookedRooms));
+
+            if (roomsAvailableOnDate < availableRooms) {
+                availableRooms = roomsAvailableOnDate;
+                lowestAvailabilityDate = stayDate;
+            }
+        }
+
+        return RoomAvailabilityResponse.builder()
+                .roomTypeId(roomTypeId)
+                .checkInDate(checkInDate)
+                .checkOutDate(checkOutDate)
+                .totalRooms(totalRooms)
+                .availableRooms(availableRooms)
+                .lowestAvailabilityDate(lowestAvailabilityDate)
+                .build();
     }
 
     @Override
@@ -620,7 +671,9 @@ public class BookingServiceImpl implements BookingService {
                 .totalAmount(booking.getFinalAmount())
                 .status(booking.getStatus())
                 .guestName(booking.getUser() != null ? booking.getUser().getFullName() : "Khách hàng Elysian")
-                .guestEmail(booking.getUser() != null ? booking.getUser().getEmail() : "")
+                .guestEmail(booking.getUser() != null
+                        ? hideInternalWalkInContact(booking.getUser().getEmail())
+                        : "")
                 .actualCheckIn(detail.getActualCheckIn())
                 .actualCheckOut(detail.getActualCheckOut())
                 .roomNumber(assignedRoom != null ? assignedRoom.getRoomNumber() : null)
@@ -720,6 +773,12 @@ public class BookingServiceImpl implements BookingService {
                     "Bạn chưa hoàn thành đăng ký eKYC nên chưa thể check-in bằng FaceID");
         }
 
+        if (ekycProfileRepository.existsExpiredVerifiedByUserid(
+                customer,
+                Instant.now().minus(EKYC_VALIDITY_DAYS, ChronoUnit.DAYS))) {
+            throw new RuntimeException(EXPIRED_EKYC_FACE_ID_MESSAGE);
+        }
+
         String registeredEmbedding = faceEmbeddingRepository
                 .findEmbeddingTextByUserId(customer.getId())
                 .filter(embedding -> !embedding.isBlank())
@@ -767,7 +826,7 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Booking chua duoc lien ket voi tai khoan khach hang");
         }
 
-        validateQrBookingForCheckIn(booking, detail, customer);
+        validateQrBookingForTokenGeneration(booking, detail, customer);
 
         Instant now = Instant.now();
         if (hasActiveQrToken(detail, now)) {
@@ -1262,6 +1321,27 @@ public class BookingServiceImpl implements BookingService {
         validateQrCodeBookingEligibility(customer);
     }
 
+    private void validateQrBookingForTokenGeneration(
+            Booking booking,
+            BookingDetail detail,
+            User customer) {
+        if (!isQrCodeMethod(booking.getCheckInMethod())) {
+            throw new RuntimeException("Don dat phong nay khong su dung phuong thuc QR Code");
+        }
+        validateCheckInEligibleStatus(booking);
+        validateBookingNotCheckedIn(booking, detail);
+        validateCheckInNotExpired(detail);
+        validateQrCodeBookingEligibility(customer);
+    }
+
+    private void validateCheckInNotExpired(BookingDetail detail) {
+        LocalDate today = Instant.now().atZone(HOTEL_ZONE).toLocalDate();
+        LocalDate checkOutDate = toLocalDate(detail.getExpectedCheckOut());
+        if (!today.isBefore(checkOutDate)) {
+            throw new RuntimeException("Đơn đặt phòng đã quá thời gian nhận phòng");
+        }
+    }
+
     private void validateCheckInEligibleStatus(Booking booking) {
         if (booking.getStatus() != BookingStatus.CONFIRMED &&
                 booking.getStatus() != BookingStatus.PARTIALLY_PAID &&
@@ -1510,15 +1590,28 @@ public class BookingServiceImpl implements BookingService {
         validateDates(request.getCheckInDate(), request.getCheckOutDate());
         validateGuestCounts(request.getNumberOfAdults(), request.getNumberOfChildren());
 
-        User customer = userRepository.findByEmail(request.getCustomerEmail()).orElse(null);
+        String customerEmail = request.getCustomerEmail() == null || request.getCustomerEmail().isBlank()
+                ? null
+                : request.getCustomerEmail().trim();
+        String customerPhone = request.getCustomerPhonenumber() == null || request.getCustomerPhonenumber().isBlank()
+                ? null
+                : request.getCustomerPhonenumber().trim();
+
+        User customer = customerEmail != null
+                ? userRepository.findByEmail(customerEmail).orElse(null)
+                : userRepository.findByIdCardNumber(request.getCustomerIdCardNumber()).orElse(null);
         if (customer == null) {
             if (userRepository.existsByIdCardNumber(request.getCustomerIdCardNumber())) {
                 throw new RuntimeException("So CCCD nay da ton tai trong he thong");
             }
             customer = new User();
-            customer.setEmail(request.getCustomerEmail());
+            customer.setEmail(customerEmail != null
+                    ? customerEmail
+                    : "walkin-" + UUID.randomUUID().toString().replace("-", "") + "@guest.local");
             customer.setFullName(request.getCustomerFullname());
-            customer.setPhoneNumber(request.getCustomerPhonenumber());
+            customer.setPhoneNumber(customerPhone != null
+                    ? customerPhone
+                    : "WALKIN-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
             customer.setIdCardNumber(request.getCustomerIdCardNumber());
             customer.setRole(Role.customer);
             customer.setPasswordHash("");
@@ -1687,16 +1780,26 @@ public class BookingServiceImpl implements BookingService {
         BigDecimal taxAmount = booking.getTaxAmount();
         BigDecimal discountAmount = booking.getDiscountAmount();
         BigDecimal finalAmount = booking.getFinalAmount();
-        BigDecimal paidAmount = booking.getPaidAmount();
-        BigDecimal dueAmount = finalAmount.subtract(paidAmount);
+        // Payments are the source of truth for the invoice.  Using only the
+        // denormalized booking.paidAmount can leave a counter/walk-in payment
+        // out of the invoice when a legacy or interrupted flow did not update
+        // that aggregate field.
+        BigDecimal paidAmount = payments.stream()
+                .filter(payment -> "Completed".equalsIgnoreCase(payment.getStatus()))
+                .map(payment -> payment.getAmount()
+                        .subtract(payment.getRefundedAmount() == null
+                                ? BigDecimal.ZERO
+                                : payment.getRefundedAmount()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal dueAmount = finalAmount.subtract(paidAmount).max(BigDecimal.ZERO);
 
         return InvoiceResponse.builder()
                 .bookingId(booking.getId())
                 .bookingReference(booking.getBookingReference())
                 .bookingType(booking.getBookingType())
                 .customerName(booking.getUser().getFullName())
-                .customerEmail(booking.getUser().getEmail())
-                .customerPhone(booking.getUser().getPhoneNumber())
+                .customerEmail(hideInternalWalkInContact(booking.getUser().getEmail()))
+                .customerPhone(hideInternalWalkInContact(booking.getUser().getPhoneNumber()))
                 .checkInDate(toLocalDate(detail.getExpectedCheckIn()))
                 .checkOutDate(toLocalDate(detail.getExpectedCheckOut()))
                 .nights(nights)
@@ -1789,12 +1892,31 @@ public class BookingServiceImpl implements BookingService {
                 || "QR Code".equalsIgnoreCase(checkInMethod);
     }
 
+    private String normalizeBookingSortField(String sortBy) {
+        if (sortBy == null || sortBy.isBlank()) {
+            return "id";
+        }
+
+        return switch (sortBy.trim().toLowerCase()) {
+            case "createdat", "created_at" -> "createdAt";
+            case "updatedat", "updated_at" -> "updatedAt";
+            case "checkindate", "check_in_date" -> "checkInDate";
+            case "checkoutdate", "check_out_date" -> "checkOutDate";
+            case "bookingreference", "booking_reference" -> "bookingReference";
+            case "totalamount", "total_amount" -> "totalAmount";
+            case "finalamount", "final_amount" -> "finalAmount";
+            case "paidamount", "paid_amount" -> "paidAmount";
+            case "status", "id" -> sortBy.trim();
+            default -> "id";
+        };
+    }
+
     @Override
     @Transactional(readOnly = true)
     public PageResponse<BookingHistoryResponse> filterBookings(BookingFilter criteria) {
         int page = criteria.getPage() != null ? criteria.getPage() : 0;
         int pageSize = criteria.getPageSize() != null ? criteria.getPageSize() : 10;
-        String sortBy = criteria.getSortBy() != null ? criteria.getSortBy() : "createdAt";
+        String sortBy = normalizeBookingSortField(criteria.getSortBy());
         Sort.Direction direction = criteria.getSortDirection() != null
                 && criteria.getSortDirection().equalsIgnoreCase("DESC")
                         ? Sort.Direction.DESC
@@ -2083,8 +2205,13 @@ public class BookingServiceImpl implements BookingService {
                 .taxAmount(booking.getTaxAmount())
                 .serviceChargeAmount(booking.getServiceChargeAmount())
                 .finalAmount(booking.getFinalAmount())
+                .ekycIdentity(isFaceIdMethod(booking.getCheckInMethod())
+                        ? mapEkycIdentitySummary(booking.getUser())
+                        : null)
                 .guestName(booking.getUser() != null ? booking.getUser().getFullName() : "Khách hàng Elysian")
-                .guestEmail(booking.getUser() != null ? booking.getUser().getEmail() : "");
+                .guestEmail(booking.getUser() != null
+                        ? hideInternalWalkInContact(booking.getUser().getEmail())
+                        : "");
 
         if (detail != null) {
             RoomType roomtype = detail.getRoomType();
@@ -2125,6 +2252,17 @@ public class BookingServiceImpl implements BookingService {
                 .specialRequests(booking.getSpecialRequests())
                 .createdAt(booking.getCreatedAt())
                 .build();
+    }
+
+    private String hideInternalWalkInContact(String value) {
+        if (value == null) {
+            return null;
+        }
+        if (value.matches("(?i)^walkin-[0-9a-f]{32}@guest\\.local$")
+                || value.matches("(?i)^WALKIN-[0-9a-f]{12}$")) {
+            return null;
+        }
+        return value;
     }
 
     private String formatCurrency(BigDecimal amount) {

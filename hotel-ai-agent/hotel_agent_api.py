@@ -64,10 +64,12 @@ class BookingStateSchema(BaseModel):
     chat_history: List[dict] = []
     cached_bookings: List[dict] = []  # Cache danh sách booking để tránh gọi lại API
     quantity: int = 1
+    language: str = "VN"
 
 class ChatRequest(BaseModel):
     message: str
     state: BookingStateSchema
+    language: str = "VN"
 
 class ChatResponse(BaseModel):
     response: str
@@ -129,7 +131,8 @@ def schema_to_state(s: BookingStateSchema) -> BookingState:
         error=s.error,
         chat_history=s.chat_history,
         cached_bookings=s.cached_bookings,
-        quantity=s.quantity
+        quantity=s.quantity,
+        language=s.language
     )
 
 def state_to_schema(st: BookingState) -> BookingStateSchema:
@@ -151,7 +154,8 @@ def state_to_schema(st: BookingState) -> BookingStateSchema:
         error=st.error,
         chat_history=st.chat_history,
         cached_bookings=st.cached_bookings,
-        quantity=st.quantity
+        quantity=st.quantity,
+        language=st.language
     )
 
 # ── API Endpoints ─────────────────────────────────────────────────────────────
@@ -166,6 +170,7 @@ async def chat(req: ChatRequest):
     """Processes user input through search or booking agent based on current state."""
     user_input = req.message
     state = schema_to_state(req.state)
+    state.language = req.language or state.language or "VN"
     lower = user_input.lower().strip()
 
     booking_keywords = ["đặt", "book", "thuê", "reserve", "xác nhận", "confirm"]
@@ -174,7 +179,7 @@ async def chat(req: ChatRequest):
 
     # 1. If currently in booking flow, delegate to booking agent
     if state.step not in (BookingStep.IDLE, BookingStep.CANCELLED, BookingStep.DONE):
-        response, new_state = booking_agent.process(user_input, state)
+        response, new_state = booking_agent.process(user_input, state, state.language)
     else:
         # 2. Check intent using word boundaries to prevent matching "book" in "booking"
         booking_pattern = r"\b(đặt|book|thuê|reserve|xác\s+nhận|confirm)\b"
@@ -182,10 +187,10 @@ async def chat(req: ChatRequest):
         
         if is_booking:
             # Start booking via chat
-            response, new_state = booking_agent.process(user_input, state)
+            response, new_state = booking_agent.process(user_input, state, state.language)
         else:
             # Regular AI assistant chat
-            response = booking_agent._chat_reply(user_input, state)
+            response = booking_agent._chat_reply(user_input, state, state.language)
             new_state = state
 
     # Append to history

@@ -22,6 +22,16 @@ public interface EkycProfileRepository extends JpaRepository<EkycProfile, Intege
             """)
     boolean existsVerifiedByUserid(@Param("user") User user);
 
+    @Query("""
+            SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END
+            FROM EkycProfile e
+            WHERE e.user = :user
+              AND UPPER(e.status) = 'VERIFIED'
+              AND (e.verifiedAt IS NULL OR e.verifiedAt <= :expiresAt)
+            """)
+    boolean existsExpiredVerifiedByUserid(@Param("user") User user,
+                                          @Param("expiresAt") Instant expiresAt);
+
     @Modifying
     @Query("""
             UPDATE EkycProfile e

@@ -1,5 +1,6 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 import { Camera, Loader2, RefreshCcw, AlertTriangle, AlertCircle } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 /**
  * Tính độ mờ của ảnh dựa trên Laplacian variance.
@@ -110,6 +111,7 @@ function captureAndCompress(videoElement, maxDim = 1280, quality = 0.85, isMirro
 const BLUR_THRESHOLD = 80;
 
 export default function EkycCamera({ overlayType = 'id', hint, onCapture, mirrored = false }) {
+  const { t } = useLanguage();
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
   const streamRef = useRef(null);
@@ -120,6 +122,7 @@ export default function EkycCamera({ overlayType = 'id', hint, onCapture, mirror
   const [cameraError, setCameraError] = useState(false);
   const [compressing, setCompressing] = useState(false);
   const [blurWarning, setBlurWarning] = useState(false);
+  const [fileError, setFileError] = useState(null);
 
   // Initialize camera stream with environment→user fallback for laptops
   const startCamera = useCallback(async () => {
@@ -221,6 +224,19 @@ export default function EkycCamera({ overlayType = 'id', hint, onCapture, mirror
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Reset input value so selecting the same file triggers onChange again
+    e.target.value = '';
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const fileExtension = file.name ? file.name.split('.').pop().toLowerCase() : '';
+    const isValidExtension = ['jpg', 'jpeg', 'png', 'webp'].includes(fileExtension);
+
+    if (!validTypes.includes(file.type) && !isValidExtension) {
+      setFileError(t('ekyc_toast_invalid_file_format', 'Invalid file format. Only accepts .jpg, .png, .webp'));
+      return;
+    }
+
+    setFileError(null);
     setCompressing(true);
     try {
       // Create an image element to draw on canvas for compression
@@ -278,6 +294,16 @@ export default function EkycCamera({ overlayType = 'id', hint, onCapture, mirror
         <p className="text-center text-sm text-slate-400 font-['Geist'] px-4 max-w-sm">
           {hint}
         </p>
+      )}
+
+      {/* File format error banner */}
+      {fileError && (
+        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-none px-4 py-2.5 w-full max-w-md">
+          <AlertCircle size={16} className="text-red-600 flex-shrink-0" />
+          <p className="text-red-700 text-xs font-semibold leading-snug">
+            {fileError}
+          </p>
+        </div>
       )}
 
       {/* Blur warning banner */}
@@ -380,7 +406,7 @@ export default function EkycCamera({ overlayType = 'id', hint, onCapture, mirror
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
         className="hidden"
       />
 

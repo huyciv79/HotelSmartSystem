@@ -393,6 +393,23 @@ class BookingServiceImplTest {
     // ==========================================
 
     @Test
+    @DisplayName("Returns the exact lowest remaining room count for the selected stay")
+    void should_returnExactRemainingRoomCount_when_checkingAvailability() {
+        LocalDate checkInDate = LocalDate.now(HOTEL_ZONE).plusDays(1);
+        LocalDate checkOutDate = checkInDate.plusDays(2);
+
+        when(roomTypeRepository.findById(1)).thenReturn(Optional.of(defaultRoomType));
+        when(roomRepository.countByRoomType_IdAndStatus(1, "Available")).thenReturn(5L);
+        when(bookingDetailRepository.sumBookedQuantity(eq(1), any(), any(), anyList(), anyList()))
+                .thenReturn(1L, 3L);
+
+        var availability = bookingService.getRoomAvailability(1, checkInDate, checkOutDate);
+
+        assertEquals(2, availability.getAvailableRooms());
+        assertEquals(checkInDate.plusDays(1), availability.getLowestAvailabilityDate());
+    }
+
+    @Test
     @DisplayName("UTCID10 - Successful createGroupBooking for quantity >= 2")
     void should_createGroupBookingSuccessfully_when_validGroupRequest() {
         LocalDate today = LocalDate.now(HOTEL_ZONE);
@@ -1165,6 +1182,44 @@ class BookingServiceImplTest {
     }
 
     @Test
+    @DisplayName("Invoice includes completed counter payment even when booking aggregate is stale")
+    void should_includeCompletedCounterPaymentInInvoice() {
+        Booking booking = new Booking();
+        booking.setId(1);
+        booking.setUser(customerUser);
+        booking.setTaxAmount(new BigDecimal("100.00"));
+        booking.setDiscountAmount(BigDecimal.ZERO);
+        booking.setFinalAmount(new BigDecimal("1100.00"));
+        booking.setPaidAmount(BigDecimal.ZERO);
+
+        BookingDetail detail = new BookingDetail();
+        detail.setBooking(booking);
+        detail.setRoomType(defaultRoomType);
+        detail.setQuantity(1);
+        detail.setPriceAtBooking(new BigDecimal("1000.00"));
+        detail.setExpectedCheckIn(toInstant(LocalDate.now(HOTEL_ZONE)));
+        detail.setExpectedCheckOut(toInstant(LocalDate.now(HOTEL_ZONE).plusDays(1)));
+
+        Payment counterPayment = new Payment();
+        counterPayment.setAmount(new BigDecimal("1100.00"));
+        counterPayment.setRefundedAmount(BigDecimal.ZERO);
+        counterPayment.setStatus("Completed");
+        counterPayment.setPaymentMethod("Cash");
+        counterPayment.setPaymentType("Booking Payment");
+        counterPayment.setPaymentDate(Instant.now());
+
+        when(bookingRepository.findById(1)).thenReturn(Optional.of(booking));
+        when(userRepository.findByEmail("staff@hotel.com")).thenReturn(Optional.of(staffUser));
+        when(bookingDetailRepository.findByBooking_Id(1)).thenReturn(Optional.of(detail));
+        when(paymentRepository.findByBooking_Id(1)).thenReturn(List.of(counterPayment));
+
+        InvoiceResponse invoice = bookingService.getInvoiceDetails(1, "staff@hotel.com");
+
+        assertEquals(new BigDecimal("1100.00"), invoice.getPaidAmount());
+        assertEquals(BigDecimal.ZERO, invoice.getDueAmount());
+    }
+
+    @Test
     @DisplayName("UTCID79 - Successful addServiceToBooking when request note is provided")
     void should_addServiceToBookingWithNote_when_requestNoteIsProvided() {
         AddServiceRequest request = new AddServiceRequest();
@@ -1645,6 +1700,38 @@ class BookingServiceImplTest {
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> bookingService.performFaceCheckIn(1, selfie, selfie, selfie, selfie, "left", "manager@hotel.com"));
         assertEquals("Bạn chưa hoàn thành đăng ký eKYC nên chưa thể check-in bằng FaceID", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("FaceID check-in is rejected when eKYC verification is 365 days old or older")
+    void should_throwException_when_performFaceCheckInEkycHasExpired() {
+        MockMultipartFile selfie = new MockMultipartFile("selfieImage", "s.jpg", "image/jpeg", new byte[]{1, 2});
+        LocalDate today = LocalDate.now(HOTEL_ZONE);
+
+        Booking booking = new Booking();
+        booking.setId(1);
+        booking.setStatus(BookingStatus.CONFIRMED);
+        booking.setCheckInMethod("FaceID");
+        booking.setUser(customerUser);
+
+        BookingDetail detail = new BookingDetail();
+        detail.setBooking(booking);
+        detail.setExpectedCheckIn(toInstant(today.minusDays(1)));
+        detail.setExpectedCheckOut(toInstant(today.plusDays(2)));
+
+        when(userRepository.findByEmail("manager@hotel.com")).thenReturn(Optional.of(managerUser));
+        when(bookingDetailRepository.findByBooking_Id(1)).thenReturn(Optional.of(detail));
+        when(ekycProfileRepository.existsVerifiedByUserid(customerUser)).thenReturn(true);
+        when(ekycProfileRepository.existsExpiredVerifiedByUserid(eq(customerUser), any(Instant.class)))
+                .thenReturn(true);
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> bookingService.performFaceCheckIn(1, selfie, selfie, selfie, selfie, "left", "manager@hotel.com"));
+
+        assertEquals(
+                "Your eKYC verification has expired (365 days). Please re-verify eKYC to use FaceID.",
+                ex.getMessage());
+        verifyNoInteractions(faceEmbeddingRepository, webClient);
     }
 
     @Test
@@ -2734,8 +2821,8 @@ class BookingServiceImplTest {
     }
 
     @Test
-    @DisplayName("Generate QR token throws exception when check-in date is in future")
-    void should_throwException_when_generateQrTokenWithFutureCheckInDate() {
+    @DisplayName("Generate QR token before the check-in date")
+    void should_generateQrToken_when_checkInDateIsInFuture() {
         LocalDate today = LocalDate.now(HOTEL_ZONE);
 
         Booking booking = new Booking();
@@ -2751,10 +2838,14 @@ class BookingServiceImplTest {
         detail.setExpectedCheckOut(toInstant(today.plusDays(4)));
 
         when(bookingDetailRepository.findBookingDetail(1, "customer@example.com")).thenReturn(Optional.of(detail));
+        when(ekycProfileRepository.existsVerifiedByUserid(customerUser)).thenReturn(true);
+        when(bookingDetailRepository.existsByQrCodeValue(anyString())).thenReturn(false);
 
-        RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> bookingService.generateQrCheckInToken(1, "customer@example.com"));
-        assertEquals("Chưa đến ngày nhận phòng", ex.getMessage());
+        QrTokenResponse response = bookingService.generateQrCheckInToken(1, "customer@example.com");
+
+        assertNotNull(response);
+        assertNotNull(response.getToken());
+
     }
 
     @Test
@@ -2782,10 +2873,9 @@ class BookingServiceImplTest {
     }
 
     @Test
-    @DisplayName("Validate check-in date window on check-in date")
-    void should_handleSameDayCheckInHourWindow_when_generateQrTokenOnCheckInDate() {
+    @DisplayName("Generate QR token before the standard check-in hour")
+    void should_generateQrTokenBeforeStandardCheckInHour_when_checkInDateIsToday() {
         LocalDate today = LocalDate.now(HOTEL_ZONE);
-        LocalTime nowTime = LocalTime.now(HOTEL_ZONE);
 
         Booking booking = new Booking();
         booking.setId(1);
@@ -2800,17 +2890,12 @@ class BookingServiceImplTest {
         detail.setExpectedCheckOut(toInstant(today.plusDays(2)));
 
         when(bookingDetailRepository.findBookingDetail(1, "customer@example.com")).thenReturn(Optional.of(detail));
+        when(ekycProfileRepository.existsVerifiedByUserid(customerUser)).thenReturn(true);
+        when(bookingDetailRepository.existsByQrCodeValue(anyString())).thenReturn(false);
 
-        if (nowTime.isBefore(LocalTime.of(14, 0))) {
-            RuntimeException ex = assertThrows(RuntimeException.class,
-                    () -> bookingService.generateQrCheckInToken(1, "customer@example.com"));
-            assertEquals("Chưa đến giờ nhận phòng tiêu chuẩn (từ 14:00)", ex.getMessage());
-        } else {
-            when(ekycProfileRepository.existsVerifiedByUserid(customerUser)).thenReturn(true);
-            when(bookingDetailRepository.existsByQrCodeValue(anyString())).thenReturn(false);
-            QrTokenResponse response = bookingService.generateQrCheckInToken(1, "customer@example.com");
-            assertNotNull(response);
-        }
+        QrTokenResponse response = bookingService.generateQrCheckInToken(1, "customer@example.com");
+        assertNotNull(response);
+
     }
 
     @Test
@@ -2908,8 +2993,3 @@ class BookingServiceImplTest {
         assertEquals("Không tìm thấy người dùng", ex.getMessage());
     }
 }
-
-
-
-
-

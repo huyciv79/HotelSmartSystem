@@ -13,8 +13,10 @@ import com.example.hotelsmartbookingbackend.dto.request.CancelBookingRequest;
 import com.example.hotelsmartbookingbackend.dto.response.AiFaceReadinessResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
 import com.example.hotelsmartbookingbackend.dto.response.QrTokenResponse;
+import com.example.hotelsmartbookingbackend.dto.response.RoomAvailabilityResponse;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import com.example.hotelsmartbookingbackend.dto.request.AddServiceRequest;
@@ -24,6 +26,12 @@ public interface BookingService {
     BookingResponse createBooking(CreateBookingRequest request, String customerEmail);
 
     BookingResponse createGroupBooking(CreateGroupBookingRequest request, String customerEmail);
+
+    RoomAvailabilityResponse getRoomAvailability(
+            Integer roomTypeId,
+            LocalDate checkInDate,
+            LocalDate checkOutDate
+    );
 
     List<BookingHistoryResponse> getBookingHistory(String customerEmail);
 

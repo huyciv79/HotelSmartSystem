@@ -453,6 +453,7 @@ export const translations = {
     ekyc_btn_verify_now: 'Xác minh eKYC ngay',
     ekyc_label_smart_key: 'SMART KEY',
     ekyc_label_e_checkin: 'E-CHECKIN',
+    ekyc_toast_invalid_file_format: 'Định dạng tệp không hợp lệ. Chỉ chấp nhận .jpg, .png, .webp',
  },
   EN: {
     // Navbar
@@ -908,6 +909,7 @@ export const translations = {
     ekyc_btn_verify_now: 'Verify eKYC Now',
     ekyc_label_smart_key: 'SMART KEY',
     ekyc_label_e_checkin: 'E-CHECKIN',
+    ekyc_toast_invalid_file_format: 'Invalid file format. Only accepts .jpg, .png, .webp',
   },
   JP: {
     // Navbar
@@ -1363,6 +1365,7 @@ export const translations = {
     ekyc_btn_verify_now: '今すぐeKYC認証',
     ekyc_label_smart_key: 'SMART KEY',
     ekyc_label_e_checkin: 'E-CHECKIN',
+    ekyc_toast_invalid_file_format: '無効なファイル形式です。.jpg, .png, .webp のみ受け付けます',
   },
   KR: {
     // Navbar
@@ -1818,6 +1821,7 @@ export const translations = {
     ekyc_btn_verify_now: '지금 eKYC 인증',
     ekyc_label_smart_key: 'SMART KEY',
     ekyc_label_e_checkin: 'E-CHECKIN',
+    ekyc_toast_invalid_file_format: '유효하지 않은 파일 형식입니다. .jpg, .png, .webp만 허용됩니다',
   },
   CN: {
     // Navbar
@@ -2273,5 +2277,6 @@ export const translations = {
     ekyc_btn_verify_now: '立即进行 eKYC 验证',
     ekyc_label_smart_key: 'SMART KEY',
     ekyc_label_e_checkin: 'E-CHECKIN',
+    ekyc_toast_invalid_file_format: '无效的文件格式。仅接受 .jpg, .png, .webp',
   }
 };

@@ -1,13 +1,94 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { chatWithAi, createInitialBookingState } from '../services/aiService';
 import { useLanguage } from '../context/LanguageContext';
 
+const bubbleCopy = {
+  VN: {
+    welcome: 'Xin chào! Tôi có thể hỗ trợ gì cho bạn về hành trình lưu trú hoặc đặt phòng hôm nay?',
+    roomTypesPrompt: 'Khách sạn có những loại phòng nào?',
+    roomTypesChip: 'Các loại phòng?',
+    checkInPrompt: 'Quy trình check-in tự động',
+    checkInChip: 'Check-in FaceID',
+    placeholder: 'Nhập câu hỏi tại đây...',
+    connectionError: 'Lỗi kết nối với Trợ lý AI.',
+    clearTitle: 'Làm mới cuộc trò chuyện',
+    expandTitle: 'Mở rộng giao diện',
+    bookingTip: 'Đang ở bước đặt phòng.',
+    bookingTipAction: 'Nhấn vào đây để xem chi tiết',
+    chooseRoomPrefix: 'Tôi chọn phòng',
+    choose: 'Chọn',
+  },
+  EN: {
+    welcome: 'Hello! How can I assist you with your travel plans or room bookings today?',
+    roomTypesPrompt: 'What room types are available?',
+    roomTypesChip: 'Room types?',
+    checkInPrompt: 'Smart Check-in process',
+    checkInChip: 'FaceID Check-in',
+    placeholder: 'Ask something...',
+    connectionError: 'AI connection error.',
+    clearTitle: 'Restart conversation',
+    expandTitle: 'Expand chat',
+    bookingTip: 'Booking is in progress.',
+    bookingTipAction: 'Open details',
+    chooseRoomPrefix: 'I choose room',
+    choose: 'Select',
+  },
+  JP: {
+    welcome: 'こんにちは！本日のご宿泊やご予約について、何かお手伝いできることはありますか？',
+    roomTypesPrompt: '利用できる客室タイプを教えてください',
+    roomTypesChip: '客室タイプ',
+    checkInPrompt: 'スマートチェックインの流れ',
+    checkInChip: 'FaceIDチェックイン',
+    placeholder: 'ご質問を入力してください...',
+    connectionError: 'AIアシスタントへの接続でエラーが発生しました。',
+    clearTitle: '会話をリセット',
+    expandTitle: 'チャットを拡大',
+    bookingTip: '予約手続き中です。',
+    bookingTipAction: '詳細を開く',
+    chooseRoomPrefix: 'この客室を選択します:',
+    choose: '選択',
+  },
+  KR: {
+    welcome: '안녕하세요! 오늘 여행 계획이나 객실 예약과 관련하여 무엇을 도와드릴까요?',
+    roomTypesPrompt: '이용 가능한 객실 유형을 알려주세요',
+    roomTypesChip: '객실 유형',
+    checkInPrompt: '스마트 체크인 절차',
+    checkInChip: 'FaceID 체크인',
+    placeholder: '질문을 입력하세요...',
+    connectionError: 'AI 어시스턴트 연결 오류입니다.',
+    clearTitle: '대화 다시 시작',
+    expandTitle: '채팅 확대',
+    bookingTip: '예약 절차가 진행 중입니다.',
+    bookingTipAction: '자세히 보기',
+    chooseRoomPrefix: '이 객실을 선택합니다:',
+    choose: '선택',
+  },
+  CN: {
+    welcome: '您好！今天有什么我可以帮您的吗？比如查找房间或了解入住流程？',
+    roomTypesPrompt: '请介绍可预订的房型',
+    roomTypesChip: '房型',
+    checkInPrompt: '智能入住流程',
+    checkInChip: 'FaceID入住',
+    placeholder: '请输入您的问题...',
+    connectionError: 'AI助手连接错误。',
+    clearTitle: '重新开始对话',
+    expandTitle: '展开聊天',
+    bookingTip: '正在进行预订流程。',
+    bookingTipAction: '查看详情',
+    chooseRoomPrefix: '我选择房间:',
+    choose: '选择',
+  },
+};
+
+const getBubbleCopy = (language) => bubbleCopy[language] || bubbleCopy.EN;
+
 export default function AiFloatingBubble({ setActivePage, activePage }) {
   const { language } = useLanguage();
+  const copy = getBubbleCopy(language);
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     try {
       return !!localStorage.getItem('accessToken');
-    } catch (e) {
+    } catch {
       return false;
     }
   });
@@ -48,9 +129,10 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
 
   useEffect(() => {
     try {
-      setIsLoggedIn(!!localStorage.getItem('accessToken'));
-    } catch (e) {
-      setIsLoggedIn(false);
+      const hasToken = !!localStorage.getItem('accessToken');
+      queueMicrotask(() => setIsLoggedIn(hasToken));
+    } catch {
+      queueMicrotask(() => setIsLoggedIn(false));
     }
   }, [activePage]);
 
@@ -59,37 +141,50 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
     if (isOpen) {
       try {
         const token = localStorage.getItem('accessToken') || '';
-        setBookingState(prev => ({
-          ...prev,
-          access_token: token
-        }));
+        queueMicrotask(() => {
+          setBookingState(prev => ({
+            ...prev,
+            access_token: token
+          }));
+        });
       } catch (e) {
         console.error(e);
       }
     }
   }, [isOpen]);
 
-  // Set up welcome message
+  // Set up welcome message and reset stale chat when the locale changes.
   useEffect(() => {
-    const welcomeMsgs = {
-      VN: 'Xin chào! Tôi có thể hỗ trợ gì cho bạn về hành trình lưu trú hoặc đặt phòng hôm nay?',
-      EN: 'Hello! How can I assist you with your travel plans or room bookings today?',
-      JP: 'こんにちは！本日のご宿泊やご予約について、何かお手伝いできることはありますか？',
-      KR: '안녕하세요! 오늘 여행 계획이나 객실 예약과 관련하여 무엇을 도와드릴까요?',
-      CN: '您好！今天有什么我可以帮您的吗？比如查找房间或了解入住流程？'
-    };
-
-    const initialGreeting = welcomeMsgs[language] || welcomeMsgs.EN;
+    const initialGreeting = getBubbleCopy(language).welcome;
     try {
+      const savedLanguage = localStorage.getItem('elysianChatLanguage');
       const saved = localStorage.getItem('elysianChatMessages');
       const parsed = saved ? JSON.parse(saved) : [];
+      const shouldResetForLanguage =
+        (savedLanguage && savedLanguage !== language) ||
+        (!savedLanguage && language !== 'VN' && parsed.length > 0);
+
+      if (shouldResetForLanguage) {
+        localStorage.setItem('elysianChatLanguage', language);
+        localStorage.removeItem('elysianChatMessages');
+        localStorage.removeItem('elysianBookingState');
+        queueMicrotask(() => {
+          setChatMessages([{ role: 'assistant', content: initialGreeting }]);
+          setBookingState(createInitialBookingState());
+        });
+        return;
+      }
+
+      localStorage.setItem('elysianChatLanguage', language);
       if (parsed.length === 0) {
-        setChatMessages([
-          {
-            role: 'assistant',
-            content: initialGreeting
-          }
-        ]);
+        queueMicrotask(() => {
+          setChatMessages([
+            {
+              role: 'assistant',
+              content: initialGreeting
+            }
+          ]);
+        });
       }
     } catch (e) {
       console.error(e);
@@ -181,7 +276,7 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
       if (trimmed.startsWith('[ROOM_CARD:')) {
         const match = trimmed.match(/\[ROOM_CARD:\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\]/);
         if (match) {
-          const [_, name, price, capacity, image] = match;
+          const [, name, price, capacity, image] = match;
           return (
             <div key={idx} className="flex flex-col bg-white border border-slate-200 rounded-lg overflow-hidden my-2 shadow-sm max-w-[260px]">
               {image && image !== 'null' && image !== '' && (
@@ -194,10 +289,10 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
                   <span className="text-primary font-bold">{price}</span>
                 </div>
                 <button 
-                  onClick={() => onSendMessage && onSendMessage(`Tôi chọn phòng ${name}`)}
+                  onClick={() => onSendMessage && onSendMessage(`${copy.chooseRoomPrefix} ${name}`)}
                   className="mt-1.5 w-full py-2 bg-slate-50 hover:bg-primary hover:text-white border border-slate-200 hover:border-primary rounded-md text-[11px] font-bold transition-colors cursor-pointer"
                 >
-                  Chọn
+                  {copy.choose}
                 </button>
               </div>
             </div>
@@ -250,11 +345,14 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
     });
   };
 
-  const handleSendMessage = async (e) => {
-    e?.preventDefault();
-    if (!inputText.trim() || isLoading) return;
+  const handleSendMessage = async (eventOrMessage) => {
+    if (typeof eventOrMessage !== 'string') {
+      eventOrMessage?.preventDefault();
+    }
 
-    const message = inputText;
+    const message = typeof eventOrMessage === 'string' ? eventOrMessage : inputText;
+    if (!message.trim() || isLoading) return;
+
     setInputText('');
     setIsLoading(true);
 
@@ -262,16 +360,14 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
     setChatMessages(prev => [...prev, { role: 'user', content: message }]);
 
     try {
-      const data = await chatWithAi(message, bookingState);
+      const data = await chatWithAi(message, bookingState, language);
       setBookingState(data.state);
       setChatMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
     } catch (err) {
       console.error(err);
       setChatMessages(prev => [...prev, {
         role: 'assistant',
-        content: language === 'VN' 
-          ? '⚠️ Lỗi kết nối với Trợ lý AI.'
-          : '⚠️ AI connection error.'
+        content: copy.connectionError
       }]);
     } finally {
       setIsLoading(false);
@@ -287,17 +383,11 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
     try {
       localStorage.removeItem('elysianChatMessages');
       localStorage.removeItem('elysianBookingState');
+      localStorage.setItem('elysianChatLanguage', language);
     } catch (e) {
       console.error("Error clearing chat from localStorage in AiFloatingBubble:", e);
     }
-    const welcomeMsgs = {
-      VN: 'Xin chào! Tôi có thể hỗ trợ gì cho bạn về hành trình lưu trú hoặc đặt phòng hôm nay?',
-      EN: 'Hello! How can I assist you with your travel plans or room bookings today?',
-      JP: 'こんにちは！本日のご宿泊やご予約について、何かお手伝いできることはありますか？',
-      KR: '안녕하세요! 오늘 여행 계획이나 객실 예약과 관련하여 무엇을 도와드릴까요?',
-      CN: '您好！今天有什么我可以帮您的吗？比如查找房间或了解入住流程？'
-    };
-    const initialGreeting = welcomeMsgs[language] || welcomeMsgs.EN;
+    const initialGreeting = copy.welcome;
     setChatMessages([
       {
         role: 'assistant',
@@ -329,14 +419,14 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
             <div className="flex items-center gap-1.5">
               <button 
                 onClick={handleClearChat}
-                title="Làm mới cuộc trò chuyện"
+                title={copy.clearTitle}
                 className="p-1 hover:bg-white/10 text-white transition-colors border-none bg-transparent cursor-pointer flex items-center"
               >
                 <span className="material-symbols-outlined text-base">refresh</span>
               </button>
               <button 
                 onClick={handleExpandUI}
-                title="Mở rộng giao diện"
+                title={copy.expandTitle}
                 className="p-1 hover:bg-white/10 text-white transition-colors border-none bg-transparent cursor-pointer flex items-center"
               >
                 <span className="material-symbols-outlined text-base">open_in_full</span>
@@ -403,7 +493,7 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
           {/* Booking Flow Redirect Tip */}
           {bookingState.step !== 'idle' && (
             <div className="px-4 py-1.5 bg-red-50 border-t border-red-150 text-[10px] font-bold text-primary text-center">
-              ⚠️ Đang ở bước đặt phòng. <button onClick={handleExpandUI} className="underline bg-transparent border-none text-primary font-black uppercase cursor-pointer">Nhấn vào đây để xem chi tiết</button>
+              {copy.bookingTip} <button onClick={handleExpandUI} className="underline bg-transparent border-none text-primary font-black uppercase cursor-pointer">{copy.bookingTipAction}</button>
             </div>
           )}
 
@@ -411,16 +501,16 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
           {bookingState.step === 'idle' && (
             <div className="px-4 py-1.5 bg-white border-t border-slate-100 flex gap-1.5 overflow-x-auto scrollbar-none whitespace-nowrap">
               <button 
-                onClick={() => setInputText(language === 'VN' ? 'Khách sạn có những loại phòng nào?' : 'What room types are available?')}
+                onClick={() => setInputText(copy.roomTypesPrompt)}
                 className="px-3 py-1 rounded-full bg-slate-50 hover:bg-slate-100 text-[10px] font-bold tracking-wide text-slate-600 hover:text-primary border border-slate-200 hover:border-primary/30 transition-all cursor-pointer"
               >
-                Các loại phòng?
+                {copy.roomTypesChip}
               </button>
               <button 
-                onClick={() => setInputText(language === 'VN' ? 'Quy trình check-in tự động' : 'Smart Check-in process')}
+                onClick={() => setInputText(copy.checkInPrompt)}
                 className="px-3 py-1 rounded-full bg-slate-50 hover:bg-slate-100 text-[10px] font-bold tracking-wide text-slate-600 hover:text-primary border border-slate-200 hover:border-primary/30 transition-all cursor-pointer"
               >
-                Check-in FaceID
+                {copy.checkInChip}
               </button>
             </div>
           )}
@@ -432,7 +522,7 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               disabled={isLoading}
-              placeholder={language === 'VN' ? 'Nhập câu hỏi tại đây...' : 'Ask something...'}
+              placeholder={copy.placeholder}
               className="flex-grow px-4 py-2 bg-slate-50 border border-slate-200 rounded-full text-xs font-semibold text-slate-800 focus:outline-none focus:border-primary focus:bg-white transition-colors"
             />
             <button 

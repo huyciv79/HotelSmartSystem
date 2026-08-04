@@ -12,12 +12,14 @@ import com.example.hotelsmartbookingbackend.dto.response.BookingHistoryResponse;
 import com.example.hotelsmartbookingbackend.dto.response.BookingResponse;
 import com.example.hotelsmartbookingbackend.dto.response.InvoiceResponse;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
+import com.example.hotelsmartbookingbackend.dto.response.RoomAvailabilityResponse;
 import com.example.hotelsmartbookingbackend.service.BookingService;
 import com.example.hotelsmartbookingbackend.service.PdfService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,9 +28,11 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.example.hotelsmartbookingbackend.repository.ServiceRepository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -56,6 +60,18 @@ public class BookingController {
         String customerEmail = authentication.getName();
         BookingResponse response = bookingService.createGroupBooking(request, customerEmail);
         return ResponseEntity.ok(ApiResponse.success("Đặt phòng nhóm thành công", response));
+    }
+
+    @GetMapping("/availability")
+    public ResponseEntity<ApiResponse<RoomAvailabilityResponse>> getRoomAvailability(
+            @RequestParam Integer roomTypeId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkInDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOutDate) {
+        RoomAvailabilityResponse response = bookingService.getRoomAvailability(
+                roomTypeId,
+                checkInDate,
+                checkOutDate);
+        return ResponseEntity.ok(ApiResponse.success("Room availability retrieved", response));
     }
 
     @GetMapping("/history")

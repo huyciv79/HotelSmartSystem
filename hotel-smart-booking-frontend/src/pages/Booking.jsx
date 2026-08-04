@@ -14,6 +14,7 @@ export default function Booking({ setActivePage }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [roomTypes, setRoomTypes] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
+  const [isRoomTypesLoading, setIsRoomTypesLoading] = useState(true);
   
   // Date Picker States
   const [startDate, setStartDate] = useState(null);
@@ -22,10 +23,6 @@ export default function Booking({ setActivePage }) {
   // Guest Stepper States
   const [adults, setAdults] = useState(1);
   const [childrenCount, setChildrenCount] = useState(0);
-  
-  // Availability Check State
-  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
-  const [isAvailable, setIsAvailable] = useState(null); // null | true | false
   
   // Step 2 & 3 States
   const [checkInMethod, setCheckInMethod] = useState('Manual'); // 'Manual' | 'FaceID' | 'QR Code'
@@ -40,7 +37,8 @@ export default function Booking({ setActivePage }) {
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const response = await getRoomTypes();
+        const response = await getRoomTypes('Active');
+        setIsRoomTypesLoading(false);
         if (response && response.data && response.data.content) {
           setRoomTypes(response.data.content);
           
@@ -59,6 +57,7 @@ export default function Booking({ setActivePage }) {
           }
         }
       } catch (err) {
+        setIsRoomTypesLoading(false);
         console.error('Lỗi khi tải danh sách loại phòng:', err);
         showToast('Không thể tải danh sách loại phòng', 'error');
       }
@@ -100,12 +99,20 @@ export default function Booking({ setActivePage }) {
     setCheckInMethod('FaceID');
   };
 
-  // Reset availability status when dates or room changes
-  useEffect(() => {
-    setTimeout(() => {
-      setIsAvailable(null);
-    }, 0);
-  }, [startDate, endDate, selectedRoom]);
+  const handleQrCodeSelection = () => {
+    if (isEkycLoading) {
+      showToast('Đang kiểm tra trạng thái eKYC, vui lòng chờ.', 'info');
+      return;
+    }
+    if (!isEkycVerified) {
+      showToast(
+        'Vui lòng hoàn thành đăng ký eKYC trước khi sử dụng check-in bằng QR Code.',
+        'warning',
+      );
+      return;
+    }
+    setCheckInMethod('QR Code');
+  };
 
   const handleRoomChange = (roomId) => {
     const room = roomTypes.find(r => r.id === parseInt(roomId));
@@ -123,21 +130,6 @@ export default function Booking({ setActivePage }) {
     const [start, end] = dates;
     setStartDate(start);
     setEndDate(end);
-  };
-
-  const checkAvailability = () => {
-    if (!startDate || !endDate) {
-      showToast('Vui lòng chọn khoảng ngày lưu trú.', 'error');
-      return;
-    }
-    
-    setIsCheckingAvailability(true);
-    // Simulate API call to check room availability
-    setTimeout(() => {
-      setIsCheckingAvailability(false);
-      setIsAvailable(true);
-      showToast('Phòng vẫn còn trống trong khoảng thời gian này!', 'success');
-    }, 1200);
   };
 
   // Calculate nights
@@ -177,16 +169,8 @@ export default function Booking({ setActivePage }) {
     if (totalGuests > maxCapacity) {
       tempErrors.guests = `Tổng số khách (${totalGuests}) vượt quá sức chứa tối đa của phòng (${maxCapacity} người)`;
     }
-    if (isAvailable === false) {
-      tempErrors.availability = 'Khoảng thời gian này đã hết phòng trống';
-    }
-
     setErrors(tempErrors);
     if (Object.keys(tempErrors).length === 0) {
-      if (isAvailable === null) {
-        // Automatically mark as available if they didn't manually check
-        setIsAvailable(true);
-      }
       setCurrentStep(2);
     } else {
       showToast('Vui lòng kiểm tra lại thông tin bước 1.', 'error');
@@ -228,20 +212,6 @@ export default function Booking({ setActivePage }) {
       const response = await createBooking(bookingPayload);
       if (response && response.data) {
         showToast(t('Đặt phòng thành công! Đang chuyển hướng sang trang thanh toán...'), 'success');
-        
-        try {
-          const existing = JSON.parse(localStorage.getItem('hotel_all_bookings') || '[]');
-          const userObj = JSON.parse(localStorage.getItem('user') || '{}');
-          const newBk = {
-            ...response.data,
-            guestName: userObj.fullName || userObj.name || 'Khách hàng Elysian',
-            guestEmail: userObj.email || ''
-          };
-          existing.push(newBk);
-          localStorage.setItem('hotel_all_bookings', JSON.stringify(existing));
-        } catch (e) {
-          console.error('Lỗi khi lưu đặt phòng vào danh sách dùng chung:', e);
-        }
 
         sessionStorage.removeItem('bookingRoom');
         sessionStorage.setItem('selectedBookingId', response.data.bookingId);
@@ -377,8 +347,10 @@ export default function Booking({ setActivePage }) {
                     <select 
                       value={selectedRoom ? selectedRoom.id : ''}
                       onChange={(e) => handleRoomChange(e.target.value)}
+                      disabled={isRoomTypesLoading || roomTypes.length === 0}
                       className="w-full bg-transparent border-b border-on-surface py-2 font-bold text-sm outline-none focus:border-primary"
                     >
+                      {isRoomTypesLoading && <option value="">Đang tải loại phòng...</option>}
                       {roomTypes.map((room) => (
                         <option key={room.id} value={room.id}>
                           {room.name} - {t('booking_capacity_label', 'Sức chứa')}: {room.totalCapacity || ((room.adultCapacity || 2) + (room.childCapacity || 1))} {t('booking_guests_count', 'khách')}
@@ -404,37 +376,6 @@ export default function Booking({ setActivePage }) {
                     </div>
                     {errors.dates && <p className="text-xs text-error font-medium mt-1">{errors.dates}</p>}
                   </div>
-
-                  {/* Check Availability Box */}
-                  {startDate && endDate && (
-                    <div className="bg-slate-50 border border-slate-200 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                      <div>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{t('booking_availability_status_label', 'Trạng thái phòng trống')}</span>
-                        {isCheckingAvailability ? (
-                          <span className="text-xs font-bold text-slate-600 flex items-center gap-1.5 mt-1">
-                            <span className="w-3 h-3 border border-slate-400 border-t-slate-600 rounded-full animate-spin"></span> {t('booking_checking_availability', 'Đang kiểm tra phòng trống...')}
-                          </span>
-                        ) : isAvailable ? (
-                          <span className="text-xs font-bold text-green-600 flex items-center gap-1 mt-1">
-                            <span className="material-symbols-outlined text-base">check_circle</span> {t('booking_available_success', 'Phòng trống sẵn sàng')}
-                          </span>
-                        ) : isAvailable === false ? (
-                          <span className="text-xs font-bold text-error flex items-center gap-1 mt-1">
-                            <span className="material-symbols-outlined text-base">cancel</span> {t('booking_not_available', 'Hết phòng trống')}
-                          </span>
-                        ) : (
-                          <span className="text-xs font-bold text-slate-500 mt-1 block">{t('booking_not_checked', 'Chưa kiểm tra')}</span>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={checkAvailability}
-                        className="bg-slate-900 hover:bg-primary text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 border-none cursor-pointer transition-all duration-200"
-                      >
-                        {t('booking_btn_check_availability', 'Kiểm tra phòng trống')}
-                      </button>
-                    </div>
-                  )}
 
                   {/* Guests Steppers */}
                   <div className="space-y-4 border-t border-gray-100 pt-6">
@@ -528,11 +469,14 @@ export default function Booking({ setActivePage }) {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* QR Code Option */}
                     <div 
-                      onClick={() => setCheckInMethod('QR Code')}
+                      onClick={handleQrCodeSelection}
+                      aria-disabled={isEkycLoading || !isEkycVerified}
                       className={`border p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 ${
                         checkInMethod === 'QR Code' 
                           ? 'border-primary bg-primary/5 text-primary shadow-md' 
-                          : 'border-slate-200 hover:border-primary/50 text-slate-700 bg-white'
+                          : isEkycLoading || !isEkycVerified
+                            ? 'border-slate-200 text-slate-400 bg-slate-100 cursor-not-allowed opacity-70'
+                            : 'border-slate-200 hover:border-primary/50 text-slate-700 bg-white'
                       }`}
                     >
                       <span className="material-symbols-outlined text-3xl mb-3">qr_code_2</span>

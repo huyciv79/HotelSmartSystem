@@ -75,7 +75,7 @@ const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleL
             }`}
           >
             <span className="material-symbols-outlined text-base">face</span>
-            FaceID Check-in
+            Check-in khuôn mặt
           </button>
 
           {isManager && (

@@ -45,10 +45,8 @@ public class WalkInBookingRequest {
     @NotBlank(message = "Vui lòng nhập họ tên khách hàng")
     private String customerFullname;
 
-    @NotBlank(message = "Vui lòng nhập email khách hàng")
     private String customerEmail;
 
-    @NotBlank(message = "Vui lòng nhập số điện thoại khách hàng")
     private String customerPhonenumber;
 
     @NotBlank(message = "Vui lòng nhập số CCCD khách hàng")

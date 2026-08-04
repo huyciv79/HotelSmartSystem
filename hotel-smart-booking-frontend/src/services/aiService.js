@@ -30,7 +30,8 @@ export const createInitialBookingState = () => {
     access_token: token,
     booking_result: null,
     error: '',
-    chat_history: []
+    chat_history: [],
+    language: localStorage.getItem('language') || 'VN'
   };
 };
 
@@ -40,6 +41,7 @@ export const createInitialBookingState = () => {
 const syncAccessToken = (state) => {
   const currentState = { ...state };
   currentState.access_token = localStorage.getItem('accessToken') || '';
+  currentState.language = localStorage.getItem('language') || currentState.language || 'VN';
   return currentState;
 };
 
@@ -49,12 +51,15 @@ const syncAccessToken = (state) => {
  * @param {object} state 
  * @returns {Promise<{response: string, state: object, search_results: object|null}>}
  */
-export const chatWithAi = async (message, state) => {
+export const chatWithAi = async (message, state, language) => {
   try {
     const syncedState = syncAccessToken(state);
+    const activeLanguage = language || localStorage.getItem('language') || syncedState.language || 'VN';
+    syncedState.language = activeLanguage;
     const response = await aiAxios.post('/chat', {
       message,
-      state: syncedState
+      state: syncedState,
+      language: activeLanguage
     });
     return response.data;
   } catch (error) {
