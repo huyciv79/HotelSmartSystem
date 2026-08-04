@@ -166,6 +166,50 @@ export default function StaffDashboard({ setActivePage }) {
   const [roomsSearchQuery, setRoomsSearchQuery] = useState('');
   const [isRoomEditOpen, setIsRoomEditOpen] = useState(false);
   const [editingRoomItem, setEditingRoomItem] = useState(null);
+
+  // Auth state
+
+
+
+
+
+
+
+  // Dashboard Tabs Navigation
+
+
+  // Simulated Booking states
+
+
+
+
+
+  // Live Room Types states for Manager CRUD
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // Individual Rooms states for Manager CRUD
+
+
+
+
+
+
+
+
   const [roomEditFormData, setRoomEditFormData] = useState({
     roomNumber: '',
     floorNumber: '',
@@ -199,9 +243,13 @@ export default function StaffDashboard({ setActivePage }) {
     specialRequests: '',
     discountAmount: 0
   });
+
+  // Cancel booking modal states
+  const [isCancelBookingModalOpen, setIsCancelBookingModalOpen] = useState(false);
+  const [cancelBookingReason, setCancelBookingReason] = useState('Hủy trực tiếp bởi nhân viên/quản lý');
+  const [isSubmittingCancelBooking, setIsSubmittingCancelBooking] = useState(false);
+
   const [walkInFormData, setWalkInFormData] = useState({
-    roomTypeId: '',
-    checkInDate: '',
     checkOutDate: '',
     numberOfAdults: 1,
     numberOfChildren: 0,
@@ -502,17 +550,8 @@ export default function StaffDashboard({ setActivePage }) {
       showToast('Vui lòng điền đầy đủ các thông tin bắt buộc', 'warning');
       return;
     }
-    const today = formatLocalDate(new Date());
-    if (walkInFormData.checkInDate < today) {
-      showToast('Ngày nhận phòng không thể ở trong quá khứ.', 'warning');
-      return;
-    }
-    if (walkInFormData.checkOutDate <= walkInFormData.checkInDate) {
-      showToast('Ngày trả phòng phải sau ngày nhận phòng.', 'warning');
-      return;
-    }
     if (!/^[0-9]{12}$/.test(walkInFormData.customerIdCardNumber)) {
-      showToast('So CCCD phai gom dung 12 chu so', 'warning');
+      showToast('Số CCCD phải gồm đúng 12 chữ số', 'warning');
       return;
     }
     setIsSubmittingWalkIn(true);
@@ -530,7 +569,6 @@ export default function StaffDashboard({ setActivePage }) {
       if (response && response.success) {
         showToast('Đặt phòng Walk-in và nhận phòng thành công!', 'success');
         setIsWalkInModalOpen(false);
-        fetchRealBookings();
       }
     } catch (err) {
       console.error(err);
@@ -557,34 +595,33 @@ export default function StaffDashboard({ setActivePage }) {
       if (response && response.success) {
         showToast('Cập nhật đơn đặt phòng thành công!', 'success');
         setIsEditBookingModalOpen(false);
-        const updated = response.data;
-        setSelectedBooking(prev => ({
-          ...prev,
-          ...updated,
-          id: updated.bookingId,
-          bookingReference: updated.bookingNumber || updated.bookingReference || prev.bookingReference,
-          roomType: updated.roomTypeName || prev.roomType,
-          roomTypeId: updated.roomTypeId || prev.roomTypeId,
-          checkInDate: updated.checkInDate || prev.checkInDate,
-          checkOutDate: updated.checkOutDate || prev.checkOutDate,
-          nights: updated.nights || prev.nights,
-          totalAmount: updated.totalAmount || prev.totalAmount,
-          finalAmount: updated.finalAmount || prev.finalAmount,
-          paidAmount: updated.paidAmount || prev.paidAmount,
-          taxAmount: updated.taxAmount || prev.taxAmount,
-          specialRequests: updated.specialRequests || prev.specialRequests,
-          numberOfAdults: updated.numberOfAdults || prev.numberOfAdults,
-          numberOfChildren: updated.numberOfChildren || prev.numberOfChildren,
-          quantity: updated.quantity || prev.quantity,
-          discountAmount: updated.discountAmount || prev.discountAmount,
-        }));
-        fetchRealBookings();
       }
     } catch (err) {
       console.error(err);
       showToast(err.response?.data?.message || 'Không thể cập nhật đơn đặt phòng.', 'error');
     } finally {
       setIsSubmittingEditBooking(false);
+    }
+  };
+
+  const handleCancelBookingSubmit = async (e) => {
+    e?.preventDefault();
+    if (!selectedBooking) return;
+    setIsSubmittingCancelBooking(true);
+    try {
+      const prevTab = selectedBooking.prevTab || 'bookings';
+      await cancelBooking(selectedBooking.id, cancelBookingReason || 'Hủy trực tiếp bởi nhân viên/quản lý');
+      showToast(`Hủy đặt phòng thành công!`, 'success');
+      setIsCancelBookingModalOpen(false);
+      setSelectedBooking(null);
+      setActiveTab(prevTab);
+      fetchRealBookings();
+      window.dispatchEvent(new Event('reload-bookings'));
+    } catch (err) {
+      console.error('Lỗi khi hủy đặt phòng:', err);
+      showToast(err.response?.data?.message || 'Không thể hủy đặt phòng', 'error');
+    } finally {
+      setIsSubmittingCancelBooking(false);
     }
   };
 
@@ -2071,6 +2108,203 @@ export default function StaffDashboard({ setActivePage }) {
                         );
                       })()}
 
+
+                      {/* Room Move Request Block */}
+                      {(() => {
+                        const associatedRoomChange = pendingRoomChanges.find(req => req.bookingId === selectedBooking.bookingId || req.bookingReference === selectedBooking.bookingReference);
+                        if (!associatedRoomChange) return null;
+                        return (
+                          <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-6 flex flex-col gap-4 animate-scale-in">
+                            <div className="flex items-center gap-2 border-b border-blue-100 pb-3">
+                              <span className="material-symbols-outlined text-blue-500 text-base">autorenew</span>
+                              <h4 className="text-xs font-black text-blue-700 uppercase tracking-widest m-0">Yêu cầu đổi phòng chờ xử lý</h4>
+                              <span className="ml-auto px-2.5 py-1 text-[8.5px] font-extrabold text-blue-600 bg-blue-100 uppercase tracking-widest rounded-lg">Pending</span>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
+                              <div className="space-y-2">
+                                <div>
+                                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Lý do yêu cầu đổi phòng:</span>
+                                  <span className="text-slate-700 font-semibold italic">"{associatedRoomChange.description || 'Không có lý do chi tiết'}"</span>
+                                </div>
+                                <div className="pt-1">
+                                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Yêu cầu lúc:</span>
+                                  <span className="text-slate-500 font-bold">{new Date(associatedRoomChange.createdAt).toLocaleString('vi-VN')}</span>
+                                </div>
+                              </div>
+
+                              <div className="bg-white p-4 border border-blue-100 space-y-3 rounded-xl font-semibold">
+                                <div className="flex justify-between text-[11px]">
+                                  <span className="text-slate-500">Hạng phòng đích:</span>
+                                  <span className="text-slate-800 font-bold">{associatedRoomChange.newValue === String(selectedBooking.roomTypeId) ? 'Cùng hạng phòng hiện tại' : 'Hạng phòng khác'}</span>
+                                </div>
+                                
+                                <div className="space-y-1">
+                                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Chọn phòng vật lý trống để gán:</span>
+                                  {isLoadingAvailableRooms ? (
+                                    <div className="text-[10px] text-slate-500">Đang tải danh sách phòng...</div>
+                                  ) : availableRoomsForChange.length === 0 ? (
+                                    <div className="text-[10px] text-rose-500">Hết phòng trống thuộc hạng phòng này!</div>
+                                  ) : (
+                                    <select
+                                      value={selectedPhysicalRoomId}
+                                      onChange={(e) => setSelectedPhysicalRoomId(e.target.value)}
+                                      className="w-full bg-white border border-slate-200 text-slate-800 p-2 text-xs font-semibold focus:outline-none"
+                                    >
+                                      <option value="">-- Chọn phòng vật lý --</option>
+                                      {availableRoomsForChange.map(r => (
+                                        <option key={r.id} value={r.id}>Phòng {r.roomNumber || r.roomnumber} (Tầng {r.floorNumber ?? r.floornumber})</option>
+                                      ))}
+                                    </select>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-3 justify-end border-t border-blue-100 pt-3">
+                              <button
+                                onClick={() => handleApproveRoomChange(associatedRoomChange)}
+                                disabled={isSubmittingRoomChangeAction}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer border-none rounded-xl shadow-sm transition-all"
+                              >
+                                {isSubmittingRoomChangeAction ? 'Đang duyệt...' : 'Duyệt chuyển phòng'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedRoomChange(associatedRoomChange);
+                                  setRoomChangeRejectionReason('');
+                                  setIsRejectRoomChangeOpen(true);
+                                }}
+                                disabled={isSubmittingRoomChangeAction}
+                                className="bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer border-none rounded-xl shadow-sm transition-all"
+                              >
+                                Từ chối
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Stay Extension Request Block */}
+                      {(() => {
+                        const associatedStayExtension = pendingStayExtensions.find(req => req.bookingId === selectedBooking.bookingId || req.bookingReference === selectedBooking.bookingReference);
+                        if (!associatedStayExtension) return null;
+                        return (
+                          <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-6 flex flex-col gap-4 animate-scale-in">
+                            <div className="flex items-center gap-2 border-b border-emerald-100 pb-3">
+                              <span className="material-symbols-outlined text-emerald-500 text-base">calendar_add_on</span>
+                              <h4 className="text-xs font-black text-emerald-700 uppercase tracking-widest m-0">Yêu cầu gia hạn lưu trú chờ xử lý</h4>
+                              <span className="ml-auto px-2.5 py-1 text-[8.5px] font-extrabold text-emerald-600 bg-emerald-100 uppercase tracking-widest rounded-lg">Pending</span>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
+                              <div className="space-y-2">
+                                <div>
+                                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Lý do yêu cầu từ khách:</span>
+                                  <span className="text-slate-700 font-semibold italic">"{associatedStayExtension.description || 'Không có lý do chi tiết'}"</span>
+                                </div>
+                                <div className="pt-1">
+                                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Gửi lúc:</span>
+                                  <span className="text-slate-500 font-bold">{new Date(associatedStayExtension.createdAt).toLocaleString('vi-VN')}</span>
+                                </div>
+                              </div>
+
+                              <div className="bg-white p-4 border border-emerald-100 space-y-2 rounded-xl font-semibold">
+                                <div className="flex justify-between text-[11px]">
+                                  <span className="text-slate-500">Ngày check-out hiện tại:</span>
+                                  <span className="text-slate-800 font-mono">{associatedStayExtension.oldValue}</span>
+                                </div>
+                                <div className="flex justify-between text-[11px] border-t border-emerald-100/50 pt-1.5">
+                                  <span className="text-emerald-600">Ngày check-out mong muốn:</span>
+                                  <strong className="text-emerald-600 font-mono">{associatedStayExtension.newValue}</strong>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-3 justify-end border-t border-emerald-100 pt-3">
+                              <button
+                                onClick={() => handleApproveStayExtension(associatedStayExtension)}
+                                disabled={isSubmittingStayExtensionAction}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer border-none rounded-xl shadow-sm transition-all"
+                              >
+                                {isSubmittingStayExtensionAction ? 'Đang duyệt...' : 'Duyệt gia hạn'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedStayExtension(associatedStayExtension);
+                                  setStayExtensionRejectionReason('');
+                                  setIsRejectStayExtensionOpen(true);
+                                }}
+                                disabled={isSubmittingStayExtensionAction}
+                                className="bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer border-none rounded-xl shadow-sm transition-all"
+                              >
+                                Từ chối
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Early Check-out Request Block */}
+                      {(() => {
+                        const associatedEarlyCheckOut = pendingEarlyCheckOuts.find(req => req.bookingId === selectedBooking.bookingId || req.bookingReference === selectedBooking.bookingReference);
+                        if (!associatedEarlyCheckOut) return null;
+                        return (
+                          <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-6 flex flex-col gap-4 animate-scale-in">
+                            <div className="flex items-center gap-2 border-b border-amber-100 pb-3">
+                              <span className="material-symbols-outlined text-amber-500 text-base">history</span>
+                              <h4 className="text-xs font-black text-amber-700 uppercase tracking-widest m-0">Yêu cầu Checkout sớm chờ xử lý</h4>
+                              <span className="ml-auto px-2.5 py-1 text-[8.5px] font-extrabold text-amber-600 bg-amber-100 uppercase tracking-widest rounded-lg">Pending</span>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
+                              <div className="space-y-2">
+                                <div>
+                                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Lý do yêu cầu từ khách:</span>
+                                  <span className="text-slate-700 font-semibold italic">"{associatedEarlyCheckOut.description || 'Không có lý do chi tiết'}"</span>
+                                </div>
+                                <div className="pt-1">
+                                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Gửi lúc:</span>
+                                  <span className="text-slate-500 font-bold">{new Date(associatedEarlyCheckOut.createdAt).toLocaleString('vi-VN')}</span>
+                                </div>
+                              </div>
+
+                              <div className="bg-white p-4 border border-amber-100 space-y-2 rounded-xl font-semibold">
+                                <div className="flex justify-between text-[11px]">
+                                  <span className="text-slate-500">Ngày check-out dự kiến gốc:</span>
+                                  <span className="text-slate-800 font-mono">{associatedEarlyCheckOut.oldValue}</span>
+                                </div>
+                                <div className="flex justify-between text-[11px] border-t border-amber-100/50 pt-1.5">
+                                  <span className="text-amber-600">Ngày check-out mới rút ngắn:</span>
+                                  <strong className="text-amber-600 font-mono">{associatedEarlyCheckOut.newValue}</strong>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-3 justify-end border-t border-amber-100 pt-3">
+                              <button
+                                onClick={() => handleApproveEarlyCheckOut(associatedEarlyCheckOut)}
+                                disabled={isSubmittingEarlyCheckOutAction}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer border-none rounded-xl shadow-sm transition-all"
+                              >
+                                {isSubmittingEarlyCheckOutAction ? 'Đang duyệt...' : 'Duyệt rút ngắn ngày'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedEarlyCheckOut(associatedEarlyCheckOut);
+                                  setEarlyCheckOutRejectionReason('');
+                                  setIsRejectEarlyCheckOutOpen(true);
+                                }}
+                                disabled={isSubmittingEarlyCheckOutAction}
+                                className="bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-black uppercase tracking-widest px-4 py-2.5 cursor-pointer border-none rounded-xl shadow-sm transition-all"
+                              >
+                                Từ chối
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       {/* Unified Info Card */}
                       <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] p-6 md:p-8 space-y-6">
                         <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
@@ -2189,8 +2423,6 @@ export default function StaffDashboard({ setActivePage }) {
                       )}
                     </div>
 
-
-
                     {/* Right column - Invoice summary */}
                     <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] p-6 md:p-8 flex flex-col justify-between h-fit space-y-6">
                       <div>
@@ -2262,6 +2494,17 @@ export default function StaffDashboard({ setActivePage }) {
                           >
                             <span className="material-symbols-outlined text-sm">download</span> Xuất file PDF bảng kê
                           </button>
+                          {selectedBooking.status !== 'Cancelled' && selectedBooking.status !== 'Completed' && selectedBooking.status !== 'Checked Out' && selectedBooking.status !== 'Checked-out' && (
+                            <button
+                              onClick={() => {
+                                setCancelBookingReason('Hủy trực tiếp bởi nhân viên/quản lý');
+                                setIsCancelBookingModalOpen(true);
+                              }}
+                              className="w-full py-3 bg-red-500/10 border border-red-500/20 text-red-600 hover:bg-red-500/20 text-[10px] font-black uppercase tracking-widest cursor-pointer flex items-center justify-center gap-1.5 rounded-xl transition-all shadow-sm backdrop-blur-md"
+                            >
+                              <span className="material-symbols-outlined text-sm">cancel</span> Hủy đơn đặt phòng
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -2272,109 +2515,6 @@ export default function StaffDashboard({ setActivePage }) {
           </main>
         </div>
       </div>
-
-
-      {/* Room Edit Dialog */}
-      {isRoomEditOpen && (
-        <div className="fixed inset-0 bg-black/65 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-100 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-slate-800 text-left font-['Montserrat'] rounded-2xl">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <div>
-                <span className="text-[9px] font-black tracking-widest text-primary uppercase">CẬP NHẬT PHÒNG VẬT LÝ</span>
-                <h4 className="text-sm font-black uppercase text-slate-800 m-0 mt-0.5">Phòng {editingRoomItem?.roomNumber}</h4>
-              </div>
-              <button
-                onClick={() => setIsRoomEditOpen(false)}
-                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1 transition-all border-none bg-transparent cursor-pointer flex items-center"
-              >
-                <span className="material-symbols-outlined text-lg">close</span>
-              </button>
-            </div>
-
-            <form onSubmit={handleRoomEditSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Số phòng</label>
-                <input
-                  type="text"
-                  value={roomEditFormData.roomNumber}
-                  onChange={(e) => setRoomEditFormData(prev => ({ ...prev, roomNumber: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tầng</label>
-                <input
-                  type="number"
-                  value={roomEditFormData.floorNumber}
-                  onChange={(e) => setRoomEditFormData(prev => ({ ...prev, floorNumber: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hạng phòng (Loại phòng)</label>
-                <select
-                  value={roomEditFormData.roomTypeId}
-                  onChange={(e) => setRoomEditFormData(prev => ({ ...prev, roomTypeId: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all [&>option]:bg-white [&>option]:text-slate-800"
-                  required
-                >
-                  <option value="">Chọn loại phòng</option>
-                  {roomTypes.map(type => (
-                    <option key={type.id} value={type.id}>{type.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Mật mã phòng</label>
-                <input
-                  type="text"
-                  value={roomEditFormData.adminPasscode || ''}
-                  onChange={(e) => setRoomEditFormData(prev => ({ ...prev, adminPasscode: e.target.value }))}
-                  placeholder="Nhập mật mã phòng..."
-                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Trạng thái phòng</label>
-                <select
-                  value={roomEditFormData.status}
-                  onChange={(e) => setRoomEditFormData(prev => ({ ...prev, status: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all [&>option]:bg-white [&>option]:text-slate-800"
-                  required
-                >
-                  <option value="Available">Available</option>
-                  <option value="Occupied">Occupied</option>
-                  <option value="Cleaning">Cleaning</option>
-                  <option value="Maintenance">Maintenance</option>
-                </select>
-              </div>
-
-              <div className="flex gap-4 pt-4 border-t border-slate-100">
-                <button
-                  type="submit"
-                  disabled={isSubmittingRoomEdit}
-                  className="bg-primary hover:brightness-110 text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1 rounded-xl shadow-[0_4px_12px_rgba(162,5,19,0.2)] disabled:opacity-60"
-                >
-                  {isSubmittingRoomEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsRoomEditOpen(false)}
-                  className="bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold px-8 py-3.5 uppercase text-xs tracking-widest border border-slate-200/60 cursor-pointer flex-1 rounded-xl transition-all"
-                >
-                  Hủy bỏ
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* WALK-IN BOOKING FORM MODAL */}
       {isWalkInModalOpen && (
@@ -3448,6 +3588,73 @@ export default function StaffDashboard({ setActivePage }) {
                   className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1 rounded-xl transition-all"
                 >
                   Hủy bỏ
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CANCEL BOOKING MODAL */}
+      {isCancelBookingModalOpen && selectedBooking && (
+        <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-[6000] flex items-center justify-center p-4 font-['Montserrat']">
+          <div className="bg-white border border-slate-200/80 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl rounded-2xl animate-scale-in text-slate-800 text-left">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <span className="text-[9px] font-black tracking-widest text-rose-600 uppercase">HỦY ĐẶT PHÒNG</span>
+                <h4 className="text-sm font-black uppercase text-slate-900 m-0 mt-0.5">{selectedBooking.bookingReference}</h4>
+              </div>
+              <button
+                onClick={() => setIsCancelBookingModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 border-none bg-transparent cursor-pointer flex items-center transition-all"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleCancelBookingSubmit} className="space-y-4">
+              <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-amber-800 text-xs font-semibold leading-relaxed flex items-start gap-2">
+                <span className="material-symbols-outlined text-base text-amber-600 shrink-0 mt-0.5">warning</span>
+                <div>
+                  Bạn có chắc chắn muốn hủy đơn đặt phòng <strong>{selectedBooking.bookingReference}</strong>? Hành động này sẽ cập nhật trạng thái đơn thành <strong>Cancelled</strong>.
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  Lý do hủy đặt phòng:
+                </label>
+                <textarea
+                  rows="3"
+                  value={cancelBookingReason}
+                  onChange={(e) => setCancelBookingReason(e.target.value)}
+                  placeholder="Nhập lý do hủy..."
+                  className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-rose-500 focus:bg-white resize-none rounded-xl transition-all"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-4 pt-4 border-t border-slate-100">
+                <button
+                  type="submit"
+                  disabled={isSubmittingCancelBooking}
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-black px-8 py-3.5 uppercase text-xs tracking-widest transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1 rounded-xl shadow-sm"
+                >
+                  {isSubmittingCancelBooking ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-t-2 border-white" />
+                      <span>Đang xử lý...</span>
+                    </>
+                  ) : (
+                    <span>Xác nhận hủy</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCancelBookingModalOpen(false)}
+                  className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1 rounded-xl transition-all"
+                >
+                  Quay lại
                 </button>
               </div>
             </form>

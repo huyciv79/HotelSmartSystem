@@ -250,6 +250,13 @@ export default function ReviewSection({ roomId }) {
       return;
     }
 
+    const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
+    const oversized = files.find((f) => f.size > MAX_FILE_SIZE);
+    if (oversized) {
+      setFeedbackErrorMessage(`Tệp "${oversized.name}" vượt quá dung lượng tối đa 15MB. Vui lòng chọn ảnh khác.`);
+      return;
+    }
+
     const promises = files.map((file) => compressImageFile(file));
 
     Promise.all(promises)

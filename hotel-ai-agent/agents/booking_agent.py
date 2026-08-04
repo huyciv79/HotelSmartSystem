@@ -428,12 +428,21 @@ def _get_user_context(access_token: str) -> tuple[str, list]:
         room = b.get('roomType', 'N/A')
         ci = b.get('checkInDate', 'N/A')
         co = b.get('checkOutDate', 'N/A')
+        actual_ci = b.get('actualCheckIn', None)
+        actual_co = b.get('actualCheckOut', None)
         price = b.get('finalAmount', 0)
         price_str = f"{float(price)/1_000_000:.2f}M ₫" if price else "0₫"
         method = b.get('checkInMethod', 'N/A')
+        
+        actual_info = ""
+        if actual_ci:
+            actual_info += f" | Check-in thực tế: {actual_ci}"
+        if actual_co:
+            actual_info += f" | Check-out thực tế: {actual_co}"
+            
         context_str += (
             f"- Mã Booking: {ref} | Trạng thái: {status} | Phòng: {room}"
-            f" | Check-in: {ci} | Check-out: {co} | Tổng tiền: {price_str} | Phương thức: {method}\n"
+            f" | Check-in dự kiến: {ci} | Check-out dự kiến: {co}{actual_info} | Tổng tiền: {price_str} | Phương thức: {method}\n"
         )
     return context_str, bookings
 
