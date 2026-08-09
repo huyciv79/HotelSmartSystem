@@ -3,8 +3,12 @@ import axiosInstance from './axiosInstance';
 const ROOM_TYPES_CACHE_TTL_MS = 60_000;
 const roomTypesCache = new Map();
 
+export const clearRoomTypesCache = () => {
+  roomTypesCache.clear();
+};
+
 const createRoomTypesUrl = (status, keyword) => {
-  let url = status ? `/room-types?size=100&status=${status}` : '/room-types?size=100';
+  let url = status ? `/room-types?size=100&status=${status}` : '/room-types?size=100&status=all';
   if (keyword) {
     url += `&keyword=${encodeURIComponent(keyword)}`;
   }
@@ -16,15 +20,15 @@ const createRoomTypesUrl = (status, keyword) => {
  * GET /api/room-types
  * @returns {Promise<object>} API response containing page list of room types
  */
-export const getRoomTypes = (status = '', keyword = '') => {
+export const getRoomTypes = (status = '', keyword = '', bypassCache = false) => {
   const cacheKey = `${status}|${keyword}`;
   const cached = roomTypesCache.get(cacheKey);
   const now = Date.now();
 
-  if (cached?.data && now - cached.updatedAt < ROOM_TYPES_CACHE_TTL_MS) {
+  if (!bypassCache && cached?.data && now - cached.updatedAt < ROOM_TYPES_CACHE_TTL_MS) {
     return Promise.resolve(cached.data);
   }
-  if (cached?.promise) {
+  if (!bypassCache && cached?.promise) {
     return cached.promise;
   }
 

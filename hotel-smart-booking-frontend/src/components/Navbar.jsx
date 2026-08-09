@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Profile from '../pages/Profile';
 import ChangePassword from '../pages/ChangePassword';
@@ -28,6 +28,10 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
   const langDropdownRef = useRef(null);
   const navigate = useNavigate();
   const { toasts, showToast, dismissToast } = useToast();
+
+  const handleNewNotification = useCallback((notification) => {
+    showToast(`${t(notification.title, notification.title)}: ${t(notification.message, notification.message)}`, 'info');
+  }, [showToast, t]);
 
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
 
@@ -308,9 +312,11 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
         {/* Book Now / Profile Dropdown */}
         <div className="h-full flex items-center pr-6 relative gap-2">
           {isLoggedIn && (
-            <NotificationDropdown dark={false} onNewNotification={(n) => {
-              showToast(`${t(n.title, n.title)}: ${t(n.message, n.message)}`, 'info');
-            }} />
+            <NotificationDropdown
+              dark={false}
+              onShowToast={showToast}
+              onNewNotification={handleNewNotification}
+            />
           )}
           {isLoggedIn ? (
             <div className="relative h-full flex items-center" ref={dropdownRef}>

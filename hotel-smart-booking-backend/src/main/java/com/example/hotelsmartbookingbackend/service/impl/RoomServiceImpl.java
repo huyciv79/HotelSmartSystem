@@ -1,5 +1,6 @@
 package com.example.hotelsmartbookingbackend.service.impl;
 
+import com.example.hotelsmartbookingbackend.dto.request.CreateRoomRequest;
 import com.example.hotelsmartbookingbackend.dto.request.RoomFilterCriteria;
 import com.example.hotelsmartbookingbackend.dto.request.UpdateRoomRequest;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
@@ -39,6 +40,46 @@ public class RoomServiceImpl implements RoomService {
             "Maintenance",
             "Reserved"
     );
+
+    @Override
+    @Transactional
+    public RoomDetailDTO createRoom(CreateRoomRequest request) {
+        String roomNumber = request.getRoomNumber().trim();
+        if (roomRepository.existsByRoomNumberIgnoreCase(roomNumber)) {
+            throw new RuntimeException("Số phòng '" + roomNumber + "' đã tồn tại trong hệ thống");
+        }
+
+        RoomType roomType = roomTypeRepository.findById(request.getRoomTypeId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hạng phòng"));
+
+        String providedStatus = request.getStatus();
+        String status = "Available";
+        if (providedStatus != null && !providedStatus.isBlank()) {
+            String matched = ALLOWED_STATUSES.stream()
+                    .filter(s -> s.equalsIgnoreCase(providedStatus.trim()))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Trạng thái phòng không hợp lệ: " + providedStatus));
+            status = matched;
+        }
+
+        Room room = new Room();
+        room.setRoomNumber(roomNumber);
+        room.setRoomType(roomType);
+        room.setFloorNumber(request.getFloorNumber());
+        room.setStatus(status);
+        room.setAdminPasscode(request.getAdminPasscode() != null && !request.getAdminPasscode().isBlank()
+                ? request.getAdminPasscode().trim()
+                : null);
+        room.setNote(request.getNote() != null && !request.getNote().isBlank()
+                ? request.getNote().trim()
+                : null);
+        room.setCreatedAt(Instant.now());
+        room.setUpdatedAt(Instant.now());
+
+        Room savedRoom = roomRepository.save(room);
+        return mapToDetailDTO(savedRoom);
+    }
+
     @Override
     @Transactional(readOnly = true)
     public PageResponse<RoomSummaryDTO> getRoomList(RoomFilterCriteria criteria, Pageable pageable) {
@@ -75,6 +116,20 @@ public class RoomServiceImpl implements RoomService {
         Room room = roomRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng với mã: " + id));
 
+        if (request.getRoomNumber() != null && !request.getRoomNumber().isBlank()) {
+            String newRoomNumber = request.getRoomNumber().trim();
+            if (!newRoomNumber.equalsIgnoreCase(room.getRoomNumber())) {
+                if (roomRepository.existsByRoomNumberIgnoreCase(newRoomNumber)) {
+                    throw new RuntimeException("Số phòng '" + newRoomNumber + "' đã tồn tại trong hệ thống");
+                }
+                room.setRoomNumber(newRoomNumber);
+            }
+        }
+
+        if (request.getFloorNumber() != null) {
+            room.setFloorNumber(request.getFloorNumber());
+        }
+
         if (request.getStatus() != null && !request.getStatus().isBlank()) {
             String provided = request.getStatus().trim();
             boolean ok = ALLOWED_STATUSES.stream().anyMatch(s -> s.equalsIgnoreCase(provided));
@@ -87,11 +142,11 @@ public class RoomServiceImpl implements RoomService {
         }
 
         if (request.getNote() != null) {
-            room.setNote(request.getNote());
+            room.setNote(request.getNote().trim());
         }
 
         if (request.getAdminPasscode() != null) {
-            room.setAdminPasscode(request.getAdminPasscode());
+            room.setAdminPasscode(request.getAdminPasscode().trim());
         }
 
         if (request.getRoomTypeId() != null) {

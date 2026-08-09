@@ -68,7 +68,7 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.fullName.trim()) {
-      showToast(t('profile_toast_fullname_empty', 'Họ và tên không được để trống'), 'error');
+      showToast(t('profile_toast_fullname_empty', 'Họ và tên không được để trống'), 'warning');
       return;
     }
 
@@ -106,13 +106,13 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
     const isValidExtension = ['jpg', 'jpeg', 'png', 'webp'].includes(fileExtension);
 
     if (!validTypes.includes(file.type) && !isValidExtension) {
-      showToast(t('profile_toast_avatar_invalid_type', 'Định dạng tệp không hợp lệ. Chỉ chấp nhận .jpg, .png, .webp'), 'error');
+      showToast(t('profile_toast_avatar_invalid_type', 'Định dạng tệp không hợp lệ. Chỉ chấp nhận .jpg, .png, .webp'), 'warning');
       return;
     }
 
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      showToast(t('profile_toast_avatar_too_large', 'Kích thước tệp tối đa là 5 MB'), 'error');
+      showToast(t('profile_toast_avatar_too_large', 'Kích thước tệp tối đa là 5 MB'), 'warning');
       return;
     }
 

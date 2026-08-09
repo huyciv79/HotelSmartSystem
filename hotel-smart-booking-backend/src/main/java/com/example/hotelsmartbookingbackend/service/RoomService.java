@@ -1,5 +1,6 @@
 package com.example.hotelsmartbookingbackend.service;
 
+import com.example.hotelsmartbookingbackend.dto.request.CreateRoomRequest;
 import com.example.hotelsmartbookingbackend.dto.request.RoomFilterCriteria;
 import com.example.hotelsmartbookingbackend.dto.request.UpdateRoomRequest;
 import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
@@ -10,6 +11,8 @@ import com.example.hotelsmartbookingbackend.dto.response.RoomStatusResponse;
 import java.util.List;
 
 public interface RoomService {
+
+    RoomDetailDTO createRoom(CreateRoomRequest request);
 
     PageResponse<RoomSummaryDTO> getRoomList(RoomFilterCriteria criteria, Pageable pageable);
 

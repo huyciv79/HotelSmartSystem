@@ -12,6 +12,8 @@ public interface RoomRepository extends JpaRepository<Room, Integer>, JpaSpecifi
 
     long countByStatus(String status);
 
+    boolean existsByRoomNumberIgnoreCase(String roomNumber);
+
     long countByRoomType_IdAndStatus(Integer roomTypeId, String status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

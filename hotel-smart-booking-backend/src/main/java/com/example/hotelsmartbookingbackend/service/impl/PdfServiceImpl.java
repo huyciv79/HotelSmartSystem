@@ -141,8 +141,10 @@ public class PdfServiceImpl implements PdfService {
             // Subtotal & Tax/Discount Summary
             addSummaryRow(chargesTable, "Subtotal Room Total:", formatCurrency(invoice.getRoomTotal()), regularBoldFont);
             if (invoice.getServiceTotal() != null && invoice.getServiceTotal().compareTo(BigDecimal.ZERO) > 0) {
-                addSummaryRow(chargesTable, "Subtotal Services:", formatCurrency(invoice.getServiceTotal()), regularBoldFont);
+                addSummaryRow(chargesTable, "Subtotal Services (Stay Charges):", formatCurrency(invoice.getServiceTotal()), regularBoldFont);
             }
+            BigDecimal subtotalBeforeTax = invoice.getRoomTotal().add(invoice.getServiceTotal() != null ? invoice.getServiceTotal() : BigDecimal.ZERO);
+            addSummaryRow(chargesTable, "Total Before Tax:", formatCurrency(subtotalBeforeTax), regularBoldFont);
             addSummaryRow(chargesTable, "VAT / Tax (10%):", formatCurrency(invoice.getTaxAmount()), regularBoldFont);
             if (invoice.getDiscountAmount() != null && invoice.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
                 addSummaryRow(chargesTable, "Discounts:", "-" + formatCurrency(invoice.getDiscountAmount()), regularBoldFont);

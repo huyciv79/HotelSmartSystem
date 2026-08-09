@@ -6,6 +6,8 @@ import com.example.hotelsmartbookingbackend.dto.response.AiFaceEnrollmentRespons
 import com.example.hotelsmartbookingbackend.dto.response.AiFaceFrameValidationResponse;
 import com.example.hotelsmartbookingbackend.dto.response.EkycResponse;
 import com.example.hotelsmartbookingbackend.dto.response.EkycStatusResponse;
+import com.example.hotelsmartbookingbackend.dto.response.EkycDocumentContent;
+import com.example.hotelsmartbookingbackend.exception.ForbiddenException;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import com.example.hotelsmartbookingbackend.entity.EkycProfile;
@@ -93,15 +95,21 @@ public class EkycServiceImpl implements EkycService {
             MultipartFile upImage,
             MultipartFile downImage
     ) {
-        // ── Upload 3 ảnh lên Supabase → lấy public URL ───────────────────────
-        String frontUrl   = uploadImage(frontImage,  "ekyc_front");
-        String backUrl    = uploadImage(backImage,   "ekyc_back");
-        String selfieUrl  = uploadImage(selfieImage, "ekyc_selfie");
+        // Persist only private object paths. Signed URLs are created just-in-time
+        // for the internal AI request and must not be saved in the database.
+        String frontPath   = uploadImage(frontImage,  "ekyc_front");
+        String backPath    = uploadImage(backImage,   "ekyc_back");
+        String selfiePath  = uploadImage(selfieImage, "ekyc_selfie");
 
-        EkycRequest request = EkycRequest.builder()
-                .frontImageUrl(frontUrl)
-                .backImageUrl(backUrl)
-                .faceImageUrl(selfieUrl)
+        EkycRequest storedRequest = EkycRequest.builder()
+                .frontImageUrl(frontPath)
+                .backImageUrl(backPath)
+                .faceImageUrl(selfiePath)
+                .build();
+        EkycRequest aiRequest = EkycRequest.builder()
+                .frontImageUrl(supabaseStorageService.getSignedUrl(frontPath))
+                .backImageUrl(supabaseStorageService.getSignedUrl(backPath))
+                .faceImageUrl(supabaseStorageService.getSignedUrl(selfiePath))
                 .build();
 
         // ── 1. Kiểm tra user tồn tại ─────────────────────────────────────────
@@ -132,16 +140,16 @@ public class EkycServiceImpl implements EkycService {
 
         // ── 3. Tạo/Cập nhật bản ghi EkycProfile với trạng thái SUBMITTED rồi AI_CHECKING ──
         if (isUpdateFlow) {
-            profile.setFrontImage(request.getFrontImageUrl());
-            profile.setBackImage(request.getBackImageUrl());
-            profile.setFaceImage(request.getFaceImageUrl());
+            profile.setFrontImage(storedRequest.getFrontImageUrl());
+            profile.setBackImage(storedRequest.getBackImageUrl());
+            profile.setFaceImage(storedRequest.getFaceImageUrl());
             profile.setStatus(STATUS_SUBMITTED);
             profile.setRejectionReason(null);
             profile.setVerificationMethod(VERIFICATION_METHOD);
             profile.setUpdatedAt(now);
             ekycProfileRepository.save(profile);
         } else {
-            profile = createSubmittedProfile(user, request);
+            profile = createSubmittedProfile(user, storedRequest);
             ekycProfileRepository.save(profile);
         }
         Instant aiStartedAt = Instant.now();
@@ -152,7 +160,7 @@ public class EkycServiceImpl implements EkycService {
         // ── 4. OCR CCCD ───────────────────────────────────────────────────────
         AiEkycResponse ocrResponse;
         try {
-            ocrResponse = callAiService(request);
+            ocrResponse = callAiService(aiRequest);
         } catch (Exception ex) {
             throw new RuntimeException(
                     "Không thể đọc thông tin CCCD. Hãy chụp đúng mặt trước, mặt sau, "
@@ -298,6 +306,7 @@ public class EkycServiceImpl implements EkycService {
             return EkycStatusResponse.builder()
                     .status("NOT_FOUND")
                     .message("You have not registered an identity verification profile yet.")
+                    .userId(user.getId())
                     .fullName(user.getFullName())
                     .address(user.getAddress())
                     .build();
@@ -359,6 +368,7 @@ public class EkycServiceImpl implements EkycService {
         return EkycStatusResponse.builder()
                 .status(statusStr)
                 .message(statusMsg)
+                .userId(user.getId())
                 .fullName(decryptedFullName != null ? decryptedFullName : user.getFullName())
                 .idNumber(decryptedIdNumber)
                 .dateOfBirth(decryptedDob)
@@ -370,10 +380,44 @@ public class EkycServiceImpl implements EkycService {
                 .verifiedAt(profile.getVerifiedAt())
                 .rejectionReason(profile.getRejectionReason())
                 .requestId(profile.getId() != null ? profile.getId().toString() : null)
-                .frontImage(supabaseStorageService.getSignedUrl(profile.getFrontImage()))
-                .backImage(supabaseStorageService.getSignedUrl(profile.getBackImage()))
-                .faceImage(supabaseStorageService.getSignedUrl(profile.getFaceImage()))
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<EkycDocumentContent> getEkycDocument(
+            Integer userId,
+            String type,
+            String requesterEmail
+    ) {
+        User requester = userRepository.findByEmail(requesterEmail)
+                .orElseThrow(() -> new RuntimeException("Khong tim thay tai khoan nguoi yeu cau"));
+        User target = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Khong tim thay tai khoan can xem tai lieu eKYC"));
+
+        boolean isStaff = requester.getRole() == com.example.hotelsmartbookingbackend.enums.Role.manager
+                || requester.getRole() == com.example.hotelsmartbookingbackend.enums.Role.receptionist;
+        if (!isStaff && !requester.getId().equals(target.getId())) {
+            throw new ForbiddenException("Ban khong co quyen xem tai lieu eKYC cua tai khoan nay");
+        }
+
+        String field = type == null ? "" : type.trim().toLowerCase(Locale.ROOT);
+        Optional<EkycProfile> profileOpt = ekycProfileRepository.findTopByUserOrderByCreatedAtDesc(target);
+        if (profileOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String path = switch (field) {
+            case "front" -> profileOpt.get().getFrontImage();
+            case "back" -> profileOpt.get().getBackImage();
+            case "face", "selfie" -> profileOpt.get().getFaceImage();
+            default -> throw new IllegalArgumentException("Loai tai lieu eKYC khong hop le");
+        };
+
+        log.info("Authorized eKYC document access: requesterId={}, targetUserId={}, type={}",
+                requester.getId(), target.getId(), field);
+        return supabaseStorageService.downloadEkycDocument(path)
+                .map(file -> new EkycDocumentContent(file.bytes(), file.contentType()));
     }
 
     @Override

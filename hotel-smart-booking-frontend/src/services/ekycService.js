@@ -48,3 +48,11 @@ export const getEkycProfile = async () => {
   const response = await axiosInstance.get('/v1/ekyc/status');
   return response.data;
 };
+
+// Tai tai lieu eKYC qua backend; khong bao gio tra URL Supabase cho frontend.
+export const getEkycDocument = async (userId, type) => {
+  return axiosInstance.get(
+    `/v1/admin/users/${encodeURIComponent(userId)}/ekyc-documents/${encodeURIComponent(type)}`,
+    { responseType: 'blob', timeout: 120000 },
+  );
+};

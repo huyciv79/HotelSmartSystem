@@ -17,6 +17,7 @@ import {
   faceCheckInBooking,
   filterBookings,
 } from '../../services/bookingService';
+import { getEkycDocument } from '../../services/ekycService';
 
 const CHECK_IN_READY_STATUSES = new Set([
   'confirmed',
@@ -122,12 +123,35 @@ function IdentityInfoRow({ label, value }) {
   );
 }
 
-function IdentityDocumentTile({ label, src }) {
-  const [hasError, setHasError] = useState(!src);
+function IdentityDocumentTile({ label, userId, type }) {
+  const [src, setSrc] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    setHasError(!src);
-  }, [src]);
+    let objectUrl = null;
+    setSrc(null);
+    setHasError(false);
+    setLoading(true);
+
+    if (!userId) {
+      setLoading(false);
+      setHasError(true);
+      return undefined;
+    }
+
+    getEkycDocument(userId, type)
+      .then((response) => {
+        objectUrl = URL.createObjectURL(response.data);
+        setSrc(objectUrl);
+      })
+      .catch(() => setHasError(true))
+      .finally(() => setLoading(false));
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [userId, type]);
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -135,7 +159,9 @@ function IdentityDocumentTile({ label, src }) {
         {label}
       </span>
       <div className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden border border-white/10 bg-white/[0.03]">
-        {hasError ? (
+        {loading ? (
+          <Loader2 size={18} className="text-slate-600 animate-spin" />
+        ) : hasError || !src ? (
           <div className="flex flex-col items-center gap-2 px-3 text-center">
             <ImageIcon size={18} className="text-slate-600" />
             <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">
@@ -143,12 +169,25 @@ function IdentityDocumentTile({ label, src }) {
             </span>
           </div>
         ) : (
-          <img
-            src={src}
-            alt={label}
-            onError={() => setHasError(true)}
-            className="h-full w-full object-cover"
-          />
+          <>
+            <img
+              src={src}
+              alt={label}
+              onError={() => setHasError(true)}
+              onContextMenu={(e) => e.preventDefault()}
+              onDragStart={(e) => e.preventDefault()}
+              className="h-full w-full object-cover select-none"
+            />
+            {/* Security Watermark Overlay */}
+            <div 
+              className="absolute inset-0 pointer-events-none flex items-center justify-center bg-black/10 select-none"
+              onContextMenu={(e) => e.preventDefault()}
+            >
+              <span className="text-[8px] font-black uppercase tracking-widest text-white/25 -rotate-12 select-none">
+                HOTEL SMART eKYC • BẢO MẬT
+              </span>
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -222,11 +261,12 @@ function IdentitySummaryPanel({ identity }) {
           </h5>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <IdentityDocumentTile label="Mặt trước CCCD" src={identity.frontImage} />
-          <IdentityDocumentTile label="Mặt sau CCCD" src={identity.backImage} />
+          <IdentityDocumentTile label="Mặt trước CCCD" userId={identity.userId} type="front" />
+          <IdentityDocumentTile label="Mặt sau CCCD" userId={identity.userId} type="back" />
           <IdentityDocumentTile
             label="Ảnh chân dung (Selfie)"
-            src={identity.faceImage}
+            userId={identity.userId}
+            type="face"
           />
         </div>
       </div>

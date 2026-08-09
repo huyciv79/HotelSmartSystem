@@ -1,4 +1,5 @@
 import axiosInstance from './axiosInstance';
+import { clearRoomTypesCache } from './roomService';
 
 /**
  * Create a new room type.
@@ -10,6 +11,7 @@ export const createRoomType = async (formData) => {
       'Content-Type': 'multipart/form-data',
     },
   });
+  clearRoomTypesCache();
   return response.data;
 };
 
@@ -23,6 +25,7 @@ export const updateRoomType = async (id, formData) => {
       'Content-Type': 'multipart/form-data',
     },
   });
+  clearRoomTypesCache();
   return response.data;
 };
 
@@ -32,6 +35,7 @@ export const updateRoomType = async (id, formData) => {
  */
 export const deleteRoomType = async (id) => {
   const response = await axiosInstance.delete(`/room-types/${id}`);
+  clearRoomTypesCache();
   return response.data;
 };
 
@@ -56,5 +60,14 @@ export const getRooms = async (params = {}) => {
  */
 export const updateRoom = async (id, data) => {
   const response = await axiosInstance.put(`/rooms/${id}`, data);
+  return response.data;
+};
+
+/**
+ * Create a new individual room.
+ * POST /api/rooms
+ */
+export const createRoom = async (data) => {
+  const response = await axiosInstance.post('/rooms', data);
   return response.data;
 };

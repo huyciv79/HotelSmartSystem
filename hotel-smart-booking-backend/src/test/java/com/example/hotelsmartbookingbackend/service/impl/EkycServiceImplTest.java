@@ -32,6 +32,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -711,7 +712,7 @@ class EkycServiceImplTest {
 
         when(headersSpec.retrieve()).thenReturn(responseSpec).thenThrow(WebClientResponseException.create(
                 HttpStatus.BAD_REQUEST.value(), "Bad Request", HttpHeaders.EMPTY,
-                "{\"detail\":\"Nhiều khuôn mặt xuất hiện trong ảnh\"}".getBytes(), null
+                "{\"detail\":\"Nhiều khuôn mặt xuất hiện trong ảnh\"}".getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8
         ));
 
         when(responseSpec.bodyToMono(AiEkycResponse.class)).thenReturn(Mono.just(ocrResponse));
@@ -929,6 +930,8 @@ class EkycServiceImplTest {
     void should_throwException_when_fileReadFailsWithIOExceptionDuringUploadImage() throws Exception {
         MultipartFile badFile = mock(MultipartFile.class);
         when(badFile.isEmpty()).thenReturn(false);
+        when(badFile.getContentType()).thenReturn("image/jpeg");
+        when(badFile.getOriginalFilename()).thenReturn("front.jpg");
         when(badFile.getBytes()).thenThrow(new IOException("Disk read error"));
 
         RuntimeException ex = assertThrows(RuntimeException.class,
@@ -1132,7 +1135,7 @@ class EkycServiceImplTest {
 
         WebClientResponseException webEx = WebClientResponseException.create(
                 HttpStatus.BAD_REQUEST.value(), "Bad Request", HttpHeaders.EMPTY,
-                "{\"detail\":\"Khuôn mặt quay quá xa\"}".getBytes(), null
+                "{\"detail\":\"Khuôn mặt quay quá xa\"}".getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8
         );
         when(headersSpec.retrieve()).thenThrow(webEx);
 
@@ -1222,6 +1225,8 @@ class EkycServiceImplTest {
     void should_throwException_when_uploadImageEncountersIOException() throws IOException {
         MockMultipartFile corruptedFile = mock(MockMultipartFile.class);
         when(corruptedFile.isEmpty()).thenReturn(false);
+        when(corruptedFile.getContentType()).thenReturn("image/jpeg");
+        when(corruptedFile.getOriginalFilename()).thenReturn("front.jpg");
         when(corruptedFile.getBytes()).thenThrow(new IOException("Disk IO error"));
 
         MockMultipartFile validFile = new MockMultipartFile("front", "f.jpg", "image/jpeg", new byte[]{1});

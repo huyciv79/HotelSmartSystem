@@ -43,7 +43,6 @@ import com.example.hotelsmartbookingbackend.service.BookingService;
 import com.example.hotelsmartbookingbackend.service.EmailService;
 import com.example.hotelsmartbookingbackend.service.WebSocketService;
 
-import com.example.hotelsmartbookingbackend.service.SupabaseStorageService;
 import com.example.hotelsmartbookingbackend.specification.BookingSpecification;
 import com.example.hotelsmartbookingbackend.dto.request.BookingFilter;
 
@@ -91,8 +90,7 @@ public class BookingServiceImpl implements BookingService {
     private static final int DEFAULT_SINGLE_BOOKING_QUANTITY = 1;
     private static final int QR_TOKEN_RANDOM_BYTES = 32;
     private static final long EKYC_VALIDITY_DAYS = 365;
-    private static final String EXPIRED_EKYC_FACE_ID_MESSAGE =
-            "Your eKYC verification has expired (365 days). Please re-verify eKYC to use FaceID.";
+    private static final String EXPIRED_EKYC_FACE_ID_MESSAGE = "Your eKYC verification has expired (365 days). Please re-verify eKYC to use FaceID.";
 
     private static final ZoneId HOTEL_ZONE = ZoneId.of("Asia/Bangkok");
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
@@ -118,7 +116,6 @@ public class BookingServiceImpl implements BookingService {
     private final EkycProfileRepository ekycProfileRepository;
     private final FaceEmbeddingRepository faceEmbeddingRepository;
     private final AesEncryptionService aesEncryptionService;
-    private final SupabaseStorageService supabaseStorageService;
     private final WebClient webClient;
     private final PaymentRepository paymentRepository;
     private final BookingServiceRepository bookingServiceRepository;
@@ -334,7 +331,8 @@ public class BookingServiceImpl implements BookingService {
 
         try {
             // Gửi thông báo cho khách hàng
-            String customerMsg = String.format("Đặt phòng nhóm thành công! Mã đơn của bạn là %s. Phương thức check-in: %s.",
+            String customerMsg = String.format(
+                    "Đặt phòng nhóm thành công! Mã đơn của bạn là %s. Phương thức check-in: %s.",
                     savedBooking.getBookingReference(), savedBooking.getCheckInMethod());
             notificationService.sendNotification(customer, "Đặt phòng nhóm thành công", customerMsg, "Booking",
                     savedBooking.getId());
@@ -375,9 +373,7 @@ public class BookingServiceImpl implements BookingService {
         int availableRooms = totalRooms;
         LocalDate lowestAvailabilityDate = checkInDate;
 
-        for (LocalDate stayDate = checkInDate;
-             stayDate.isBefore(checkOutDate);
-             stayDate = stayDate.plusDays(1)) {
+        for (LocalDate stayDate = checkInDate; stayDate.isBefore(checkOutDate); stayDate = stayDate.plusDays(1)) {
             long bookedRooms = bookingDetailRepository.sumBookedQuantity(
                     roomTypeId,
                     toInstant(stayDate),
@@ -599,9 +595,7 @@ public class BookingServiceImpl implements BookingService {
                             .provinceCode(profile.getProvinceCode())
                             .provinceName(provinceName)
                             .verifiedAt(profile.getVerifiedAt())
-                            .frontImage(signedUrlOrNull(profile.getFrontImage()))
-                            .backImage(signedUrlOrNull(profile.getBackImage()))
-                            .faceImage(signedUrlOrNull(profile.getFaceImage()))
+                            .userId(customer.getId())
                             .build();
                 })
                 .orElse(null);
@@ -613,17 +607,6 @@ public class BookingServiceImpl implements BookingService {
         }
         try {
             return aesEncryptionService.decrypt(encryptedValue);
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
-    private String signedUrlOrNull(String pathOrUrl) {
-        if (pathOrUrl == null || pathOrUrl.isBlank()) {
-            return null;
-        }
-        try {
-            return supabaseStorageService.getSignedUrl(pathOrUrl);
         } catch (Exception ignored) {
             return null;
         }
@@ -1286,7 +1269,7 @@ public class BookingServiceImpl implements BookingService {
         if (today.isBefore(checkInDate)) {
             throw new RuntimeException("Chưa đến ngày nhận phòng");
         }
-        
+
         // Nếu chính là ngày check-in, kiểm tra xem đã qua 14:00 chưa
         if (today.equals(checkInDate)) {
             if (nowHotelTime.toLocalTime().isBefore(LocalTime.of(14, 0))) {
@@ -1298,8 +1281,6 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Đơn đặt phòng đã quá thời gian nhận phòng");
         }
     }
-
-
 
     private void validateQrCodeBookingEligibility(User customer) {
         if (!ekycProfileRepository.existsVerifiedByUserid(customer)) {
@@ -1740,7 +1721,8 @@ public class BookingServiceImpl implements BookingService {
             assignedRooms = List.of(detail.getRoom().getRoomNumber());
         }
 
-        List<com.example.hotelsmartbookingbackend.entity.BookingService> bookingservices = bookingServiceRepository.findByBooking_Id(bookingId);
+        List<com.example.hotelsmartbookingbackend.entity.BookingService> bookingservices = bookingServiceRepository
+                .findByBooking_Id(bookingId);
         List<InvoiceResponse.ServiceChargeItem> serviceItems = bookingservices.stream()
                 .map(bs -> InvoiceResponse.ServiceChargeItem.builder()
                         .usageId(bs.getId())
@@ -1777,10 +1759,29 @@ public class BookingServiceImpl implements BookingService {
         BigDecimal roomRate = detail.getPriceAtBooking();
         BigDecimal roomTotal = roomRate.multiply(BigDecimal.valueOf(detail.getQuantity()))
                 .multiply(BigDecimal.valueOf(nights));
-        BigDecimal taxAmount = booking.getTaxAmount();
-        BigDecimal discountAmount = booking.getDiscountAmount();
-        BigDecimal finalAmount = booking.getFinalAmount();
-        // Payments are the source of truth for the invoice.  Using only the
+        BigDecimal discountAmount = booking.getDiscountAmount() != null ? booking.getDiscountAmount() : BigDecimal.ZERO;
+
+        // Ensure taxAmount and finalAmount include serviceTotal in case entity was not
+        // synchronized
+        BigDecimal baseTotal = booking.getTotalAmount() != null && booking.getTotalAmount().compareTo(roomTotal) > 0
+                ? booking.getTotalAmount()
+                : roomTotal;
+        BigDecimal subtotalWithServices = baseTotal.add(serviceTotal);
+        BigDecimal expectedTax = subtotalWithServices.multiply(new BigDecimal("0.10")).setScale(2,
+                RoundingMode.HALF_UP);
+        BigDecimal expectedFinal = subtotalWithServices.add(expectedTax).subtract(discountAmount).setScale(2,
+                RoundingMode.HALF_UP);
+        if (expectedFinal.compareTo(BigDecimal.ZERO) < 0)
+            expectedFinal = BigDecimal.ZERO;
+
+        BigDecimal taxAmount = booking.getTaxAmount() != null ? booking.getTaxAmount() : expectedTax;
+        BigDecimal finalAmount = booking.getFinalAmount() != null ? booking.getFinalAmount() : expectedFinal;
+        if (expectedFinal.compareTo(finalAmount) > 0) {
+            finalAmount = expectedFinal;
+            taxAmount = expectedTax;
+        }
+
+        // Payments are the source of truth for the invoice. Using only the
         // denormalized booking.paidAmount can leave a counter/walk-in payment
         // out of the invoice when a legacy or interrupted flow did not update
         // that aggregate field.
@@ -1970,8 +1971,6 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse updateBooking(Integer bookingId, UpdateBookingRequest request, String staffEmail) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng với ID: " + bookingId));
-
-
 
         if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.COMPLETED) {
             throw new RuntimeException("Không thể cập nhật đơn đặt phòng đã hủy hoặc đã hoàn thành");
@@ -2187,8 +2186,6 @@ public class BookingServiceImpl implements BookingService {
 
         return mapToBookingResponse(saved);
     }
-
-
 
     private BookingHistoryResponse mapToBookingHistoryResponse(Booking booking, BookingDetail detail,
             List<BookingRoomAccess> accesses) {

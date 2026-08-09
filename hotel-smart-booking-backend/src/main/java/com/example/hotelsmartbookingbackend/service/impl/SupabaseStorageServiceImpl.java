@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -98,7 +99,8 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
                 throw new RuntimeException("Failed to upload ekyc file to Supabase Storage: " + response.getStatusCode());
             }
 
-            return createSignedUrl(cleanUrl, ekycBucket, fileName);
+            // Store the private object path; signed URLs are transient credentials.
+            return fileName;
 
         } catch (Exception e) {
             throw new RuntimeException("Lỗi khi tải ảnh eKYC lên hệ thống lưu trữ: " + e.getMessage(), e);
@@ -153,8 +155,8 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
             headers.set("apikey", supabaseKey);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            // Supabase API yêu cầu body: {"expiresIn": 3600}
-            HttpEntity<Map<String, Integer>> entity = new HttpEntity<>(Map.of("expiresIn", 3600), headers);
+            // Supabase API yêu cầu body: {"expiresIn": 300}; keep exposure short.
+            HttpEntity<Map<String, Integer>> entity = new HttpEntity<>(Map.of("expiresIn", 300), headers);
             ResponseEntity<String> response = restTemplate.postForEntity(signedUrlEndpoint, entity, String.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
@@ -180,10 +182,9 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
         } catch (Exception e) {
             System.err.println("Error creating signed URL: " + e.getMessage());
             e.printStackTrace();
-            // Fallback
+            throw new IllegalStateException("Khong the tao signed URL cho tai lieu eKYC", e);
         }
-        // Fallback: trả về public URL nếu tạo signed URL thất bại
-        return cleanUrl + "/storage/v1/object/public/" + bucket + "/" + fileName;
+        throw new IllegalStateException("Supabase khong tra ve signed URL cho tai lieu eKYC");
     }
 
     @Override
@@ -240,6 +241,52 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
         return createSignedUrl(cleanUrl, ekycBucket, fileName);
     }
 
+    @Override
+    public Optional<StoredFile> downloadEkycDocument(String pathOrUrl) {
+        String fileName = extractFileName(pathOrUrl);
+        if (fileName == null || fileName.isBlank() || fileName.contains("..")) {
+            return Optional.empty();
+        }
+        if (supabaseUrl == null || supabaseUrl.isBlank()
+                || supabaseKey == null || supabaseKey.isBlank()
+                || ekycBucket == null || ekycBucket.isBlank()) {
+            throw new IllegalStateException("Supabase storage chua duoc cau hinh day du");
+        }
+
+        String cleanUrl = supabaseUrl.endsWith("/")
+                ? supabaseUrl.substring(0, supabaseUrl.length() - 1)
+                : supabaseUrl;
+        String objectUrl = cleanUrl + "/storage/v1/object/" + ekycBucket + "/" + fileName;
+
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + supabaseKey);
+            headers.set("apikey", supabaseKey);
+
+            ResponseEntity<byte[]> response = restTemplate.exchange(
+                    objectUrl,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    byte[].class
+            );
+
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                return Optional.empty();
+            }
+
+            MediaType contentType = response.getHeaders().getContentType();
+            if (contentType == null || !"image".equalsIgnoreCase(contentType.getType())) {
+                contentType = MediaType.IMAGE_JPEG;
+            }
+            return Optional.of(new StoredFile(response.getBody(), contentType));
+        } catch (org.springframework.web.client.HttpClientErrorException.NotFound ex) {
+            return Optional.empty();
+        } catch (Exception ex) {
+            throw new IllegalStateException("Khong the doc tai lieu eKYC tu Supabase", ex);
+        }
+    }
+
     private String extractFileName(String urlOrPath) {
         if (urlOrPath == null || urlOrPath.isBlank()) {
             return null;
@@ -265,17 +312,9 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
             return afterKeyword;
         }
         if (urlOrPath.startsWith("http")) {
-            int lastSlash = urlOrPath.lastIndexOf("/");
-            if (lastSlash != -1) {
-                String afterSlash = urlOrPath.substring(lastSlash + 1);
-                int questionMarkIndex = afterSlash.indexOf("?");
-                if (questionMarkIndex != -1) {
-                    return afterSlash.substring(0, questionMarkIndex);
-                }
-                return afterSlash;
-            }
+            return null;
         }
-        return urlOrPath;
+        return urlOrPath.startsWith("/") ? urlOrPath.substring(1) : urlOrPath;
     }
 
     private String resolveImageExtension(String originalFilename, String contentType) {

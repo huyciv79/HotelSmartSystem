@@ -76,6 +76,9 @@ export const translations = {
     footer_email_placeholder: 'Email của bạn',
     footer_terms: 'Điều khoản',
     footer_privacy: 'Bảo mật',
+    footer_iris_signature: 'The IRIS Signature',
+    footer_iris_desc: 'Chúng tôi rất hân hạnh được hỗ trợ bạn mọi lúc. Hãy liên hệ để nhận tư vấn đặt phòng, thông tin dịch vụ hoặc hỗ trợ trực tiếp. Dịch vụ thân thiện và chuyên nghiệp luôn sẵn sàng phục vụ.',
+    footer_contact_info: 'THÔNG TIN LIÊN HỆ',
 
     // Residences Page
     residences_desc: 'Không gian sống và làm việc hiện đại, năng động dành cho các nhà sáng tạo nội dung, doanh nhân và cư dân đô thị thế hệ mới.',
@@ -532,6 +535,9 @@ export const translations = {
     footer_email_placeholder: 'Your email address',
     footer_terms: 'Terms',
     footer_privacy: 'Privacy',
+    footer_iris_signature: 'The IRIS Signature',
+    footer_iris_desc: 'We are delighted to assist you at any time. Contact us for booking advice, service information, or direct support. Friendly and professional service is always at your service.',
+    footer_contact_info: 'CONTACT INFORMATION',
 
     // Residences Page
     residences_desc: 'Modern and dynamic living & working spaces for content creators, entrepreneurs, and the next generation of urban citizens.',
@@ -988,6 +994,9 @@ export const translations = {
     footer_email_placeholder: 'メールアドレス',
     footer_terms: '利用規約',
     footer_privacy: 'プライバシーポリシー',
+    footer_iris_signature: 'The IRIS Signature',
+    footer_iris_desc: 'いつでも皆様をサポートいたします。宿泊予約、サービス情報、直接のご案内などお気軽にお問い合わせください。親切でプロフェッショナルなサービスでお応えいたします。',
+    footer_contact_info: 'お問い合わせ情報',
 
     // Residences Page
     residences_desc: 'コンテンツクリエイター、起業家、保存と次世代の都市生活者のための現代的でダイナミックな職住空間。',

@@ -798,8 +798,11 @@ public class RoomChangeServiceImpl implements RoomChangeService {
                 .multiply(BigDecimal.valueOf(detail.getQuantity()))
                 .multiply(BigDecimal.valueOf(newNights));
 
-        BigDecimal taxAmount = newTotal.multiply(new BigDecimal("0.10")).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal finalAmount = newTotal.add(taxAmount).subtract(booking.getDiscountAmount()).setScale(2,
+        BigDecimal serviceCharge = booking.getServiceChargeAmount() != null ? booking.getServiceChargeAmount() : BigDecimal.ZERO;
+        BigDecimal subtotalWithServices = newTotal.add(serviceCharge);
+        BigDecimal taxAmount = subtotalWithServices.multiply(new BigDecimal("0.10")).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal discountAmt = booking.getDiscountAmount() != null ? booking.getDiscountAmount() : BigDecimal.ZERO;
+        BigDecimal finalAmount = subtotalWithServices.add(taxAmount).subtract(discountAmt).setScale(2,
                 RoundingMode.HALF_UP);
 
         // Cập nhật booking & detail
@@ -988,8 +991,11 @@ public class RoomChangeServiceImpl implements RoomChangeService {
                 .multiply(BigDecimal.valueOf(detail.getQuantity()))
                 .multiply(BigDecimal.valueOf(newNights));
 
-        BigDecimal taxAmount = newTotal.multiply(new BigDecimal("0.10")).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal finalAmount = newTotal.add(taxAmount).subtract(booking.getDiscountAmount()).setScale(2,
+        BigDecimal serviceCharge = booking.getServiceChargeAmount() != null ? booking.getServiceChargeAmount() : BigDecimal.ZERO;
+        BigDecimal subtotalWithServices = newTotal.add(serviceCharge);
+        BigDecimal taxAmount = subtotalWithServices.multiply(new BigDecimal("0.10")).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal discountAmt = booking.getDiscountAmount() != null ? booking.getDiscountAmount() : BigDecimal.ZERO;
+        BigDecimal finalAmount = subtotalWithServices.add(taxAmount).subtract(discountAmt).setScale(2,
                 RoundingMode.HALF_UP);
 
         // Cập nhật booking & detail

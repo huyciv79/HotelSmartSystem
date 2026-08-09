@@ -4,7 +4,7 @@ import {
   CheckCircle2, Loader2,
   ArrowLeft
 } from 'lucide-react';
-import { getEkycProfile } from '../../services/ekycService';
+import { getEkycDocument, getEkycProfile } from '../../services/ekycService';
 
 // Status badge component
 function StatusBadge({ status }) {
@@ -35,26 +35,52 @@ function InfoRow({ label, value }) {
 }
 
 // Uploaded image placeholder / component (UC-31 EXC-01)
-function EkycImage({ label, src, onImageError }) {
-  const [erroredSrc, setErroredSrc] = useState(null);
-  const hasError = !src || erroredSrc === src;
+export function EkycImage({ label, userId, type, onImageError }) {
+  const [src, setSrc] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    if (!src) {
+    let objectUrl = null;
+    setSrc(null);
+    setHasError(false);
+    setLoading(true);
+
+    if (!userId) {
+      setLoading(false);
+      setHasError(true);
       onImageError?.();
+      return undefined;
     }
-  }, [src, onImageError]);
+
+    getEkycDocument(userId, type)
+      .then((response) => {
+        objectUrl = URL.createObjectURL(response.data);
+        setSrc(objectUrl);
+      })
+      .catch(() => {
+        setHasError(true);
+        onImageError?.();
+      })
+      .finally(() => setLoading(false));
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [userId, type, onImageError]);
 
   const handleError = () => {
-    setErroredSrc(src);
+    setHasError(true);
     onImageError?.();
   };
 
   return (
     <div className="flex flex-col gap-2.5">
       <span className="text-[9px] uppercase tracking-widest text-white/40 font-bold">{label}</span>
-      <div className="w-full aspect-[4/3] bg-white/5 border border-white/10 rounded-none overflow-hidden flex items-center justify-center relative hover:border-white/20 transition-colors shadow-inner">
-        {hasError ? (
+      <div className="w-full aspect-[4/3] bg-white/5 border border-white/10 rounded-none overflow-hidden flex items-center justify-center relative hover:border-white/20 transition-colors shadow-inner select-none">
+        {loading ? (
+          <Loader2 size={18} className="text-white/40 animate-spin" />
+        ) : hasError || !src ? (
           <div className="flex flex-col items-center gap-1.5 p-4 text-center">
             <div className="w-8 h-8 rounded-none bg-red-500/10 flex items-center justify-center border border-red-500/20">
               <ShieldX size={16} className="text-red-400" />
@@ -63,12 +89,25 @@ function EkycImage({ label, src, onImageError }) {
             <span className="text-[8px] text-neutral-500 uppercase tracking-wider font-bold">Vui lòng cập nhật eKYC</span>
           </div>
         ) : (
-          <img
-            src={src}
-            alt={label}
-            onError={handleError}
-            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-          />
+          <>
+            <img
+              src={src}
+              alt={label}
+              onError={handleError}
+              onContextMenu={(e) => e.preventDefault()}
+              onDragStart={(e) => e.preventDefault()}
+              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105 select-none"
+            />
+            {/* Watermark bảo mật đè lên ảnh */}
+            <div 
+              className="absolute inset-0 pointer-events-none flex items-center justify-center bg-black/10 select-none"
+              onContextMenu={(e) => e.preventDefault()}
+            >
+              <span className="text-[8px] font-black uppercase tracking-widest text-white/25 -rotate-12 select-none">
+                HOTEL SMART eKYC • BẢO MẬT
+              </span>
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -277,9 +316,9 @@ export default function ViewEkyc({ onBack, onRegister, onUpdate }) {
               <div className="space-y-4">
                 <h3 className="text-white font-bold text-xs uppercase tracking-widest border-b border-white/5 pb-2">Tài liệu đã tải lên</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <EkycImage label="Mặt trước CCCD" src={ekycData?.frontImage} onImageError={handleImageError} />
-                  <EkycImage label="Mặt sau CCCD" src={ekycData?.backImage} onImageError={handleImageError} />
-                  <EkycImage label="Ảnh chân dung (Selfie)" src={ekycData?.faceImage} onImageError={handleImageError} />
+                  <EkycImage label="Mặt trước CCCD" userId={ekycData?.userId} type="front" onImageError={handleImageError} />
+                  <EkycImage label="Mặt sau CCCD" userId={ekycData?.userId} type="back" onImageError={handleImageError} />
+                  <EkycImage label="Ảnh chân dung (Selfie)" userId={ekycData?.userId} type="face" onImageError={handleImageError} />
                 </div>
               </div>
 

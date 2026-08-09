@@ -1,15 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Bell, Calendar, CreditCard, RefreshCw, Smartphone, Plus, LogOut, CheckCircle2, MessageSquare, Check, CheckSquare } from 'lucide-react';
 import { getNotifications, markAsRead, markAllAsRead, getUnreadCount } from '../services/notificationService';
-import { useToast } from './Toast';
 
-export default function NotificationDropdown({ dark = false, onNewNotification }) {
+export default function NotificationDropdown({ dark = false, onNewNotification, onShowToast }) {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef(null);
-  const { showToast } = useToast();
-
   const isLoggedIn = !!localStorage.getItem('accessToken');
 
   const fetchNotifications = async () => {
@@ -77,8 +74,8 @@ export default function NotificationDropdown({ dark = false, onNewNotification }
                 
                 if (onNewNotification) {
                   onNewNotification(newNotif);
-                } else {
-                  showToast(`${newNotif.title}: ${newNotif.message}`, 'info');
+                } else if (onShowToast) {
+                  onShowToast(`${newNotif.title}: ${newNotif.message}`, 'info');
                 }
               } catch (ex) {
                 console.error('Error parsing WS notification:', ex);
@@ -108,7 +105,7 @@ export default function NotificationDropdown({ dark = false, onNewNotification }
         socket.close();
       }
     };
-  }, [isLoggedIn]);
+  }, [isLoggedIn, onNewNotification, onShowToast]);
 
   // Click outside to close dropdown
   useEffect(() => {
@@ -152,7 +149,7 @@ export default function NotificationDropdown({ dark = false, onNewNotification }
       if (res && res.success) {
         setNotifications(prev => prev.map(n => ({ ...n, isread: true })));
         setUnreadCount(0);
-        showToast("Đã đánh dấu tất cả thông báo là đã đọc", "success");
+        onShowToast?.("Đã đánh dấu tất cả thông báo là đã đọc", "success");
       }
     } catch (err) {
       console.error("Failed to mark all as read:", err);

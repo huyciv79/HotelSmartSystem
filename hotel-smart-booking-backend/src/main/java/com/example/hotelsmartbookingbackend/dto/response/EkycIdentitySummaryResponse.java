@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Data
 @Builder
@@ -13,6 +14,7 @@ import java.time.Instant;
 @AllArgsConstructor
 public class EkycIdentitySummaryResponse {
     private String status;
+    private Integer userId;
     private String fullName;
     private String idNumber;
     private String dateOfBirth;
@@ -21,7 +23,10 @@ public class EkycIdentitySummaryResponse {
     private String provinceCode;
     private String provinceName;
     private Instant verifiedAt;
+    @JsonIgnore
     private String frontImage;
+    @JsonIgnore
     private String backImage;
+    @JsonIgnore
     private String faceImage;
 }

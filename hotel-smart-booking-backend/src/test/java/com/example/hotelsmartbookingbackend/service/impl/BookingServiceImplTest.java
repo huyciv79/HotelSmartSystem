@@ -1216,7 +1216,7 @@ class BookingServiceImplTest {
         InvoiceResponse invoice = bookingService.getInvoiceDetails(1, "staff@hotel.com");
 
         assertEquals(new BigDecimal("1100.00"), invoice.getPaidAmount());
-        assertEquals(BigDecimal.ZERO, invoice.getDueAmount());
+        assertEquals(0, invoice.getDueAmount().compareTo(BigDecimal.ZERO));
     }
 
     @Test

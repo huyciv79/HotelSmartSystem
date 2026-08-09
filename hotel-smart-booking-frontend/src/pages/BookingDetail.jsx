@@ -376,7 +376,7 @@ export default function BookingDetail({ setActivePage }) {
   const handleSubmitFeedback = async (e) => {
     e.preventDefault();
     if (!feedbackComment.trim()) {
-      showToast(t('bd_toast_comment_required', 'Vui lòng nhập bình luận đánh giá.'), 'error');
+      showToast(t('bd_toast_comment_required', 'Vui lòng nhập bình luận đánh giá.'), 'warning');
       return;
     }
 
@@ -433,7 +433,7 @@ export default function BookingDetail({ setActivePage }) {
     if (!files.length) return;
 
     if (feedbackImages.length + files.length > 5) {
-      showToast(t('bd_toast_images_limit', 'Bạn chỉ có thể đính kèm tối đa 5 hình ảnh.'), 'error');
+      showToast(t('bd_toast_images_limit', 'Bạn chỉ có thể đính kèm tối đa 5 hình ảnh.'), 'warning');
       return;
     }
 

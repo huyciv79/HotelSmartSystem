@@ -16,6 +16,7 @@ const RoomsManager = ({
   roomsList,
   roomTypes,
   handleOpenEditRoomItem,
+  handleOpenCreateRoomModal,
   fetchRealRooms,
   roomsSearchQuery,
   setRoomsSearchQuery
@@ -88,15 +89,26 @@ const RoomsManager = ({
           </p>
         </div>
 
-        <div className="relative min-w-[200px] w-full md:w-auto">
-          <span className="material-symbols-outlined text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">search</span>
-          <input
-            type="text"
-            placeholder="Tìm nhanh số phòng..."
-            value={roomsSearchQuery}
-            onChange={(e) => setRoomsSearchQuery(e.target.value)}
-            className="w-full md:w-64 bg-slate-50 border border-slate-200/60 rounded-xl pl-9 pr-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
-          />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          <div className="relative min-w-[200px] w-full md:w-auto">
+            <span className="material-symbols-outlined text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">search</span>
+            <input
+              type="text"
+              placeholder="Tìm nhanh số phòng..."
+              value={roomsSearchQuery}
+              onChange={(e) => setRoomsSearchQuery(e.target.value)}
+              className="w-full md:w-64 bg-slate-50 border border-slate-200/60 rounded-xl pl-9 pr-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
+            />
+          </div>
+          {handleOpenCreateRoomModal && (
+            <button
+              onClick={handleOpenCreateRoomModal}
+              className="bg-primary hover:brightness-110 text-white font-black text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-primary/20 transition-all border-none shrink-0"
+            >
+              <span className="material-symbols-outlined text-base">add</span>
+              Thêm phòng mới
+            </button>
+          )}
         </div>
       </div>
 

@@ -173,7 +173,7 @@ export default function Booking({ setActivePage }) {
     if (Object.keys(tempErrors).length === 0) {
       setCurrentStep(2);
     } else {
-      showToast('Vui lòng kiểm tra lại thông tin bước 1.', 'error');
+      showToast('Vui lòng kiểm tra lại thông tin bước 1.', 'warning');
     }
   };
 
@@ -193,7 +193,7 @@ export default function Booking({ setActivePage }) {
 
   const handleBookingSubmit = async () => {
     if (!agreedToTerms) {
-      showToast(t('Bạn phải đồng ý với Điều khoản & Điều kiện để tiếp tục.'), 'error');
+      showToast(t('Bạn phải đồng ý với Điều khoản & Điều kiện để tiếp tục.'), 'warning');
       return;
     }
 

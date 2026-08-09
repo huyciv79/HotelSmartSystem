@@ -33,31 +33,31 @@ export default function ChangePassword({ onCancel, showToast }) {
 
     // Validation
     if (!currentPassword) {
-      showToast(t('cpw_toast_current_empty', 'Vui lòng nhập mật khẩu hiện tại'), 'error');
+      showToast(t('cpw_toast_current_empty', 'Vui lòng nhập mật khẩu hiện tại'), 'warning');
       return;
     }
     if (!newPassword) {
-      showToast(t('cpw_toast_new_empty', 'Vui lòng nhập mật khẩu mới'), 'error');
+      showToast(t('cpw_toast_new_empty', 'Vui lòng nhập mật khẩu mới'), 'warning');
       return;
     }
     if (newPassword.length < 8) {
-      showToast(t('cpw_toast_new_length', 'Mật khẩu mới phải có ít nhất 8 ký tự'), 'error');
+      showToast(t('cpw_toast_new_length', 'Mật khẩu mới phải có ít nhất 8 ký tự'), 'warning');
       return;
     }
     if (!/[0-9]/.test(newPassword)) {
-      showToast(t('cpw_toast_new_digit', 'Mật khẩu mới phải chứa ít nhất một chữ số'), 'error');
+      showToast(t('cpw_toast_new_digit', 'Mật khẩu mới phải chứa ít nhất một chữ số'), 'warning');
       return;
     }
     if (!/[^a-zA-Z0-9]/.test(newPassword)) {
-      showToast(t('cpw_toast_new_special', 'Mật khẩu mới phải chứa ít nhất một ký tự đặc biệt'), 'error');
+      showToast(t('cpw_toast_new_special', 'Mật khẩu mới phải chứa ít nhất một ký tự đặc biệt'), 'warning');
       return;
     }
     if (newPassword === currentPassword) {
-      showToast(t('cpw_toast_new_matches_current', 'Mật khẩu mới không được trùng với mật khẩu hiện tại'), 'error');
+      showToast(t('cpw_toast_new_matches_current', 'Mật khẩu mới không được trùng với mật khẩu hiện tại'), 'warning');
       return;
     }
     if (newPassword !== confirmPassword) {
-      showToast(t('cpw_toast_confirm_mismatch', 'Mật khẩu xác nhận không khớp'), 'error');
+      showToast(t('cpw_toast_confirm_mismatch', 'Mật khẩu xác nhận không khớp'), 'warning');
       return;
     }
 

@@ -276,7 +276,7 @@ export default function GroupBooking({ setActivePage }) {
     if (Object.keys(tempErrors).length === 0) {
       setCurrentStep(2);
     } else {
-      showToast(t('group_toast_error_step1', 'Vui lòng kiểm tra lại thông tin bước 1.'), 'error');
+      showToast(t('group_toast_error_step1', 'Vui lòng kiểm tra lại thông tin bước 1.'), 'warning');
     }
   };
 
@@ -299,7 +299,7 @@ export default function GroupBooking({ setActivePage }) {
 
   const handleBookingSubmit = async () => {
     if (!agreedToTerms) {
-      showToast(t('group_toast_error_terms', 'Bạn phải đồng ý với Điều khoản & Điều kiện để tiếp tục.'), 'error');
+      showToast(t('group_toast_error_terms', 'Bạn phải đồng ý với Điều khoản & Điều kiện để tiếp tục.'), 'warning');
       return;
     }
 

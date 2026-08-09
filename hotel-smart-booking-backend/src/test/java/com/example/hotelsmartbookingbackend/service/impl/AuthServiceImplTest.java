@@ -109,7 +109,7 @@ class AuthServiceImplTest {
         request.setPhone("0901234567");
         request.setIdCardNumber("123456789012");
 
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("john@example.com")).thenReturn(false);
         when(userRepository.existsByPhoneNumber("0901234567")).thenReturn(false);
         when(userRepository.existsByIdCardNumber("123456789012")).thenReturn(false);
 
@@ -130,7 +130,7 @@ class AuthServiceImplTest {
         request.setEmail("existing@example.com");
         request.setIdCardNumber("123456789012");
 
-        when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
+        when(userRepository.existsByEmailIgnoreCase("existing@example.com")).thenReturn(true);
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class,
@@ -147,7 +147,7 @@ class AuthServiceImplTest {
         request.setEmail("new@example.com");
         request.setIdCardNumber("123456789012");
 
-        when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
         when(userRepository.existsByPhoneNumber(any())).thenReturn(false);
         when(userRepository.existsByIdCardNumber("123456789012")).thenReturn(true);
 
@@ -167,7 +167,7 @@ class AuthServiceImplTest {
         request.setPhone("0901234567");
         request.setIdCardNumber("123456789012");
 
-        when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
         when(userRepository.existsByPhoneNumber("0901234567")).thenReturn(true);
 
         // Act & Assert
@@ -198,7 +198,7 @@ class AuthServiceImplTest {
 
         when(valueOperations.get("register:otp:john@example.com")).thenReturn("123456");
         when(valueOperations.get("register:user:john@example.com")).thenReturn(cachedRequest);
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("john@example.com")).thenReturn(false);
         when(userRepository.existsByPhoneNumber("0901234567")).thenReturn(false);
         when(userRepository.existsByIdCardNumber("123456789012")).thenReturn(false);
         when(passwordEncoder.encode("rawPass123")).thenReturn("encodedPass123");
@@ -241,7 +241,7 @@ class AuthServiceImplTest {
 
         when(valueOperations.get("register:otp:john@example.com")).thenReturn("123456");
         when(valueOperations.get("register:user:john@example.com")).thenReturn(cachedMap);
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("john@example.com")).thenReturn(false);
         when(userRepository.existsByPhoneNumber("0901234567")).thenReturn(false);
         when(userRepository.existsByIdCardNumber("123456789012")).thenReturn(false);
         when(passwordEncoder.encode("rawPass123")).thenReturn("encodedPass123");
@@ -387,7 +387,7 @@ class AuthServiceImplTest {
 
         when(valueOperations.get("register:otp:john@example.com")).thenReturn("123456");
         when(valueOperations.get("register:user:john@example.com")).thenReturn(cachedRequest);
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("john@example.com")).thenReturn(false);
         when(userRepository.existsByPhoneNumber("0901234567")).thenReturn(false);
         when(userRepository.existsByIdCardNumber("123456789012")).thenReturn(true);
 
@@ -412,7 +412,7 @@ class AuthServiceImplTest {
 
         when(valueOperations.get("register:otp:john@example.com")).thenReturn("123456");
         when(valueOperations.get("register:user:john@example.com")).thenReturn(cachedRequest);
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
+        when(userRepository.existsByEmailIgnoreCase("john@example.com")).thenReturn(false);
         when(userRepository.existsByPhoneNumber("0901234567")).thenReturn(true);
 
         // Act & Assert
@@ -436,7 +436,7 @@ class AuthServiceImplTest {
 
         when(valueOperations.get("register:otp:john@example.com")).thenReturn("123456");
         when(valueOperations.get("register:user:john@example.com")).thenReturn(cachedRequest);
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(true);
+        when(userRepository.existsByEmailIgnoreCase("john@example.com")).thenReturn(true);
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class,

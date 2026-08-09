@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { getRoomTypes } from '../services/roomService';
-import { createRoomType, updateRoomType, deleteRoomType, getRooms, updateRoom } from '../services/roomManagementService';
-import { 
-  getBookingHistory, 
-  getAllBookings, 
-  checkInBooking, 
+import { createRoomType, updateRoomType, deleteRoomType, getRooms, updateRoom, createRoom } from '../services/roomManagementService';
+import {
+  getBookingHistory,
+  getAllBookings,
+  checkInBooking,
   checkOutBooking,
   createWalkInBooking,
   getInvoiceDetails,
@@ -214,7 +214,9 @@ export default function StaffDashboard({ setActivePage }) {
     roomNumber: '',
     floorNumber: '',
     roomTypeId: '',
-    status: 'Available'
+    status: 'Available',
+    adminPasscode: '',
+    note: ''
   });
   const [isSubmittingRoomEdit, setIsSubmittingRoomEdit] = useState(false);
 
@@ -419,15 +421,15 @@ export default function StaffDashboard({ setActivePage }) {
 
   useEffect(() => {
     let socket = null;
-    
+
     const connectWebSocket = () => {
       try {
         socket = new WebSocket('ws://localhost:8080/ws/websocket');
-        
+
         socket.onopen = () => {
           socket.send("CONNECT\naccept-version:1.1,1.2\n\n\x00");
         };
-        
+
         socket.onmessage = (event) => {
           const raw = event.data;
           if (raw.startsWith("CONNECTED")) {
@@ -440,7 +442,7 @@ export default function StaffDashboard({ setActivePage }) {
               try {
                 const bodyStr = raw.substring(bodyStart, bodyEnd + 1);
                 const data = JSON.parse(bodyStr);
-                
+
                 showToast(`Phòng ${data.roomNumber} đã chuyển sang trạng thái: ${data.status}`, 'info');
                 fetchRealRooms(roomsCurrentPage);
                 fetchRealBookings();
@@ -450,11 +452,11 @@ export default function StaffDashboard({ setActivePage }) {
             }
           }
         };
-        
+
         socket.onerror = (err) => {
           console.error('Lỗi kết nối WebSocket:', err);
         };
-        
+
         socket.onclose = () => {
           console.log('Kết nối WebSocket đã đóng. Đang thử kết nối lại sau 5s...');
           setTimeout(connectWebSocket, 5000);
@@ -463,9 +465,9 @@ export default function StaffDashboard({ setActivePage }) {
         console.error('Không thể tạo kết nối WebSocket:', e);
       }
     };
-    
+
     connectWebSocket();
-    
+
     return () => {
       if (socket) {
         socket.onclose = null;
@@ -712,14 +714,14 @@ export default function StaffDashboard({ setActivePage }) {
       showToast('Đã thêm dịch vụ thành công!', 'success');
       setInlineServiceNote('');
       setInlineServiceQuantity(1);
-      
+
       // Refresh invoice modal
       const freshInvoice = await getInvoiceDetails(invoiceData.bookingId);
       if (freshInvoice && freshInvoice.success) {
         setInvoiceData(freshInvoice.data);
         setManualPaymentAmount(freshInvoice.data.dueAmount || '');
       }
-      
+
       fetchRealBookings();
     } catch (err) {
       console.error(err);
@@ -735,7 +737,7 @@ export default function StaffDashboard({ setActivePage }) {
     setServiceQuantity(1);
     setServiceNote('');
     setIsAddServiceModalOpen(true);
-    
+
     try {
       const response = await getAllServices();
       if (response && response.data) {
@@ -753,16 +755,16 @@ export default function StaffDashboard({ setActivePage }) {
   const handleAddServiceSubmit = async (e) => {
     e.preventDefault();
     if (!selectedServiceId) {
-      showToast('Vui lòng chọn dịch vụ', 'error');
+      showToast('Vui lòng chọn dịch vụ', 'warning');
       return;
     }
-    
+
     setIsSubmittingService(true);
     try {
       await addServiceToBooking(
-        selectedServiceBooking.id, 
-        parseInt(selectedServiceId), 
-        serviceQuantity, 
+        selectedServiceBooking.id,
+        parseInt(selectedServiceId),
+        serviceQuantity,
         serviceNote
       );
       showToast('Thêm dịch vụ thành công!', 'success');
@@ -866,15 +868,15 @@ export default function StaffDashboard({ setActivePage }) {
 
   useEffect(() => {
     let socket = null;
-    
+
     const connectWebSocket = () => {
       try {
         socket = new WebSocket('ws://localhost:8080/ws/websocket');
-        
+
         socket.onopen = () => {
           socket.send("CONNECT\naccept-version:1.1,1.2\n\n\x00");
         };
-        
+
         socket.onmessage = (event) => {
           const raw = event.data;
           if (raw.startsWith("CONNECTED")) {
@@ -887,7 +889,7 @@ export default function StaffDashboard({ setActivePage }) {
               try {
                 const bodyStr = raw.substring(bodyStart, bodyEnd + 1);
                 const data = JSON.parse(bodyStr);
-                
+
                 showToast(`Phòng ${data.roomNumber} đã chuyển sang trạng thái: ${data.status}`, 'info');
                 fetchRealRooms(roomsCurrentPage);
                 fetchRealBookings();
@@ -897,11 +899,11 @@ export default function StaffDashboard({ setActivePage }) {
             }
           }
         };
-        
+
         socket.onerror = (err) => {
           console.error('Lỗi kết nối WebSocket:', err);
         };
-        
+
         socket.onclose = () => {
           console.log('Kết nối WebSocket đã đóng. Đang thử kết nối lại sau 5s...');
           setTimeout(connectWebSocket, 5000);
@@ -910,9 +912,9 @@ export default function StaffDashboard({ setActivePage }) {
         console.error('Không thể tạo kết nối WebSocket:', e);
       }
     };
-    
+
     connectWebSocket();
-    
+
     return () => {
       if (socket) {
         socket.onclose = null;
@@ -1470,14 +1472,16 @@ export default function StaffDashboard({ setActivePage }) {
     }
   };
 
+  // ROOM EDIT HANDLERS
   const handleOpenEditRoomItem = (room) => {
     setEditingRoomItem(room);
     setRoomEditFormData({
       roomNumber: room.roomnumber || room.roomNumber || '',
       floorNumber: String(room.floornumber !== undefined ? room.floornumber : (room.floorNumber !== undefined ? room.floorNumber : '')),
-      roomTypeId: String(room.roomtypeid || room.roomTypeId || (room.roomType && room.roomType.roomTypeId) || ''),
+      roomTypeId: String(room.roomtypeid || room.roomTypeId || (room.roomType && (room.roomType.id || room.roomType.roomTypeId)) || ''),
       status: room.status || 'Available',
-      adminPasscode: room.adminpasscode || room.adminPasscode || ''
+      adminPasscode: room.adminpasscode || room.adminPasscode || '',
+      note: room.note || ''
     });
     setIsRoomEditOpen(true);
   };
@@ -1492,13 +1496,14 @@ export default function StaffDashboard({ setActivePage }) {
     setIsSubmittingRoomEdit(true);
     try {
       const payload = {
-        roomNumber: roomEditFormData.roomNumber,
+        roomNumber: roomEditFormData.roomNumber.trim(),
         floorNumber: parseInt(roomEditFormData.floorNumber),
         roomTypeId: parseInt(roomEditFormData.roomTypeId),
         status: roomEditFormData.status,
-        adminPasscode: roomEditFormData.adminPasscode
+        adminPasscode: roomEditFormData.adminPasscode ? roomEditFormData.adminPasscode.trim() : null,
+        note: roomEditFormData.note ? roomEditFormData.note.trim() : null
       };
-      await updateRoom(editingRoomItem.roomId || editingRoomItem.id, payload);
+      await updateRoom(editingRoomItem.id || editingRoomItem.roomId, payload);
       showToast(`Đã cập nhật phòng ${roomEditFormData.roomNumber} thành công!`, 'success');
       setIsRoomEditOpen(false);
       fetchRealRooms(roomsCurrentPage);
@@ -1507,6 +1512,59 @@ export default function StaffDashboard({ setActivePage }) {
       showToast(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật phòng.', 'error');
     } finally {
       setIsSubmittingRoomEdit(false);
+    }
+  };
+
+  // ROOM CREATE HANDLERS
+  const [isRoomCreateOpen, setIsRoomCreateOpen] = useState(false);
+  const [isSubmittingRoomCreate, setIsSubmittingRoomCreate] = useState(false);
+  const [roomCreateFormData, setRoomCreateFormData] = useState({
+    roomNumber: '',
+    floorNumber: '1',
+    roomTypeId: '',
+    status: 'Available',
+    adminPasscode: '',
+    note: ''
+  });
+
+  const handleOpenCreateRoomModal = () => {
+    setRoomCreateFormData({
+      roomNumber: '',
+      floorNumber: '1',
+      roomTypeId: roomTypes.length > 0 ? String(roomTypes[0].id) : '',
+      status: 'Available',
+      adminPasscode: '',
+      note: ''
+    });
+    setIsRoomCreateOpen(true);
+  };
+
+  const handleRoomCreateSubmit = async (e) => {
+    e.preventDefault();
+    if (!roomCreateFormData.roomNumber || !roomCreateFormData.floorNumber || !roomCreateFormData.roomTypeId) {
+      showToast('Vui lòng điền đầy đủ số phòng, số tầng và hạng phòng', 'warning');
+      return;
+    }
+
+    setIsSubmittingRoomCreate(true);
+    try {
+      const payload = {
+        roomNumber: roomCreateFormData.roomNumber.trim(),
+        floorNumber: parseInt(roomCreateFormData.floorNumber),
+        roomTypeId: parseInt(roomCreateFormData.roomTypeId),
+        status: roomCreateFormData.status,
+        adminPasscode: roomCreateFormData.adminPasscode ? roomCreateFormData.adminPasscode.trim() : null,
+        note: roomCreateFormData.note ? roomCreateFormData.note.trim() : null
+      };
+      await createRoom(payload);
+      showToast(`Tạo phòng mới ${roomCreateFormData.roomNumber} thành công!`, 'success');
+      setIsRoomCreateOpen(false);
+      fetchRealRooms(roomsCurrentPage);
+    } catch (err) {
+      console.error('Lỗi khi tạo phòng mới:', err);
+      showToast(err.response?.data?.message || 'Có lỗi xảy ra khi tạo phòng mới.', 'error');
+    } finally {
+      setIsSubmittingRoomCreate(false);
     }
   };
 
@@ -1684,8 +1742,8 @@ export default function StaffDashboard({ setActivePage }) {
                                           ? 'Xác minh tại sảnh'
                                           : 'Cần Manager'
                                         : usesQrCode
-                                        ? 'Quét QR'
-                                        : 'Check-in tại quầy'}
+                                          ? 'Quét QR'
+                                          : 'Check-in tại quầy'}
                                     </button>
                                   </>
                                 )}
@@ -1783,6 +1841,7 @@ export default function StaffDashboard({ setActivePage }) {
                 setRoomsSearchQuery={setRoomsSearchQuery}
                 fetchRealRooms={fetchRealRooms}
                 handleOpenEditRoomItem={handleOpenEditRoomItem}
+                handleOpenCreateRoomModal={handleOpenCreateRoomModal}
                 roomTypes={roomTypes}
               />
             )}
@@ -1844,7 +1903,7 @@ export default function StaffDashboard({ setActivePage }) {
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left columns - Detailed info */}
                     <div className="lg:col-span-2 space-y-6">
-                      
+
                       {/* Refund Request Block */}
                       {associatedRefund && (
                         <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-6 flex flex-col gap-4 animate-scale-in">
@@ -1853,7 +1912,7 @@ export default function StaffDashboard({ setActivePage }) {
                             <h4 className="text-xs font-black text-rose-700 uppercase tracking-widest m-0">Yêu cầu hoàn tiền chờ xử lý</h4>
                             <span className="ml-auto px-2.5 py-1 text-[8.5px] font-extrabold text-rose-600 bg-rose-100 uppercase tracking-widest rounded-lg">Pending</span>
                           </div>
-                          
+
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
                             <div className="space-y-2">
                               <div>
@@ -1923,7 +1982,7 @@ export default function StaffDashboard({ setActivePage }) {
                               <h4 className="text-xs font-black text-blue-700 uppercase tracking-widest m-0">Yêu cầu đổi phòng chờ xử lý</h4>
                               <span className="ml-auto px-2.5 py-1 text-[8.5px] font-extrabold text-blue-600 bg-blue-100 uppercase tracking-widest rounded-lg">Pending</span>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
                               <div className="space-y-2">
                                 <div>
@@ -1941,7 +2000,7 @@ export default function StaffDashboard({ setActivePage }) {
                                   <span className="text-slate-500">Hạng phòng đích:</span>
                                   <span className="text-slate-800 font-bold">{associatedRoomChange.newValue === String(selectedBooking.roomTypeId) ? 'Cùng hạng phòng hiện tại' : 'Hạng phòng khác'}</span>
                                 </div>
-                                
+
                                 <div className="space-y-1">
                                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Chọn phòng vật lý trống để gán:</span>
                                   {isLoadingAvailableRooms ? (
@@ -1999,7 +2058,7 @@ export default function StaffDashboard({ setActivePage }) {
                               <h4 className="text-xs font-black text-emerald-700 uppercase tracking-widest m-0">Yêu cầu gia hạn lưu trú chờ xử lý</h4>
                               <span className="ml-auto px-2.5 py-1 text-[8.5px] font-extrabold text-emerald-600 bg-emerald-100 uppercase tracking-widest rounded-lg">Pending</span>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
                               <div className="space-y-2">
                                 <div>
@@ -2059,7 +2118,7 @@ export default function StaffDashboard({ setActivePage }) {
                               <h4 className="text-xs font-black text-amber-700 uppercase tracking-widest m-0">Yêu cầu Checkout sớm chờ xử lý</h4>
                               <span className="ml-auto px-2.5 py-1 text-[8.5px] font-extrabold text-amber-600 bg-amber-100 uppercase tracking-widest rounded-lg">Pending</span>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
                               <div className="space-y-2">
                                 <div>
@@ -2120,7 +2179,7 @@ export default function StaffDashboard({ setActivePage }) {
                               <h4 className="text-xs font-black text-blue-700 uppercase tracking-widest m-0">Yêu cầu đổi phòng chờ xử lý</h4>
                               <span className="ml-auto px-2.5 py-1 text-[8.5px] font-extrabold text-blue-600 bg-blue-100 uppercase tracking-widest rounded-lg">Pending</span>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
                               <div className="space-y-2">
                                 <div>
@@ -2138,7 +2197,7 @@ export default function StaffDashboard({ setActivePage }) {
                                   <span className="text-slate-500">Hạng phòng đích:</span>
                                   <span className="text-slate-800 font-bold">{associatedRoomChange.newValue === String(selectedBooking.roomTypeId) ? 'Cùng hạng phòng hiện tại' : 'Hạng phòng khác'}</span>
                                 </div>
-                                
+
                                 <div className="space-y-1">
                                   <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Chọn phòng vật lý trống để gán:</span>
                                   {isLoadingAvailableRooms ? (
@@ -2196,7 +2255,7 @@ export default function StaffDashboard({ setActivePage }) {
                               <h4 className="text-xs font-black text-emerald-700 uppercase tracking-widest m-0">Yêu cầu gia hạn lưu trú chờ xử lý</h4>
                               <span className="ml-auto px-2.5 py-1 text-[8.5px] font-extrabold text-emerald-600 bg-emerald-100 uppercase tracking-widest rounded-lg">Pending</span>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
                               <div className="space-y-2">
                                 <div>
@@ -2256,7 +2315,7 @@ export default function StaffDashboard({ setActivePage }) {
                               <h4 className="text-xs font-black text-amber-700 uppercase tracking-widest m-0">Yêu cầu Checkout sớm chờ xử lý</h4>
                               <span className="ml-auto px-2.5 py-1 text-[8.5px] font-extrabold text-amber-600 bg-amber-100 uppercase tracking-widest rounded-lg">Pending</span>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
                               <div className="space-y-2">
                                 <div>
@@ -2311,7 +2370,7 @@ export default function StaffDashboard({ setActivePage }) {
                           <span className="material-symbols-outlined text-primary text-base">info</span>
                           <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest m-0">Thông tin chi tiết lưu trú</h4>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6 text-xs">
                           {/* Col 1 */}
                           <div className="space-y-4">
@@ -2349,13 +2408,12 @@ export default function StaffDashboard({ setActivePage }) {
                             <div className="flex flex-col gap-1.5 bg-slate-50 p-4 border border-slate-100 rounded-xl">
                               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Trạng thái & Check-in</span>
                               <div className="flex flex-wrap gap-1.5 mt-0.5">
-                                <span className={`inline-block px-2.5 py-1 text-[8.5px] font-extrabold uppercase tracking-widest rounded-lg ${
-                                  isCheckedIn 
-                                    ? 'bg-blue-50 text-blue-600 border border-blue-100' 
-                                    : isConfirmed 
-                                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
-                                    : 'bg-slate-100 text-slate-600 border border-slate-200'
-                                }`}>
+                                <span className={`inline-block px-2.5 py-1 text-[8.5px] font-extrabold uppercase tracking-widest rounded-lg ${isCheckedIn
+                                    ? 'bg-blue-50 text-blue-600 border border-blue-100'
+                                    : isConfirmed
+                                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                      : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                  }`}>
                                   {selectedBooking.status}
                                 </span>
                                 {selectedBooking.checkInMethod === 'FaceID' || selectedBooking.checkInMethod === 'Face Recognition' ? (
@@ -2949,13 +3007,23 @@ export default function StaffDashboard({ setActivePage }) {
 
                 {/* Summary values */}
                 <div className="border-t border-slate-100 pt-4 space-y-2">
-                  <div className="flex justify-between text-slate-500 font-bold">
+                  <div className="flex justify-between text-slate-500 font-medium text-[11px]">
+                    <span>Tiền phòng (chưa thuế):</span>
+                    <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(invoiceData.roomTotal || 0))}</span>
+                  </div>
+                  {parseFloat(invoiceData.serviceTotal || 0) > 0 && (
+                    <div className="flex justify-between text-amber-700 font-medium text-[11px]">
+                      <span>+ Dịch vụ phụ thu (khi lưu trú):</span>
+                      <span>+{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(invoiceData.serviceTotal || 0))}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-slate-700 font-bold pt-1 border-t border-slate-100/80">
                     <span>Tổng chưa thuế:</span>
-                    <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(invoiceData.roomTotal) + parseFloat(invoiceData.serviceTotal || 0))}</span>
+                    <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(parseFloat(invoiceData.roomTotal || 0) + parseFloat(invoiceData.serviceTotal || 0))}</span>
                   </div>
                   <div className="flex justify-between text-slate-500 font-bold">
                     <span>Thuế VAT (10%):</span>
-                    <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(invoiceData.taxAmount)}</span>
+                    <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(invoiceData.taxAmount || 0)}</span>
                   </div>
                   {parseFloat(invoiceData.discountAmount || 0) > 0 && (
                     <div className="flex justify-between text-rose-600 font-bold">
@@ -3040,12 +3108,13 @@ export default function StaffDashboard({ setActivePage }) {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Inline Add Service Form */}
                 {(() => {
-                  const associatedBooking = bookings.find(b => b.id === invoiceData?.bookingId);
-                  const isNotCompleted = associatedBooking && associatedBooking.status !== 'Completed';
-                  return isNotCompleted && (
+                  const associatedBooking = bookings.find(b => String(b.id) === String(invoiceData?.bookingId)) || (selectedBooking && String(selectedBooking.id) === String(invoiceData?.bookingId) ? selectedBooking : null);
+                  const status = associatedBooking?.status;
+                  const canAddService = !status || (status !== 'Completed' && status !== 'Cancelled');
+                  return canAddService && (
                     <div className="border-t border-slate-100 pt-4 space-y-3">
                       <span className="block text-[9px] font-black text-slate-500 uppercase tracking-widest">
                         Thêm dịch vụ phụ thu (Minibar, Spa, Concierge...)
@@ -3655,6 +3724,272 @@ export default function StaffDashboard({ setActivePage }) {
                   className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1 rounded-xl transition-all"
                 >
                   Quay lại
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE ROOM MODAL */}
+      {isRoomCreateOpen && (
+        <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-[6000] flex items-center justify-center p-4 font-['Montserrat']">
+          <div className="bg-white border border-slate-200/80 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl rounded-2xl animate-scale-in text-slate-800 text-left">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <span className="text-[9px] font-black tracking-widest text-primary uppercase">THÊM PHÒNG MỚI</span>
+                <h4 className="text-sm font-black uppercase text-slate-900 m-0 mt-0.5">Tạo phòng vào sơ đồ vận hành</h4>
+              </div>
+              <button
+                onClick={() => setIsRoomCreateOpen(false)}
+                className="text-slate-400 hover:text-slate-700 border-none bg-transparent cursor-pointer flex items-center transition-all"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleRoomCreateSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    Số phòng *
+                  </label>
+                  <input
+                    type="text"
+                    value={roomCreateFormData.roomNumber}
+                    onChange={(e) => setRoomCreateFormData(prev => ({ ...prev, roomNumber: e.target.value }))}
+                    placeholder="Ví dụ: P101, P205..."
+                    className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-primary focus:bg-white rounded-xl transition-all"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    Số tầng *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={roomCreateFormData.floorNumber}
+                    onChange={(e) => setRoomCreateFormData(prev => ({ ...prev, floorNumber: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-primary focus:bg-white rounded-xl transition-all"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  Hạng phòng *
+                </label>
+                <select
+                  value={roomCreateFormData.roomTypeId}
+                  onChange={(e) => setRoomCreateFormData(prev => ({ ...prev, roomTypeId: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-primary focus:bg-white rounded-xl transition-all"
+                  required
+                >
+                  <option value="" disabled>-- Chọn hạng phòng --</option>
+                  {roomTypes.map(type => (
+                    <option key={type.id} value={type.id}>
+                      {type.name} - {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(type.basePrice)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    Trạng thái ban đầu
+                  </label>
+                  <select
+                    value={roomCreateFormData.status}
+                    onChange={(e) => setRoomCreateFormData(prev => ({ ...prev, status: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-primary focus:bg-white rounded-xl transition-all"
+                  >
+                    <option value="Available">Trống (Available)</option>
+                    <option value="Cleaning">Đang dọn dẹp (Cleaning)</option>
+                    <option value="Maintenance">Bảo trì (Maintenance)</option>
+                    <option value="Occupied">Có khách (Occupied)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    Mã khóa Admin
+                  </label>
+                  <input
+                    type="text"
+                    value={roomCreateFormData.adminPasscode}
+                    onChange={(e) => setRoomCreateFormData(prev => ({ ...prev, adminPasscode: e.target.value }))}
+                    placeholder="Mã khóa quản lý (nếu có)"
+                    className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-primary focus:bg-white rounded-xl transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  Ghi chú
+                </label>
+                <textarea
+                  rows="2"
+                  value={roomCreateFormData.note}
+                  onChange={(e) => setRoomCreateFormData(prev => ({ ...prev, note: e.target.value }))}
+                  placeholder="Ghi chú thêm về phòng này..."
+                  className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-primary focus:bg-white resize-none rounded-xl transition-all"
+                />
+              </div>
+
+              <div className="flex gap-4 pt-4 border-t border-slate-100">
+                <button
+                  type="submit"
+                  disabled={isSubmittingRoomCreate}
+                  className="bg-primary hover:brightness-110 text-white font-black px-8 py-3.5 uppercase text-xs tracking-widest transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1 rounded-xl shadow-md shadow-primary/20"
+                >
+                  {isSubmittingRoomCreate ? 'Đang tạo phòng...' : 'Xác nhận tạo phòng'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsRoomCreateOpen(false)}
+                  className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1 rounded-xl transition-all"
+                >
+                  Hủy bỏ
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT ROOM MODAL */}
+      {isRoomEditOpen && editingRoomItem && (
+        <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-sm z-[6000] flex items-center justify-center p-4 font-['Montserrat']">
+          <div className="bg-white border border-slate-200/80 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl rounded-2xl animate-scale-in text-slate-800 text-left">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <span className="text-[9px] font-black tracking-widest text-primary uppercase">CẬP NHẬT THÔNG TIN PHÒNG</span>
+                <h4 className="text-sm font-black uppercase text-slate-900 m-0 mt-0.5">
+                  Phòng {editingRoomItem.roomnumber || editingRoomItem.roomNumber}
+                </h4>
+              </div>
+              <button
+                onClick={() => setIsRoomEditOpen(false)}
+                className="text-slate-400 hover:text-slate-700 border-none bg-transparent cursor-pointer flex items-center transition-all"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleRoomEditSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    Số phòng *
+                  </label>
+                  <input
+                    type="text"
+                    value={roomEditFormData.roomNumber}
+                    onChange={(e) => setRoomEditFormData(prev => ({ ...prev, roomNumber: e.target.value }))}
+                    placeholder="Ví dụ: P101, P205..."
+                    className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-primary focus:bg-white rounded-xl transition-all"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    Số tầng *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={roomEditFormData.floorNumber}
+                    onChange={(e) => setRoomEditFormData(prev => ({ ...prev, floorNumber: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-primary focus:bg-white rounded-xl transition-all"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  Hạng phòng *
+                </label>
+                <select
+                  value={roomEditFormData.roomTypeId}
+                  onChange={(e) => setRoomEditFormData(prev => ({ ...prev, roomTypeId: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-primary focus:bg-white rounded-xl transition-all"
+                  required
+                >
+                  <option value="" disabled>-- Chọn hạng phòng --</option>
+                  {roomTypes.map(type => (
+                    <option key={type.id} value={type.id}>
+                      {type.name} - {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(type.basePrice)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    Trạng thái hoạt động
+                  </label>
+                  <select
+                    value={roomEditFormData.status}
+                    onChange={(e) => setRoomEditFormData(prev => ({ ...prev, status: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-primary focus:bg-white rounded-xl transition-all"
+                  >
+                    <option value="Available">Trống (Available)</option>
+                    <option value="Cleaning">Đang dọn dẹp (Cleaning)</option>
+                    <option value="Maintenance">Bảo trì (Maintenance)</option>
+                    <option value="Occupied">Có khách (Occupied)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    Mã khóa Admin
+                  </label>
+                  <input
+                    type="text"
+                    value={roomEditFormData.adminPasscode}
+                    onChange={(e) => setRoomEditFormData(prev => ({ ...prev, adminPasscode: e.target.value }))}
+                    placeholder="Mã khóa quản lý"
+                    className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-primary focus:bg-white rounded-xl transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  Ghi chú
+                </label>
+                <textarea
+                  rows="2"
+                  value={roomEditFormData.note || ''}
+                  onChange={(e) => setRoomEditFormData(prev => ({ ...prev, note: e.target.value }))}
+                  placeholder="Ghi chú về phòng này..."
+                  className="w-full bg-slate-50 border border-slate-200/80 p-3 font-bold text-xs outline-none text-slate-900 focus:border-primary focus:bg-white resize-none rounded-xl transition-all"
+                />
+              </div>
+
+              <div className="flex gap-4 pt-4 border-t border-slate-100">
+                <button
+                  type="submit"
+                  disabled={isSubmittingRoomEdit}
+                  className="bg-primary hover:brightness-110 text-white font-black px-8 py-3.5 uppercase text-xs tracking-widest transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 flex-1 rounded-xl shadow-md shadow-primary/20"
+                >
+                  {isSubmittingRoomEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsRoomEditOpen(false)}
+                  className="bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold px-8 py-3.5 uppercase text-xs tracking-widest cursor-pointer flex-1 rounded-xl transition-all"
+                >
+                  Hủy bỏ
                 </button>
               </div>
             </form>
