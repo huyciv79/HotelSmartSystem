@@ -9,5 +9,6 @@ import java.util.List;
 @Repository
 public interface CustomerRequestRepository extends JpaRepository<CustomerRequest, Integer> {
     List<CustomerRequest> findByBooking_Id(Integer bookingId);
+    List<CustomerRequest> findByBooking_IdOrderByCreatedAtDesc(Integer bookingId);
     List<CustomerRequest> findByRequestTypeAndStatusOrderByCreatedAtDesc(String requestType, String status);
 }

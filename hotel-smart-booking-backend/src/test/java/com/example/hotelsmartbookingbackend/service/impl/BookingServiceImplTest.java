@@ -150,8 +150,6 @@ class BookingServiceImplTest {
         defaultRoomType.setId(1);
         defaultRoomType.setName("Deluxe Suite");
         defaultRoomType.setStatus("Active");
-        defaultRoomType.setAdultCapacity(2);
-        defaultRoomType.setChildCapacity(1);
         defaultRoomType.setBasePrice(new BigDecimal("1000000.00"));
 
         defaultRoom = new Room();
@@ -159,7 +157,11 @@ class BookingServiceImplTest {
         defaultRoom.setRoomNumber("101");
         defaultRoom.setFloorNumber(1);
         defaultRoom.setStatus("Available");
+        defaultRoom.setAdultCapacity(2);
+        defaultRoom.setChildCapacity(1);
+        defaultRoom.setTotalCapacity(3);
         defaultRoom.setRoomType(defaultRoomType);
+        defaultRoomType.setRooms(java.util.Set.of(defaultRoom));
     }
 
     private Instant toInstant(LocalDate date) {
@@ -2199,8 +2201,15 @@ class BookingServiceImplTest {
         newRoomType.setName("Executive Suite");
         newRoomType.setBasePrice(new BigDecimal("800000.00"));
         newRoomType.setStatus("Active");
-        newRoomType.setAdultCapacity(4);
-        newRoomType.setChildCapacity(2);
+
+        Room newRoom = new Room();
+        newRoom.setId(201);
+        newRoom.setRoomNumber("201");
+        newRoom.setAdultCapacity(4);
+        newRoom.setChildCapacity(2);
+        newRoom.setTotalCapacity(6);
+        newRoom.setRoomType(newRoomType);
+        newRoomType.setRooms(java.util.Set.of(newRoom));
 
         UpdateBookingRequest request = new UpdateBookingRequest();
         request.setCheckInDate(newCheckIn.toString());

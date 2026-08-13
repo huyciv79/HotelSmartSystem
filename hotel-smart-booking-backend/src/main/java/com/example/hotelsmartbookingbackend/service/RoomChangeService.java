@@ -52,4 +52,19 @@ public interface RoomChangeService {
 
     List<CustomerRequestResponse> getPendingEarlyCheckOutRequests(
             String staffEmail);
+
+    CustomerRequestResponse submitServiceRequest(
+            com.example.hotelsmartbookingbackend.dto.request.CustomerServiceRequest request, String customerEmail);
+
+    List<CustomerRequestResponse> getPendingServiceRequests(
+            String staffEmail);
+
+    List<CustomerRequestResponse> getServiceRequestsByBooking(
+            Integer bookingId, String actorEmail);
+
+    CustomerRequestResponse approveServiceRequest(
+            Integer requestId, String staffEmail);
+
+    CustomerRequestResponse rejectServiceRequest(
+            Integer requestId, String rejectionReason, String staffEmail);
 }

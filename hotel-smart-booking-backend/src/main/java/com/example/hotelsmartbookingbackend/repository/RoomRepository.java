@@ -16,6 +16,8 @@ public interface RoomRepository extends JpaRepository<Room, Integer>, JpaSpecifi
 
     long countByRoomType_IdAndStatus(Integer roomTypeId, String status);
 
+    List<Room> findByRoomType_Id(Integer roomTypeId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<Room> findByRoomType_IdAndStatusOrderByRoomNumberAsc(
             Integer roomTypeId,

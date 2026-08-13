@@ -71,3 +71,12 @@ export const createRoom = async (data) => {
   const response = await axiosInstance.post('/rooms', data);
   return response.data;
 };
+
+/**
+ * Delete an individual room (soft delete).
+ * DELETE /api/rooms/{id}
+ */
+export const deleteRoom = async (id) => {
+  const response = await axiosInstance.delete(`/rooms/${id}`);
+  return response.data;
+};

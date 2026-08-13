@@ -25,5 +25,7 @@ public interface RoomService {
     List<RoomStatusResponse> getAllRoomStatuses();
 
     RoomStatusResponse updateRoomStatus(Integer roomId, UpdateRoomRequest request);
+
+    void deleteRoom(Integer id);
 }
 

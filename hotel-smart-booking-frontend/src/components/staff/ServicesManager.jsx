@@ -1,13 +1,29 @@
 import { useState, useEffect } from 'react';
-import { getServices, createService, updateService, deleteService } from '../../services/serviceService';
+import {
+  getServices,
+  createService,
+  updateService,
+  deleteService,
+  getPendingServiceRequests,
+  approveCustomerServiceRequest,
+  rejectCustomerServiceRequest
+} from '../../services/serviceService';
 
 const ServicesManager = ({ showToast, triggerCustomConfirm }) => {
+  const [activeTab, setActiveTab] = useState('catalog'); // 'catalog' | 'requests'
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingService, setEditingService] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Pending In-stay Service Request states
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [rejectingReqId, setRejectingReqId] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -40,9 +56,62 @@ const ServicesManager = ({ showToast, triggerCustomConfirm }) => {
     }
   };
 
+  const fetchPendingRequests = async () => {
+    setLoadingRequests(true);
+    try {
+      const response = await getPendingServiceRequests();
+      if (response && response.success) {
+        setPendingRequests(response.data || []);
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải yêu cầu dịch vụ phòng:', err);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
   useEffect(() => {
     fetchServices();
+    fetchPendingRequests();
+    const interval = setInterval(fetchPendingRequests, 15000);
+    return () => clearInterval(interval);
   }, []);
+
+  const handleApproveRequest = async (requestId) => {
+    setActionLoading(true);
+    try {
+      const res = await approveCustomerServiceRequest(requestId);
+      if (res && res.success) {
+        showToast('Đã duyệt dịch vụ phòng! Chi phí đã tự động cộng vào hóa đơn phòng.', 'success');
+        fetchPendingRequests();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Không thể phê duyệt yêu cầu dịch vụ này.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectRequestSubmit = async (e) => {
+    e.preventDefault();
+    if (!rejectingReqId) return;
+    setActionLoading(true);
+    try {
+      const res = await rejectCustomerServiceRequest(rejectingReqId, rejectionReason);
+      if (res && res.success) {
+        showToast('Đã từ chối yêu cầu dịch vụ phòng.', 'info');
+        setRejectingReqId(null);
+        setRejectionReason('');
+        fetchPendingRequests();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Không thể từ chối dịch vụ.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handleOpenAdd = () => {
     setEditingService(null);
@@ -179,6 +248,39 @@ const ServicesManager = ({ showToast, triggerCustomConfirm }) => {
         </div>
       )}
 
+      {/* Subtabs Header */}
+      {!isFormOpen && (
+        <div className="flex border-b border-slate-200 gap-6 pt-2">
+          <button
+            onClick={() => setActiveTab('catalog')}
+            className={`pb-3 text-xs font-black uppercase tracking-wider cursor-pointer border-b-2 transition-all flex items-center gap-2 ${
+              activeTab === 'catalog'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-slate-400 hover:text-slate-700'
+            }`}
+          >
+            <span className="material-symbols-outlined text-base">inventory_2</span>
+            Danh mục dịch vụ ({services.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('requests')}
+            className={`pb-3 text-xs font-black uppercase tracking-wider cursor-pointer border-b-2 transition-all flex items-center gap-2 ${
+              activeTab === 'requests'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-slate-400 hover:text-slate-700'
+            }`}
+          >
+            <span className="material-symbols-outlined text-base">room_service</span>
+            Yêu cầu dịch vụ từ khách phòng ({pendingRequests.length})
+            {pendingRequests.length > 0 && (
+              <span className="bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-bounce">
+                {pendingRequests.length}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Main Content Area */}
       {isFormOpen ? (
         <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] p-6 md:p-8">
@@ -189,20 +291,23 @@ const ServicesManager = ({ showToast, triggerCustomConfirm }) => {
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="E.g., Giặt ủi cao cấp"
-                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="VD: Ăn sáng tại phòng, Dịch vụ giặt là..."
+                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-3 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
+                  required
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Đơn giá (VND)</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Giá dịch vụ (VNĐ)</label>
                 <input
                   type="number"
+                  min="0"
                   value={formData.price}
-                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                  placeholder="E.g., 150000"
-                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  placeholder="VD: 150000"
+                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-3 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
+                  required
                 />
               </div>
 
@@ -211,129 +316,182 @@ const ServicesManager = ({ showToast, triggerCustomConfirm }) => {
                 <input
                   type="text"
                   value={formData.unit}
-                  onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
-                  placeholder="E.g., Lượt, Chiếc, Lon..."
-                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
+                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                  placeholder="VD: Lượt, Suất, Bộ, Khẩu phần..."
+                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-3 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
+                  required
                 />
               </div>
 
               <div className="space-y-2">
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Trạng thái hoạt động</label>
-                <select
-                  value={formData.isactive ? 'true' : 'false'}
-                  onChange={(e) => setFormData(prev => ({ ...prev, isactive: e.target.value === 'true' }))}
-                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all [&>option]:bg-white [&>option]:text-slate-800"
-                >
-                  <option value="true">Hoạt động (Active)</option>
-                  <option value="false">Tạm ngưng (Inactive)</option>
-                </select>
+                <div className="flex items-center gap-4 pt-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                    <input
+                      type="radio"
+                      name="isactive"
+                      checked={formData.isactive === true}
+                      onChange={() => setFormData({ ...formData, isactive: true })}
+                      className="accent-primary"
+                    />
+                    Hoạt động
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                    <input
+                      type="radio"
+                      name="isactive"
+                      checked={formData.isactive === false}
+                      onChange={() => setFormData({ ...formData, isactive: false })}
+                      className="accent-primary"
+                    />
+                    Tạm ngưng
+                  </label>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 space-y-2">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Mô tả dịch vụ</label>
+                <textarea
+                  rows="3"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Nhập ghi chú hoặc thông tin quy định đi kèm của dịch vụ..."
+                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl p-4 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400 resize-none"
+                />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Mô tả dịch vụ</label>
-              <textarea
-                rows="3"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Nhập mô tả chi tiết dịch vụ..."
-                className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-3 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all resize-none placeholder:text-slate-400"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="bg-primary hover:brightness-110 text-white font-bold px-8 py-3.5 uppercase text-xs tracking-widest transition-all cursor-pointer border-none flex items-center justify-center gap-1.5 rounded-xl shadow-[0_4px_12px_rgba(162,5,19,0.2)] disabled:opacity-60"
-              >
-                {isSubmitting ? 'Đang lưu...' : 'Lưu lại'}
-              </button>
+            <div className="flex justify-end gap-3 border-t border-slate-100 pt-6">
               <button
                 type="button"
                 onClick={() => setIsFormOpen(false)}
-                className="bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold px-8 py-3.5 uppercase text-xs tracking-widest border border-slate-200/60 cursor-pointer rounded-xl transition-all"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs uppercase tracking-widest px-6 py-3 border-none cursor-pointer transition-all rounded-xl"
               >
-                Hủy bỏ
+                Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-primary hover:brightness-110 text-white font-black text-xs uppercase tracking-widest px-6 py-3 border-none cursor-pointer transition-all rounded-xl shadow-md"
+              >
+                {isSubmitting ? 'Đang lưu...' : editingService ? 'Cập nhật' : 'Tạo mới'}
               </button>
             </div>
           </form>
         </div>
-      ) : (
-        /* Services Table */
+      ) : activeTab === 'requests' ? (
+        /* YÊU CẦU DỊCH VỤ PHÒNG TỪ KHÁCH */
         <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] overflow-hidden">
-          {loading ? (
-            <div className="p-12 text-center">
-              <span className="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>
-              <span className="text-slate-400 font-bold uppercase tracking-widest text-xs">Đang tải danh sách dịch vụ...</span>
-            </div>
-          ) : services.length === 0 ? (
-            <div className="p-12 text-center">
-              <span className="material-symbols-outlined text-4xl text-slate-200 block mb-3">room_service</span>
-              <p className="text-slate-400 font-bold uppercase tracking-wider text-xs">Chưa có dịch vụ nào trong hệ thống</p>
+          {loadingRequests ? (
+            <div className="p-8 text-center text-xs text-slate-500 font-bold">Đang tải danh sách yêu cầu...</div>
+          ) : pendingRequests.length === 0 ? (
+            <div className="p-12 text-center text-slate-400">
+              <span className="material-symbols-outlined text-4xl block mb-2 text-slate-300">task_alt</span>
+              <p className="text-xs font-bold uppercase tracking-wider m-0">Không có yêu cầu dịch vụ phòng nào đang chờ xử lý</p>
             </div>
           ) : (
-            <table className="w-full border-collapse text-left text-xs text-slate-600">
+            <div className="divide-y divide-slate-100">
+              {pendingRequests.map((req) => (
+                <div key={req.requestId} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/50 transition-all">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-black text-slate-900 tracking-wider">Mã đơn: #{req.bookingReference}</span>
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-100 text-amber-700">
+                        Chờ tiếp nhận
+                      </span>
+                    </div>
+                    <p className="text-xs font-bold text-purple-700 m-0">
+                      {req.description}
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-medium m-0">
+                      Gửi lúc: {new Date(req.createdAt).toLocaleString('vi-VN')}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      onClick={() => handleApproveRequest(req.requestId)}
+                      disabled={actionLoading}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl border-none cursor-pointer shadow-sm transition-all flex items-center gap-1.5"
+                    >
+                      <span className="material-symbols-outlined text-base">check_circle</span>
+                      Phê duyệt & Cộng tiền
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setRejectingReqId(req.requestId);
+                        setRejectionReason('');
+                      }}
+                      disabled={actionLoading}
+                      className="bg-rose-50 hover:bg-rose-100 text-rose-600 font-black text-xs uppercase tracking-widest px-4 py-2.5 rounded-xl border border-rose-200 cursor-pointer transition-all flex items-center gap-1.5"
+                    >
+                      <span className="material-symbols-outlined text-base">cancel</span>
+                      Từ chối
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* DANH MỤC DỊCH VỤ */
+        <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] overflow-hidden">
+          {loading ? (
+            <div className="p-8 text-center text-xs text-slate-500 font-bold">Đang tải danh sách dịch vụ...</div>
+          ) : filteredServices.length === 0 ? (
+            <div className="p-12 text-center text-slate-400">
+              <span className="material-symbols-outlined text-4xl block mb-2 text-slate-300">room_service</span>
+              <p className="text-xs font-bold uppercase tracking-wider m-0">Không tìm thấy dịch vụ nào</p>
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 text-[9px] font-black uppercase tracking-wider text-slate-400 bg-slate-50/50">
-                  <th className="p-4 pl-6">ID</th>
-                  <th className="p-4">Tên dịch vụ</th>
-                  <th className="p-4">Mô tả</th>
-                  <th className="p-4">Đơn giá</th>
-                  <th className="p-4">Đơn vị tính</th>
-                  <th className="p-4">Trạng thái</th>
-                  <th className="p-4 pr-6 text-right">Thao tác</th>
+                <tr className="border-b border-slate-100 bg-slate-50/50">
+                  <th className="p-4 pl-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">ID</th>
+                  <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tên dịch vụ</th>
+                  <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Giá dịch vụ</th>
+                  <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Đơn vị</th>
+                  <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
+                  <th className="p-4 pr-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredServices.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" className="p-8 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px]">
-                      Không tìm thấy dịch vụ nào phù hợp
+              <tbody className="divide-y divide-slate-100 text-xs font-bold">
+                {filteredServices.map((svc) => (
+                  <tr key={svc.id} className="hover:bg-slate-50/50 transition-all">
+                    <td className="p-4 pl-6 text-slate-400 font-mono">#{svc.id}</td>
+                    <td className="p-4 text-slate-800">
+                      <div>{svc.name}</div>
+                      {svc.description && <div className="text-[10px] text-slate-400 font-normal mt-0.5">{svc.description}</div>}
+                    </td>
+                    <td className="p-4 text-primary font-black">{Number(svc.price).toLocaleString()} VNĐ</td>
+                    <td className="p-4 text-slate-600">{svc.unit}</td>
+                    <td className="p-4">
+                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                        svc.isactive ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'
+                      }`}>
+                        {svc.isactive ? 'Hoạt động' : 'Tạm ngưng'}
+                      </span>
+                    </td>
+                    <td className="p-4 pr-6 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleOpenEdit(svc)}
+                          className="bg-slate-50 border border-slate-200/60 text-slate-700 hover:bg-slate-100 text-[8.5px] font-black uppercase tracking-widest px-3 py-1.5 cursor-pointer rounded-lg transition-all"
+                        >
+                          Sửa
+                        </button>
+                        <button
+                          onClick={() => handleDelete(svc.id, svc.name)}
+                          className="bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-100 text-[8.5px] font-black uppercase tracking-widest px-3 py-1.5 cursor-pointer rounded-lg transition-all"
+                        >
+                          Xóa
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                ) : (
-                  filteredServices.map((svc) => (
-                    <tr key={svc.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="p-4 pl-6 text-slate-400 font-bold">#{svc.id}</td>
-                      <td className="p-4">
-                        <span className="text-slate-800 font-black uppercase text-sm block">{svc.name}</span>
-                      </td>
-                      <td className="p-4 max-w-xs truncate font-medium text-slate-500">
-                        {svc.description || <span className="text-slate-300 italic">Không có mô tả</span>}
-                      </td>
-                      <td className="p-4 text-primary font-black text-sm">
-                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(svc.price || 0)}
-                      </td>
-                      <td className="p-4 font-semibold text-slate-500">{svc.unit}</td>
-                      <td className="p-4">
-                        <span className={`px-2.5 py-1 text-[8.5px] font-extrabold uppercase tracking-widest rounded-lg ${
-                          svc.isactive
-                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                            : 'bg-rose-50 text-rose-600 border border-rose-100'
-                        }`}>
-                          {svc.isactive ? 'Hoạt động' : 'Tạm ngưng'}
-                        </span>
-                      </td>
-                      <td className="p-4 pr-6 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => handleOpenEdit(svc)}
-                            className="bg-slate-50 border border-slate-200/60 text-slate-700 hover:bg-slate-100 hover:text-slate-900 text-[8.5px] font-black uppercase tracking-widest px-3 py-1.5 cursor-pointer rounded-lg transition-all"
-                          >
-                            Sửa
-                          </button>
-                          <button
-                            onClick={() => handleDelete(svc.id, svc.name)}
-                            className="bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-100 text-[8.5px] font-black uppercase tracking-widest px-3 py-1.5 cursor-pointer rounded-lg transition-all"
-                          >
-                            Xóa
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           )}

@@ -198,4 +198,63 @@ public class StayAdjustmentController {
         List<CustomerRequestResponse> response = roomChangeService.getPendingEarlyCheckOutRequests(staffEmail);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách yêu cầu check-out sớm thành công", response));
     }
+
+    @PostMapping("/service-request")
+    @Operation(summary = "Khách hàng gửi yêu cầu dịch vụ phòng đi kèm trong khi đang ở")
+    public ResponseEntity<ApiResponse<CustomerRequestResponse>> submitServiceRequest(
+            @Valid @RequestBody com.example.hotelsmartbookingbackend.dto.request.CustomerServiceRequest request,
+            Authentication authentication) {
+        String customerEmail = authentication.getName();
+        log.info("[StayAdjustmentController] Guest='{}' gửi yêu cầu dịch vụ. BookingId={}, serviceId={}",
+                customerEmail, request.getBookingId(), request.getServiceId());
+
+        CustomerRequestResponse response = roomChangeService.submitServiceRequest(request, customerEmail);
+        return ResponseEntity.ok(ApiResponse.success("Đã gửi yêu cầu dịch vụ phòng thành công. Vui lòng chờ nhân viên tiếp nhận.", response));
+    }
+
+    @GetMapping("/service-request/pending")
+    @Operation(summary = "Lấy danh sách yêu cầu dịch vụ phòng đang chờ xử lý (Nhân viên)")
+    public ResponseEntity<ApiResponse<List<CustomerRequestResponse>>> getPendingServiceRequests(
+            Authentication authentication) {
+        String staffEmail = authentication.getName();
+        log.info("[StayAdjustmentController] Staff='{}' lấy danh sách yêu cầu dịch vụ phòng đang chờ duyệt", staffEmail);
+
+        List<CustomerRequestResponse> response = roomChangeService.getPendingServiceRequests(staffEmail);
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách yêu cầu dịch vụ thành công", response));
+    }
+
+    @GetMapping("/service-request/booking/{bookingId}")
+    @Operation(summary = "Lấy danh sách yêu cầu dịch vụ theo booking ID")
+    public ResponseEntity<ApiResponse<List<CustomerRequestResponse>>> getServiceRequestsByBooking(
+            @PathVariable Integer bookingId,
+            Authentication authentication) {
+        String actorEmail = authentication.getName();
+        List<CustomerRequestResponse> response = roomChangeService.getServiceRequestsByBooking(bookingId, actorEmail);
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách dịch vụ phòng theo booking thành công", response));
+    }
+
+    @PostMapping("/service-request/approve/{requestId}")
+    @Operation(summary = "Nhân viên phê duyệt yêu cầu dịch vụ phòng (tự động cộng tiền vào hóa đơn checkout)")
+    public ResponseEntity<ApiResponse<CustomerRequestResponse>> approveServiceRequest(
+            @PathVariable Integer requestId,
+            Authentication authentication) {
+        String staffEmail = authentication.getName();
+        log.info("[StayAdjustmentController] Staff='{}' duyệt dịch vụ phòng ID={}", staffEmail, requestId);
+
+        CustomerRequestResponse response = roomChangeService.approveServiceRequest(requestId, staffEmail);
+        return ResponseEntity.ok(ApiResponse.success("Phê duyệt dịch vụ thành công, chi phí đã được cộng vào đơn phòng.", response));
+    }
+
+    @PostMapping("/service-request/reject/{requestId}")
+    @Operation(summary = "Nhân viên từ chối yêu cầu dịch vụ phòng")
+    public ResponseEntity<ApiResponse<CustomerRequestResponse>> rejectServiceRequest(
+            @PathVariable Integer requestId,
+            @RequestParam(required = false) String rejectionReason,
+            Authentication authentication) {
+        String staffEmail = authentication.getName();
+        log.info("[StayAdjustmentController] Staff='{}' từ chối dịch vụ phòng ID={}. Lý do: {}", staffEmail, requestId, rejectionReason);
+
+        CustomerRequestResponse response = roomChangeService.rejectServiceRequest(requestId, rejectionReason, staffEmail);
+        return ResponseEntity.ok(ApiResponse.success("Từ chối yêu cầu dịch vụ phòng thành công", response));
+    }
 }

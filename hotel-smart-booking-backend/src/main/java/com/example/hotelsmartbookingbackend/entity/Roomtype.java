@@ -9,6 +9,8 @@ import org.hibernate.annotations.ColumnDefault;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -32,26 +34,6 @@ public class RoomType {
     @Column(name = "baseprice", nullable = false, precision = 12, scale = 2)
     private BigDecimal basePrice;
 
-    @NotNull
-    @ColumnDefault("2")
-    @Column(name = "adultcapacity", nullable = false)
-    private Integer adultCapacity;
-
-    @NotNull
-    @ColumnDefault("1")
-    @Column(name = "childcapacity", nullable = false)
-    private Integer childCapacity;
-
-    @Column(name = "totalcapacity", insertable = false, updatable = false)
-    private Integer totalCapacity;
-
-    @Column(name = "area", precision = 8, scale = 2)
-    private BigDecimal area;
-
-    @Size(max = 100)
-    @Column(name = "bedtype", length = 100)
-    private String bedType;
-
     @Column(name = "amenities", length = Integer.MAX_VALUE)
     private String amenities;
 
@@ -73,4 +55,11 @@ public class RoomType {
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "updatedat", nullable = false)
     private Instant updatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updatedby")
+    private User updatedBy;
+
+    @OneToMany(mappedBy = "roomType", fetch = FetchType.LAZY)
+    private Set<Room> rooms = new LinkedHashSet<>();
 }

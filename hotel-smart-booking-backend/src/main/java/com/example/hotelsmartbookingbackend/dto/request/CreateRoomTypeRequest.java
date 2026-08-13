@@ -25,18 +25,12 @@ public class CreateRoomTypeRequest {
     @DecimalMin(value = "0.0", inclusive = false, message = "Gia co ban phai lon hon 0")
     private BigDecimal basePrice;
 
-    @NotNull(message = "Suc chua nguoi lon khong duoc de trong")
-    @Min(value = 1, message = "Suc chua nguoi lon phai lon hon 0")
     private Integer adultCapacity;
 
-    @NotNull(message = "Suc chua tre em khong duoc de trong")
-    @Min(value = 0, message = "Suc chua tre em khong duoc am")
     private Integer childCapacity;
 
-    @DecimalMin(value = "0.0", inclusive = false, message = "Dien tich phai lon hon 0")
     private BigDecimal area;
 
-    @Size(max = 100, message = "Kieu giuong khong duoc vuot qua 100 ky tu")
     private String bedType;
 
     private String amenities;

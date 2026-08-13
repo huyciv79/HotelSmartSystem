@@ -1,7 +1,10 @@
 package com.example.hotelsmartbookingbackend.specification;
 
 import com.example.hotelsmartbookingbackend.dto.request.RoomTypeFilterCriteria;
+import com.example.hotelsmartbookingbackend.entity.Room;
 import com.example.hotelsmartbookingbackend.entity.RoomType;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import org.springframework.data.jpa.domain.Specification;
 
 public final class RoomTypeSpecification {
@@ -66,7 +69,11 @@ public final class RoomTypeSpecification {
             if (minAdults == null) {
                 return cb.conjunction();
             }
-            return cb.greaterThanOrEqualTo(root.get("adultCapacity"), minAdults);
+            Join<RoomType, Room> roomJoin = root.join("rooms", JoinType.LEFT);
+            if (query != null) {
+                query.distinct(true);
+            }
+            return cb.greaterThanOrEqualTo(roomJoin.get("adultCapacity"), minAdults);
         };
     }
 
@@ -75,7 +82,11 @@ public final class RoomTypeSpecification {
             if (minTotalCapacity == null) {
                 return cb.conjunction();
             }
-            return cb.greaterThanOrEqualTo(root.get("totalCapacity"), minTotalCapacity);
+            Join<RoomType, Room> roomJoin = root.join("rooms", JoinType.LEFT);
+            if (query != null) {
+                query.distinct(true);
+            }
+            return cb.greaterThanOrEqualTo(roomJoin.get("totalCapacity"), minTotalCapacity);
         };
     }
 }

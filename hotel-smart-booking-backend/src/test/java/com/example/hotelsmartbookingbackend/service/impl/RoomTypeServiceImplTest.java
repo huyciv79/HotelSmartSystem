@@ -66,15 +66,23 @@ class RoomTypeServiceImplTest {
         sampleRoomType.setName("Deluxe Ocean View");
         sampleRoomType.setDescription("Luxurious ocean view room");
         sampleRoomType.setBasePrice(new BigDecimal("1500000.00"));
-        sampleRoomType.setAdultCapacity(2);
-        sampleRoomType.setChildCapacity(1);
-        sampleRoomType.setArea(new BigDecimal("35.5"));
-        sampleRoomType.setBedType("King Bed");
         sampleRoomType.setAmenities("WiFi, TV, Minibar");
         sampleRoomType.setStatus("Active");
         sampleRoomType.setImages("https://cdn.supabase.co/fallback.jpg");
         sampleRoomType.setCreatedAt(Instant.now());
         sampleRoomType.setUpdatedAt(Instant.now());
+
+        com.example.hotelsmartbookingbackend.entity.Room sampleRoom = new com.example.hotelsmartbookingbackend.entity.Room();
+        sampleRoom.setId(101);
+        sampleRoom.setRoomNumber("101");
+        sampleRoom.setRoomType(sampleRoomType);
+        sampleRoom.setAdultCapacity(2);
+        sampleRoom.setChildCapacity(1);
+        sampleRoom.setTotalCapacity(3);
+        sampleRoom.setArea(new BigDecimal("35.5"));
+        sampleRoom.setBedType("King Bed");
+        sampleRoom.setBedCount(1);
+        sampleRoomType.setRooms(java.util.Set.of(sampleRoom));
 
         primaryImage = new RoomTypeImage();
         primaryImage.setId(10);

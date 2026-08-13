@@ -20,6 +20,12 @@ public class RoomDetailDTO {
     private String adminPasscode;
     private Integer roomTypeId;
     private String roomTypeName;
+    private Integer adultCapacity;
+    private Integer childCapacity;
+    private Integer totalCapacity;
+    private java.math.BigDecimal area;
+    private String bedType;
+    private Integer bedCount;
     private Instant createdAt;
     private Instant updatedAt;
 }

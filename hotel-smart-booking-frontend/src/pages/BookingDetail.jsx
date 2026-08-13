@@ -4,6 +4,11 @@ import { submitRefundRequest } from '../services/refundService';
 import { submitCustomerRoomChangeRequest } from '../services/roomChangeService';
 import { submitStayExtensionRequest } from '../services/stayExtensionService';
 import { submitEarlyCheckOutRequest } from '../services/earlyCheckOutService';
+import {
+  getServices,
+  submitCustomerServiceRequest,
+  getServiceRequestsByBooking
+} from '../services/serviceService';
 import { getRoomTypes } from '../services/roomService';
 import { useToast, ToastContainer } from '../components/Toast';
 import QrCheckInCard from '../components/booking/QrCheckInCard';
@@ -72,6 +77,73 @@ export default function BookingDetail({ setActivePage }) {
   // Cancellation confirm states
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+
+  // In-Stay Service Request states
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  const [availableServices, setAvailableServices] = useState([]);
+  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [serviceQuantity, setServiceQuantity] = useState(1);
+  const [serviceNote, setServiceNote] = useState('');
+  const [isSubmittingServiceRequest, setIsSubmittingServiceRequest] = useState(false);
+  const [myServiceRequests, setMyServiceRequests] = useState([]);
+  const [isLoadingServices, setIsLoadingServices] = useState(false);
+
+  const fetchServicesAndMyRequests = async () => {
+    if (!booking?.bookingId) return;
+    setIsLoadingServices(true);
+    try {
+      const [servicesRes, requestsRes] = await Promise.all([
+        getServices(),
+        getServiceRequestsByBooking(booking.bookingId)
+      ]);
+      setAvailableServices(servicesRes?.data || []);
+      setMyServiceRequests(requestsRes?.data || []);
+    } catch (err) {
+      console.error('Lỗi khi tải dịch vụ phòng:', err);
+    } finally {
+      setIsLoadingServices(false);
+    }
+  };
+
+  const handleOpenServiceModal = async () => {
+    setIsServiceModalOpen(true);
+    await fetchServicesAndMyRequests();
+  };
+
+  const handleSubmitServiceRequest = async (e) => {
+    e.preventDefault();
+    if (!selectedServiceId) {
+      showToast('Vui lòng chọn dịch vụ đi kèm', 'warning');
+      return;
+    }
+    if (serviceQuantity < 1) {
+      showToast('Số lượng phải lớn hơn 0', 'warning');
+      return;
+    }
+
+    setIsSubmittingServiceRequest(true);
+    try {
+      const payload = {
+        bookingId: booking.bookingId,
+        serviceId: parseInt(selectedServiceId),
+        quantity: parseInt(serviceQuantity),
+        note: serviceNote
+      };
+      const res = await submitCustomerServiceRequest(payload);
+      if (res && res.success) {
+        showToast('Đã gửi yêu cầu dịch vụ thành công! Vui lòng chờ nhân viên tiếp nhận.', 'success');
+        setSelectedServiceId('');
+        setServiceQuantity(1);
+        setServiceNote('');
+        await fetchServicesAndMyRequests();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Không thể gửi yêu cầu dịch vụ lúc này.', 'error');
+    } finally {
+      setIsSubmittingServiceRequest(false);
+    }
+  };
 
   const handleRefundSubmit = async (e) => {
     e.preventDefault();
@@ -1628,6 +1700,138 @@ export default function BookingDetail({ setActivePage }) {
                   <span>{t('bd_btn_confirm_cancel', 'Đồng ý hủy')}</span>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* IN-STAY SERVICE REQUEST MODAL */}
+      {isServiceModalOpen && (
+        <div className="fixed inset-0 bg-slate-900 bg-opacity-70 z-[5000] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in font-['Montserrat']">
+          <div className="bg-white border border-slate-200 max-w-lg w-full p-6 flex flex-col gap-6 shadow-2xl animate-scale-in text-slate-950 text-left max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2 text-purple-700">
+                <span className="material-symbols-outlined text-2xl">room_service</span>
+                <h3 className="text-sm font-black uppercase tracking-widest m-0">GỌI DỊCH VỤ PHÒNG & TIỆN ÍCH</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsServiceModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 border-none bg-transparent cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form gửi yêu cầu dịch vụ mới */}
+            <form onSubmit={handleSubmitServiceRequest} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-600 mb-1">
+                  Chọn dịch vụ:
+                </label>
+                <select
+                  value={selectedServiceId}
+                  onChange={(e) => setSelectedServiceId(e.target.value)}
+                  className="w-full p-3 border border-slate-300 text-xs font-semibold focus:border-purple-600 focus:outline-none bg-slate-50 rounded-xl"
+                  required
+                >
+                  <option value="">-- Chọn dịch vụ --</option>
+                  {availableServices.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} - {Number(s.price).toLocaleString()} VNĐ / {s.unit}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-600 mb-1">
+                  Số lượng:
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={serviceQuantity}
+                  onChange={(e) => setServiceQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full p-3 border border-slate-300 text-xs font-bold focus:border-purple-600 focus:outline-none bg-slate-50 rounded-xl"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-600 mb-1">
+                  Ghi chú (Tùy chọn):
+                </label>
+                <textarea
+                  rows="2"
+                  value={serviceNote}
+                  onChange={(e) => setServiceNote(e.target.value)}
+                  placeholder="Ví dụ: Mang lên phòng 302 lúc 20h00, không cay..."
+                  className="w-full p-3 border border-slate-300 text-xs font-medium focus:border-purple-600 focus:outline-none bg-slate-50 rounded-xl resize-none"
+                />
+              </div>
+
+              <div className="p-3 bg-purple-50 border border-purple-200 text-purple-800 text-[11px] font-semibold rounded-xl flex items-center gap-2">
+                <span className="material-symbols-outlined text-base">info</span>
+                <span>Dịch vụ được phê duyệt sẽ được tự động cộng vào hóa đơn thanh toán khi Checkout.</span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmittingServiceRequest}
+                className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer border-none shadow-md flex items-center justify-center gap-2"
+              >
+                {isSubmittingServiceRequest ? 'Đang gửi yêu cầu...' : 'Gửi Yêu Cầu Dịch Vụ'}
+              </button>
+            </form>
+
+            {/* Lịch sử yêu cầu dịch vụ của phòng này */}
+            <div className="border-t border-slate-200 pt-4 mt-2">
+              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-3">
+                Lịch sử yêu cầu dịch vụ phòng này ({myServiceRequests.length})
+              </h4>
+
+              {isLoadingServices ? (
+                <div className="text-center py-4 text-xs text-slate-500">Đang tải lịch sử...</div>
+              ) : myServiceRequests.length === 0 ? (
+                <div className="text-center py-4 text-xs text-slate-400 bg-slate-50 rounded-xl">
+                  Chưa có yêu cầu dịch vụ nào cho phòng này.
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  {myServiceRequests.map((req) => (
+                    <div
+                      key={req.requestId}
+                      className="p-3 border border-slate-200 rounded-xl bg-slate-50 flex flex-col gap-1 text-xs"
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-slate-900">{req.description}</span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                            req.status === 'Approved'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : req.status === 'Rejected'
+                              ? 'bg-rose-100 text-rose-700'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}
+                        >
+                          {req.status === 'Approved'
+                            ? 'Đã duyệt & Cộng hóa đơn'
+                            : req.status === 'Rejected'
+                            ? 'Từ chối'
+                            : 'Đang chờ lễ tân'}
+                        </span>
+                      </div>
+                      {req.rejectionReason && (
+                        <div className="text-rose-600 text-[11px]">Lý do từ chối: {req.rejectionReason}</div>
+                      )}
+                      <div className="text-[10px] text-slate-400 mt-1">
+                        Tạo lúc: {new Date(req.createdAt).toLocaleString('vi-VN')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -38,7 +38,8 @@ public class RoomServiceImpl implements RoomService {
             "Occupied",
             "Cleaning",
             "Maintenance",
-            "Reserved"
+            "Reserved",
+            "Inactive"
     );
 
     @Override
@@ -73,6 +74,14 @@ public class RoomServiceImpl implements RoomService {
         room.setNote(request.getNote() != null && !request.getNote().isBlank()
                 ? request.getNote().trim()
                 : null);
+        room.setAdultCapacity(request.getAdultCapacity() != null ? request.getAdultCapacity() : 2);
+        room.setChildCapacity(request.getChildCapacity() != null ? request.getChildCapacity() : 0);
+        int calcTotal = (request.getAdultCapacity() != null ? request.getAdultCapacity() : 2)
+                + (request.getChildCapacity() != null ? request.getChildCapacity() : 0);
+        room.setTotalCapacity(request.getTotalCapacity() != null ? request.getTotalCapacity() : calcTotal);
+        room.setArea(request.getArea());
+        room.setBedType(request.getBedType());
+        room.setBedCount(request.getBedCount() != null ? request.getBedCount() : 1);
         room.setCreatedAt(Instant.now());
         room.setUpdatedAt(Instant.now());
 
@@ -155,6 +164,29 @@ public class RoomServiceImpl implements RoomService {
             room.setRoomType(roomType);
         }
 
+        if (request.getAdultCapacity() != null) {
+            room.setAdultCapacity(request.getAdultCapacity());
+        }
+        if (request.getChildCapacity() != null) {
+            room.setChildCapacity(request.getChildCapacity());
+        }
+        if (request.getTotalCapacity() != null) {
+            room.setTotalCapacity(request.getTotalCapacity());
+        } else if (request.getAdultCapacity() != null || request.getChildCapacity() != null) {
+            int adult = room.getAdultCapacity() != null ? room.getAdultCapacity() : 0;
+            int child = room.getChildCapacity() != null ? room.getChildCapacity() : 0;
+            room.setTotalCapacity(adult + child);
+        }
+        if (request.getArea() != null) {
+            room.setArea(request.getArea());
+        }
+        if (request.getBedType() != null) {
+            room.setBedType(request.getBedType());
+        }
+        if (request.getBedCount() != null) {
+            room.setBedCount(request.getBedCount());
+        }
+
         room.setUpdatedAt(Instant.now());
         Room updatedRoom = roomRepository.save(room);
 
@@ -188,6 +220,12 @@ public class RoomServiceImpl implements RoomService {
                 .adminPasscode(room.getAdminPasscode())
                 .roomTypeId(room.getRoomType().getId())
                 .roomTypeName(room.getRoomType().getName())
+                .adultCapacity(room.getAdultCapacity())
+                .childCapacity(room.getChildCapacity())
+                .totalCapacity(room.getTotalCapacity())
+                .area(room.getArea())
+                .bedType(room.getBedType())
+                .bedCount(room.getBedCount())
                 .createdAt(room.getCreatedAt())
                 .updatedAt(room.getUpdatedAt())
                 .build();
@@ -279,5 +317,22 @@ public class RoomServiceImpl implements RoomService {
                         .build();
 
         return response;
+    }
+
+    @Override
+    @Transactional
+    public void deleteRoom(Integer id) {
+        Room room = roomRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng với mã: " + id));
+
+        if ("Occupied".equalsIgnoreCase(room.getStatus())) {
+            throw new RuntimeException("Không thể xóa phòng đang có khách ở (Occupied)");
+        }
+
+        room.setStatus("Inactive");
+        room.setUpdatedAt(Instant.now());
+        Room savedRoom = roomRepository.save(room);
+
+        webSocketService.broadcastRoomStatus(savedRoom.getId(), savedRoom.getRoomNumber(), savedRoom.getStatus());
     }
 }

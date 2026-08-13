@@ -7,7 +7,10 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -56,5 +59,31 @@ public class Room {
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "updatedat", nullable = false)
     private Instant updatedAt;
+
+    @NotNull
+    @ColumnDefault("2")
+    @Column(name = "adultcapacity", nullable = false)
+    private Integer adultCapacity;
+
+    @NotNull
+    @ColumnDefault("1")
+    @Column(name = "childcapacity", nullable = false)
+    private Integer childCapacity;
+
+    @Column(name = "totalcapacity")
+    private Integer totalCapacity;
+
+    @Column(name = "area")
+    private BigDecimal area;
+
+    @Column(name = "bedtype", length = Integer.MAX_VALUE)
+    private String bedType;
+
+    @NotNull
+    @ColumnDefault("1")
+    @Column(name = "bedcount", nullable = false)
+    private Integer bedCount;
+
+
 
 }

@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -102,10 +103,6 @@ public class RoomTypeServiceImpl implements RoomTypeService {
             roomType.setName(requireText(request.getName(), "Tên loại phòng không được để trống"));
             roomType.setDescription(request.getDescription());
             roomType.setBasePrice(request.getBasePrice());
-            roomType.setAdultCapacity(request.getAdultCapacity());
-            roomType.setChildCapacity(request.getChildCapacity());
-            roomType.setArea(request.getArea());
-            roomType.setBedType(request.getBedType());
             roomType.setAmenities(request.getAmenities());
             roomType.setStatus(normalizeStatus(request.getStatus(), ACTIVE_STATUS));
             roomType.setCreatedAt(now);
@@ -153,22 +150,6 @@ public class RoomTypeServiceImpl implements RoomTypeService {
 
         if (request.getBasePrice() != null) {
             roomType.setBasePrice(request.getBasePrice());
-        }
-
-        if (request.getAdultCapacity() != null) {
-            roomType.setAdultCapacity(request.getAdultCapacity());
-        }
-
-        if (request.getChildCapacity() != null) {
-            roomType.setChildCapacity(request.getChildCapacity());
-        }
-
-        if (request.getArea() != null) {
-            roomType.setArea(request.getArea());
-        }
-
-        if (request.getBedType() != null) {
-            roomType.setBedType(request.getBedType());
         }
 
         if (request.getAmenities() != null) {
@@ -220,23 +201,23 @@ public class RoomTypeServiceImpl implements RoomTypeService {
             syncPrimaryImage(roomType);
 
             roomType.setUpdatedAt(Instant.now());
-            roomTypeRepository.save(roomType);
-
-            entityManager.flush();
-            entityManager.refresh(roomType);
-
-            return mapToDetailResponse(roomType);
         } catch (RuntimeException e) {
             cleanupUploadedRoomTypeImages(uploadedImageUrls);
             throw e;
         }
+
+        roomTypeRepository.save(roomType);
+
+        entityManager.flush();
+        entityManager.refresh(roomType);
+
+        return mapToDetailResponse(roomType);
     }
 
     @Override
     @Transactional
     public void deleteRoomType(Integer id) {
         RoomType roomType = findRoomTypeById(id);
-
         roomType.setStatus(INACTIVE_STATUS);
         roomType.setUpdatedAt(Instant.now());
 
@@ -254,11 +235,11 @@ public class RoomTypeServiceImpl implements RoomTypeService {
                 .name(roomType.getName())
                 .description(roomType.getDescription())
                 .basePrice(roomType.getBasePrice())
-                .adultCapacity(roomType.getAdultCapacity())
-                .childCapacity(roomType.getChildCapacity())
-                .totalCapacity(roomType.getTotalCapacity())
-                .area(roomType.getArea())
-                .bedType(roomType.getBedType())
+                .adultCapacity(getRepresentativeAdultCapacity(roomType))
+                .childCapacity(getRepresentativeChildCapacity(roomType))
+                .totalCapacity(getRepresentativeTotalCapacity(roomType))
+                .area(getRepresentativeArea(roomType))
+                .bedType(getRepresentativeBedType(roomType))
                 .primaryImageUrl(resolvePrimaryImageUrl(roomType))
                 .status(roomType.getStatus())
                 .build();
@@ -273,17 +254,57 @@ public class RoomTypeServiceImpl implements RoomTypeService {
                 .name(roomType.getName())
                 .description(roomType.getDescription())
                 .basePrice(roomType.getBasePrice())
-                .adultCapacity(roomType.getAdultCapacity())
-                .childCapacity(roomType.getChildCapacity())
-                .totalCapacity(roomType.getTotalCapacity())
-                .area(roomType.getArea())
-                .bedType(roomType.getBedType())
+                .adultCapacity(getRepresentativeAdultCapacity(roomType))
+                .childCapacity(getRepresentativeChildCapacity(roomType))
+                .totalCapacity(getRepresentativeTotalCapacity(roomType))
+                .area(getRepresentativeArea(roomType))
+                .bedType(getRepresentativeBedType(roomType))
                 .amenities(roomType.getAmenities())
                 .status(roomType.getStatus())
                 .images(images.stream().map(this::mapToImageResponse).toList())
                 .createdAt(roomType.getCreatedAt())
                 .updatedAt(roomType.getUpdatedAt())
                 .build();
+    }
+
+    private Integer getRepresentativeAdultCapacity(RoomType roomType) {
+        if (roomType.getRooms() == null || roomType.getRooms().isEmpty()) return null;
+        return roomType.getRooms().stream()
+                .map(com.example.hotelsmartbookingbackend.entity.Room::getAdultCapacity)
+                .filter(Objects::nonNull)
+                .findFirst().orElse(null);
+    }
+
+    private Integer getRepresentativeChildCapacity(RoomType roomType) {
+        if (roomType.getRooms() == null || roomType.getRooms().isEmpty()) return null;
+        return roomType.getRooms().stream()
+                .map(com.example.hotelsmartbookingbackend.entity.Room::getChildCapacity)
+                .filter(Objects::nonNull)
+                .findFirst().orElse(null);
+    }
+
+    private Integer getRepresentativeTotalCapacity(RoomType roomType) {
+        if (roomType.getRooms() == null || roomType.getRooms().isEmpty()) return null;
+        return roomType.getRooms().stream()
+                .map(com.example.hotelsmartbookingbackend.entity.Room::getTotalCapacity)
+                .filter(Objects::nonNull)
+                .findFirst().orElse(null);
+    }
+
+    private java.math.BigDecimal getRepresentativeArea(RoomType roomType) {
+        if (roomType.getRooms() == null || roomType.getRooms().isEmpty()) return null;
+        return roomType.getRooms().stream()
+                .map(com.example.hotelsmartbookingbackend.entity.Room::getArea)
+                .filter(Objects::nonNull)
+                .findFirst().orElse(null);
+    }
+
+    private String getRepresentativeBedType(RoomType roomType) {
+        if (roomType.getRooms() == null || roomType.getRooms().isEmpty()) return null;
+        return roomType.getRooms().stream()
+                .map(com.example.hotelsmartbookingbackend.entity.Room::getBedType)
+                .filter(Objects::nonNull)
+                .findFirst().orElse(null);
     }
 
     private RoomTypeImageResponse mapToImageResponse(RoomTypeImage image) {

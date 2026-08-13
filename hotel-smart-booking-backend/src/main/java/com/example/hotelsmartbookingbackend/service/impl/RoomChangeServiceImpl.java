@@ -58,6 +58,8 @@ public class RoomChangeServiceImpl implements RoomChangeService {
     private final WebSocketService webSocketService;
     private final CustomerRequestRepository customerRequestRepository;
     private final com.example.hotelsmartbookingbackend.service.NotificationService notificationService;
+    private final com.example.hotelsmartbookingbackend.repository.ServiceRepository serviceRepository;
+    private final com.example.hotelsmartbookingbackend.repository.BookingServiceRepository bookingServiceRepository;
 
     @Override
     @Transactional
@@ -1086,6 +1088,186 @@ public class RoomChangeServiceImpl implements RoomChangeService {
         return pendingRequests.stream()
                 .map(this::mapToCustomerRequestResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public CustomerRequestResponse submitServiceRequest(
+            com.example.hotelsmartbookingbackend.dto.request.CustomerServiceRequest request, String customerEmail) {
+        log.info("[ServiceRequest] Guest='{}' gửi yêu cầu dịch vụ. BookingId={}, serviceId={}, quantity={}",
+                customerEmail, request.getBookingId(), request.getServiceId(), request.getQuantity());
+
+        Booking booking = validateBookingIsCheckedIn(request.getBookingId());
+
+        User customer = userRepository.findByEmail(customerEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản người dùng: " + customerEmail));
+
+        boolean isStaff = "receptionist".equalsIgnoreCase(customer.getRole().name())
+                || "manager".equalsIgnoreCase(customer.getRole().name());
+
+        if (!isStaff && !customer.getId().equals(booking.getUser().getId())) {
+            throw new RuntimeException("Bạn không có quyền gửi yêu cầu dịch vụ cho đơn đặt phòng này.");
+        }
+
+        com.example.hotelsmartbookingbackend.entity.Service service = serviceRepository.findById(request.getServiceId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy dịch vụ"));
+
+        if (Boolean.FALSE.equals(service.getIsActive())) {
+            throw new RuntimeException("Dịch vụ hiện không hoạt động");
+        }
+
+        CustomerRequest customerRequest = new CustomerRequest();
+        customerRequest.setBooking(booking);
+        customerRequest.setRequestType("SERVICE_REQUEST");
+        String noteStr = request.getNote() != null ? request.getNote().trim() : "";
+        customerRequest.setDescription(String.format("Yêu cầu dịch vụ: %s (Số lượng: %d)%s",
+                service.getName(), request.getQuantity(), noteStr.isBlank() ? "" : " - Ghi chú: " + noteStr));
+        customerRequest.setOldValue(service.getId().toString());
+        customerRequest.setNewValue(request.getQuantity().toString() + (noteStr.isBlank() ? "" : "|" + noteStr));
+        customerRequest.setStatus("Pending");
+        customerRequest.setCreatedAt(Instant.now());
+
+        CustomerRequest saved = customerRequestRepository.save(customerRequest);
+
+        try {
+            String serviceReqMsg = String.format("Phòng của khách %s yêu cầu dịch vụ: %s x%d. Ghi chú: %s",
+                    customer.getFullName(), service.getName(), request.getQuantity(), noteStr.isBlank() ? "Không có" : noteStr);
+            notificationService.sendNotificationToRoles(
+                    List.of(com.example.hotelsmartbookingbackend.enums.Role.receptionist,
+                            com.example.hotelsmartbookingbackend.enums.Role.manager),
+                    "Yêu cầu dịch vụ phòng mới",
+                    serviceReqMsg,
+                    "ServiceRequest",
+                    booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send notification for service request: ", e);
+        }
+
+        return mapToCustomerRequestResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CustomerRequestResponse> getPendingServiceRequests(String staffEmail) {
+        validateStaffPermission(staffEmail);
+        List<CustomerRequest> requests = customerRequestRepository
+                .findByRequestTypeAndStatusOrderByCreatedAtDesc("SERVICE_REQUEST", "Pending");
+        return requests.stream().map(this::mapToCustomerRequestResponse).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CustomerRequestResponse> getServiceRequestsByBooking(Integer bookingId, String actorEmail) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt phòng"));
+
+        User actor = userRepository.findByEmail(actorEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản người dùng"));
+
+        boolean isStaff = "receptionist".equalsIgnoreCase(actor.getRole().name())
+                || "manager".equalsIgnoreCase(actor.getRole().name())
+                || "admin".equalsIgnoreCase(actor.getRole().name());
+
+        if (!isStaff && !booking.getUser().getId().equals(actor.getId())) {
+            throw new RuntimeException("Bạn không có quyền xem dịch vụ của đơn đặt phòng này");
+        }
+
+        List<CustomerRequest> requests = customerRequestRepository.findByBooking_IdOrderByCreatedAtDesc(bookingId);
+        return requests.stream()
+                .filter(r -> "SERVICE_REQUEST".equalsIgnoreCase(r.getRequestType()))
+                .map(this::mapToCustomerRequestResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public CustomerRequestResponse approveServiceRequest(Integer requestId, String staffEmail) {
+        User staff = validateStaffPermission(staffEmail);
+
+        CustomerRequest customerRequest = customerRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu dịch vụ"));
+
+        if (!"SERVICE_REQUEST".equalsIgnoreCase(customerRequest.getRequestType())) {
+            throw new RuntimeException("Yêu cầu này không phải là loại dịch vụ phòng (SERVICE_REQUEST).");
+        }
+
+        if (!"Pending".equalsIgnoreCase(customerRequest.getStatus())) {
+            throw new RuntimeException("Yêu cầu này đã được xử lý từ trước.");
+        }
+
+        Integer serviceId = Integer.parseInt(customerRequest.getOldValue());
+        String[] newParts = customerRequest.getNewValue().split("\\|", 2);
+        Integer quantity = Integer.parseInt(newParts[0]);
+        String note = newParts.length > 1 ? newParts[1] : "";
+
+        com.example.hotelsmartbookingbackend.entity.Service service = serviceRepository.findById(serviceId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy dịch vụ"));
+
+        Booking booking = customerRequest.getBooking();
+        BigDecimal unitPrice = service.getPrice();
+        BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
+
+        // Tự động tạo bản ghi BookingService để cộng dồn tiền vào Hóa đơn khi Checkout
+        com.example.hotelsmartbookingbackend.entity.BookingService usage = new com.example.hotelsmartbookingbackend.entity.BookingService();
+        usage.setBooking(booking);
+        usage.setService(service);
+        usage.setImplementedBy(staff);
+        usage.setQuantity(quantity);
+        usage.setUnitPrice(unitPrice);
+        usage.setTotalPrice(totalPrice);
+        usage.setImplementedAt(Instant.now());
+        usage.setNote("Yêu cầu dịch vụ: " + service.getName() + (note.isBlank() ? "" : " (" + note + ")"));
+        usage.setStatus("Active");
+        bookingServiceRepository.save(usage);
+
+        customerRequest.setStatus("Approved");
+        customerRequest.setResolvedAt(Instant.now());
+        CustomerRequest saved = customerRequestRepository.save(customerRequest);
+
+        try {
+            String msg = String.format("Yêu cầu dịch vụ '%s' (Số lượng: %d) của bạn đã được phê duyệt và cộng vào hóa đơn checkout.",
+                    service.getName(), quantity);
+            notificationService.sendNotification(booking.getUser(), "Dịch vụ phòng được tiếp nhận", msg, "ServiceRequest", booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send approval notification for service request: ", e);
+        }
+
+        return mapToCustomerRequestResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public CustomerRequestResponse rejectServiceRequest(Integer requestId, String rejectionReason, String staffEmail) {
+        validateStaffPermission(staffEmail);
+
+        CustomerRequest customerRequest = customerRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu dịch vụ"));
+
+        if (!"SERVICE_REQUEST".equalsIgnoreCase(customerRequest.getRequestType())) {
+            throw new RuntimeException("Yêu cầu này không phải là loại dịch vụ phòng.");
+        }
+
+        if (!"Pending".equalsIgnoreCase(customerRequest.getStatus())) {
+            throw new RuntimeException("Yêu cầu này đã được xử lý từ trước.");
+        }
+
+        String cleanReason = rejectionReason != null && !rejectionReason.isBlank()
+                ? rejectionReason.replace("\"", "").trim()
+                : "Không thể phục vụ tại thời điểm này";
+
+        customerRequest.setStatus("Rejected");
+        customerRequest.setRejectionReason(cleanReason);
+        customerRequest.setResolvedAt(Instant.now());
+        CustomerRequest saved = customerRequestRepository.save(customerRequest);
+
+        try {
+            String msg = String.format("Yêu cầu dịch vụ của bạn không thể thực hiện. Lý do: %s", cleanReason);
+            notificationService.sendNotification(customerRequest.getBooking().getUser(), "Yêu cầu dịch vụ bị từ chối", msg, "ServiceRequest", customerRequest.getBooking().getId());
+        } catch (Exception e) {
+            log.error("Failed to send rejection notification for service request: ", e);
+        }
+
+        return mapToCustomerRequestResponse(saved);
     }
 
     private static class FinancialResult {

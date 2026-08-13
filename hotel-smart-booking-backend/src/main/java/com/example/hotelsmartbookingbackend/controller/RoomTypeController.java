@@ -53,9 +53,9 @@ public class RoomTypeController {
         if (sortBy.equalsIgnoreCase("baseprice")) {
             sortField = "basePrice";
         } else if (sortBy.equalsIgnoreCase("adultcapacity")) {
-            sortField = "adultCapacity";
+            sortField = "rooms.adultCapacity";
         } else if (sortBy.equalsIgnoreCase("childcapacity")) {
-            sortField = "childCapacity";
+            sortField = "rooms.childCapacity";
         } else if (sortBy.equalsIgnoreCase("roomtypeid") || sortBy.equalsIgnoreCase("id")) {
             sortField = "id";
         }

@@ -406,4 +406,27 @@ class RoomServiceImplTest {
         assertNotNull(response);
         assertEquals("Occupied", response.getStatus());
     }
+
+    @Test
+    @DisplayName("UTCID22 - Successful deleteRoom (soft delete setting status to Inactive)")
+    void should_deleteRoomSuccessfully_when_roomIsNotOccupied() {
+        when(roomRepository.findById(1)).thenReturn(Optional.of(sampleRoom));
+        when(roomRepository.save(any(Room.class))).thenAnswer(i -> i.getArgument(0));
+
+        roomService.deleteRoom(1);
+
+        assertEquals("Inactive", sampleRoom.getStatus());
+        verify(roomRepository).save(sampleRoom);
+        verify(webSocketService).broadcastRoomStatus(eq(1), eq(sampleRoom.getRoomNumber()), eq("Inactive"));
+    }
+
+    @Test
+    @DisplayName("UTCID23 - Throw exception when deleteRoom on Occupied room")
+    void should_throwException_when_deleteRoomOccupied() {
+        sampleRoom.setStatus("Occupied");
+        when(roomRepository.findById(1)).thenReturn(Optional.of(sampleRoom));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> roomService.deleteRoom(1));
+        assertEquals("Không thể xóa phòng đang có khách ở (Occupied)", ex.getMessage());
+    }
 }

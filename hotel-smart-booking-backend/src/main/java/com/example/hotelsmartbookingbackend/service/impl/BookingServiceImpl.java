@@ -457,8 +457,24 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void assertCapacity(RoomType roomtype, int quantity, int numberOfAdults, int numberOfChildren) {
-        int adultCapacity = safeInt(roomtype.getAdultCapacity()) * quantity;
-        int childCapacity = safeInt(roomtype.getChildCapacity()) * quantity;
+        int maxAdult = 0;
+        int maxChild = 0;
+        if (roomtype.getRooms() != null && !roomtype.getRooms().isEmpty()) {
+            maxAdult = roomtype.getRooms().stream().mapToInt(r -> safeInt(r.getAdultCapacity())).max().orElse(2);
+            maxChild = roomtype.getRooms().stream().mapToInt(r -> safeInt(r.getChildCapacity())).max().orElse(1);
+        } else {
+            List<Room> rooms = roomRepository.findByRoomType_Id(roomtype.getId());
+            if (!rooms.isEmpty()) {
+                maxAdult = rooms.stream().mapToInt(r -> safeInt(r.getAdultCapacity())).max().orElse(2);
+                maxChild = rooms.stream().mapToInt(r -> safeInt(r.getChildCapacity())).max().orElse(1);
+            } else {
+                maxAdult = 2;
+                maxChild = 1;
+            }
+        }
+
+        int adultCapacity = maxAdult * quantity;
+        int childCapacity = maxChild * quantity;
 
         if (numberOfAdults > adultCapacity) {
             throw new RuntimeException("Số người lớn vượt quá sức chứa của loại phòng");

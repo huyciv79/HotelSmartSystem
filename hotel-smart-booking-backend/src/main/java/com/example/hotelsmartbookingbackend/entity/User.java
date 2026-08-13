@@ -1,4 +1,5 @@
 package com.example.hotelsmartbookingbackend.entity;
+
 import com.example.hotelsmartbookingbackend.enums.Role;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
