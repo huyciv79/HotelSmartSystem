@@ -22,7 +22,7 @@ const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleL
             <span className="material-symbols-outlined text-lg">hotel</span>
           </div>
           <div>
-            <h2 className="text-base font-extrabold tracking-wide text-slate-800 m-0 leading-tight">Elysian Hub</h2>
+            <h2 className="text-base font-extrabold tracking-wide text-slate-800 m-0 leading-tight">The Iris Hub</h2>
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mt-0.5">Smart Booking</span>
           </div>
         </div>
@@ -105,18 +105,6 @@ const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleL
               </button>
 
               <button
-                onClick={() => setActiveTab('services')}
-                className={`w-full py-3 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-xl ${
-                  activeTab === 'services'
-                    ? 'bg-primary/10 text-primary font-extrabold shadow-[0_4px_12px_rgba(162,5,19,0.03)]'
-                    : 'bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                }`}
-              >
-                <span className="material-symbols-outlined text-base">room_service</span>
-                Quản lý dịch vụ
-              </button>
-
-              <button
                 onClick={() => setActiveTab('reports')}
                 className={`w-full py-3 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-xl ${
                   activeTab === 'reports'
@@ -129,6 +117,18 @@ const StaffSidebar = ({ activeTab, setActiveTab, currentUser, isManager, handleL
               </button>
             </>
           )}
+
+          <button
+            onClick={() => setActiveTab('services')}
+            className={`w-full py-3 px-4 text-xs font-bold uppercase tracking-widest border-none flex items-center gap-3 cursor-pointer transition-all duration-200 rounded-xl ${
+              activeTab === 'services'
+                ? 'bg-primary/10 text-primary font-extrabold shadow-[0_4px_12px_rgba(162,5,19,0.03)]'
+                : 'bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <span className="material-symbols-outlined text-base">room_service</span>
+            Quản lý dịch vụ
+          </button>
 
 
         </nav>

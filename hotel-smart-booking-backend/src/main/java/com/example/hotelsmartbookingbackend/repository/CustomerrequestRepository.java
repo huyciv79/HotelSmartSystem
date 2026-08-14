@@ -11,4 +11,5 @@ public interface CustomerRequestRepository extends JpaRepository<CustomerRequest
     List<CustomerRequest> findByBooking_Id(Integer bookingId);
     List<CustomerRequest> findByBooking_IdOrderByCreatedAtDesc(Integer bookingId);
     List<CustomerRequest> findByRequestTypeAndStatusOrderByCreatedAtDesc(String requestType, String status);
+    List<CustomerRequest> findByRequestTypeInAndStatusOrderByCreatedAtDesc(List<String> requestTypes, String status);
 }

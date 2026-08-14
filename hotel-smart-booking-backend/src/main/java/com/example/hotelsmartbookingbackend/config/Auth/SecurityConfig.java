@@ -17,6 +17,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -51,6 +52,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/room-types/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/feedbacks/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/services/**").permitAll()
                         .requestMatchers("/api/room-types/**").hasRole("MANAGER")
                         .requestMatchers("/api/services/**").hasRole("MANAGER")
                         .requestMatchers("/api/statistics/**").hasAnyRole("MANAGER", "RECEPTIONIST")

@@ -66,6 +66,7 @@ export default function BookingDetail({ setActivePage }) {
   const [extensionReason, setExtensionReason] = useState('');
   const [isStayExtensionPending, setIsStayExtensionPending] = useState(false);
   const [isSubmittingExtension, setIsSubmittingExtension] = useState(false);
+  const [stayExtensionError, setStayExtensionError] = useState('');
 
   // Early Check-out related states
   const [isEarlyCheckOutModalOpen, setIsEarlyCheckOutModalOpen] = useState(false);
@@ -93,11 +94,19 @@ export default function BookingDetail({ setActivePage }) {
     setIsLoadingServices(true);
     try {
       const [servicesRes, requestsRes] = await Promise.all([
-        getServices(),
-        getServiceRequestsByBooking(booking.bookingId)
+        getServices().catch(err => {
+          console.error('Lỗi API getServices:', err);
+          return null;
+        }),
+        getServiceRequestsByBooking(booking.bookingId).catch(err => {
+          console.error('Lỗi API getServiceRequestsByBooking:', err);
+          return null;
+        })
       ]);
-      setAvailableServices(servicesRes?.data || []);
-      setMyServiceRequests(requestsRes?.data || []);
+      const servicesData = Array.isArray(servicesRes) ? servicesRes : (servicesRes?.data || []);
+      const requestsData = Array.isArray(requestsRes) ? requestsRes : (requestsRes?.data || []);
+      setAvailableServices(servicesData);
+      setMyServiceRequests(requestsData);
     } catch (err) {
       console.error('Lỗi khi tải dịch vụ phòng:', err);
     } finally {
@@ -220,7 +229,7 @@ export default function BookingDetail({ setActivePage }) {
         setBooking({
           bookingId: parseInt(selectedBookingId),
           bookingReference: 'BK' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '0088',
-          roomTypeName: 'Elysian Suite Thượng Hạng',
+          roomTypeName: 'The Iris Suite Thượng Hạng',
           checkInDate: '2026-06-15',
           checkOutDate: '2026-06-18',
           nights: 3,
@@ -343,6 +352,7 @@ export default function BookingDetail({ setActivePage }) {
       return;
     }
     setIsSubmittingExtension(true);
+    setStayExtensionError('');
     try {
       const response = await submitStayExtensionRequest({
         bookingId: booking.bookingId,
@@ -356,7 +366,10 @@ export default function BookingDetail({ setActivePage }) {
       }
     } catch (err) {
       console.error('Lỗi khi gửi yêu cầu gia hạn:', err);
-      showToast(t(err.response?.data?.message, t('Không thể gửi yêu cầu gia hạn lưu trú.')), 'error');
+      const backendMsg = err.response?.data?.message;
+      const errorMsg = backendMsg || t('bd_toast_error_extension', 'Không thể gửi yêu cầu gia hạn lưu trú. Hệ thống hết phòng trống hoặc có lỗi xảy ra.');
+      setStayExtensionError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setIsSubmittingExtension(false);
     }
@@ -449,6 +462,10 @@ export default function BookingDetail({ setActivePage }) {
     e.preventDefault();
     if (!feedbackComment.trim()) {
       showToast(t('bd_toast_comment_required', 'Vui lòng nhập bình luận đánh giá.'), 'warning');
+      return;
+    }
+    if (feedbackComment.length > 1000) {
+      showToast(t('review_comment_exceed_max', 'Review comment cannot exceed 1000 characters.'), 'error');
       return;
     }
 
@@ -550,7 +567,7 @@ export default function BookingDetail({ setActivePage }) {
   const statuses = [
     { key: 'Created', label: t('bd_timeline_step0_title', 'Yêu cầu Đặt phòng'), desc: t('bd_timeline_step0_desc', 'Đã tiếp nhận yêu cầu') },
     { key: 'Confirmed', label: t('bd_timeline_step1_title', 'Đã xác nhận'), desc: t('bd_timeline_step1_desc', 'Đã xác thực thông tin') },
-    { key: 'Checked-in', label: t('bd_timeline_step2_title', 'Đã nhận phòng'), desc: t('bd_timeline_step2_desc', 'Sử dụng phòng tại Elysian') },
+    { key: 'Checked-in', label: t('bd_timeline_step2_title', 'Đã nhận phòng'), desc: t('bd_timeline_step2_desc', 'Sử dụng phòng tại The Iris') },
     { key: 'Checked-out', label: t('bd_timeline_step3_title', 'Đã trả phòng'), desc: t('bd_timeline_step3_desc', 'Hoàn tất thời gian lưu trú') }
   ];
 
@@ -683,7 +700,7 @@ export default function BookingDetail({ setActivePage }) {
                 {booking.status === 'Cancelled' ? (
                   <div className="bg-red-50 border border-red-200 p-4 flex items-center gap-3 text-red-700 font-bold text-xs">
                     <span className="material-symbols-outlined text-2xl">cancel</span>
-                    <span>{t('bd_cancel_notice', 'Đặt phòng này đã bị hủy bỏ. Vui lòng liên hệ bộ phận hỗ trợ khách hàng Elysian nếu cần trợ giúp.')}</span>
+                    <span>{t('bd_cancel_notice', 'Đặt phòng này đã bị hủy bỏ. Vui lòng liên hệ bộ phận hỗ trợ khách hàng The Iris nếu cần trợ giúp.')}</span>
                   </div>
                 ) : (
                   <div className="relative pl-6 border-l border-slate-200 ml-3 space-y-8">
@@ -849,9 +866,14 @@ export default function BookingDetail({ setActivePage }) {
                 {/* Request button (available when Checked-in) */}
                 {booking.status !== 'Cancelled' && currentStatusIdx === 2 && (
                   <>
-
-
-                    {/* Room Move buttons / labels */}
+                    {/* In-Stay Service Request button */}
+                    <button
+                      onClick={handleOpenServiceModal}
+                      className="bg-purple-500/10 border border-purple-500/20 text-purple-600 hover:bg-purple-500/20 text-xs font-black uppercase tracking-widest px-6 py-3.5 active:scale-98 transition-all cursor-pointer rounded-xl flex items-center gap-1.5 h-11 shadow-sm backdrop-blur-md"
+                    >
+                      <span className="material-symbols-outlined text-lg">room_service</span>
+                      Yêu cầu dịch vụ
+                    </button>
                     {isRoomChangePending ? (
                       <div className="bg-blue-500/10 border border-blue-500/20 text-blue-700 backdrop-blur-md rounded-xl text-xs font-bold px-6 py-2.5 flex items-center gap-2 h-11 shadow-sm">
                         <span className="material-symbols-outlined text-base animate-pulse">hourglass_empty</span>
@@ -884,6 +906,7 @@ export default function BookingDetail({ setActivePage }) {
                           setIsStayExtensionModalOpen(true);
                           setNewCheckOutDate('');
                           setExtensionReason('');
+                          setStayExtensionError('');
                         }}
                         className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/20 text-xs font-black uppercase tracking-widest px-6 py-3.5 active:scale-98 transition-all cursor-pointer rounded-xl flex items-center gap-1.5 h-11 shadow-sm backdrop-blur-md"
                       >
@@ -1010,7 +1033,7 @@ export default function BookingDetail({ setActivePage }) {
                 <div className="space-y-4">
                   {/* Room Info */}
                   <div>
-                    <span className="text-[9px] text-primary font-black uppercase tracking-widest block mb-0.5">ELYSIAN HOTELS</span>
+                    <span className="text-[9px] text-primary font-black uppercase tracking-widest block mb-0.5">THE IRIS HOTEL</span>
                     <h4 className="text-sm font-black text-slate-950 uppercase tracking-wider">{booking.roomTypeName}</h4>
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 block">{t('booking_ref_code_label', 'Mã')}: {booking.bookingReference}</span>
                   </div>
@@ -1157,15 +1180,27 @@ export default function BookingDetail({ setActivePage }) {
 
               {/* Text comment */}
               <div>
-                <span className="block text-[10px] font-black uppercase tracking-widest text-slate-600 mb-1.5">Bình luận chi tiết:</span>
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="block text-[10px] font-black uppercase tracking-widest text-slate-600">Bình luận chi tiết:</span>
+                  <span className={`text-[10px] font-bold ${feedbackComment.length > 1000 ? 'text-red-600 font-extrabold' : 'text-slate-400'}`}>
+                    {feedbackComment.length}/1000
+                  </span>
+                </div>
                 <textarea
                   rows="3"
                   value={feedbackComment}
                   onChange={(e) => setFeedbackComment(e.target.value)}
                   placeholder="Hãy chia sẻ cảm nhận thực tế của bạn về chất lượng phòng và dịch vụ..."
-                  className="w-full p-3 border border-slate-300 text-xs font-medium focus:border-primary focus:outline-none placeholder-slate-400 leading-relaxed resize-none rounded-none bg-slate-50"
+                  className={`w-full p-3 border text-xs font-medium focus:outline-none placeholder-slate-400 leading-relaxed resize-none rounded-none bg-slate-50 ${
+                    feedbackComment.length > 1000 ? 'border-red-500 focus:border-red-600' : 'border-slate-300 focus:border-primary'
+                  }`}
                   required
                 />
+                {feedbackComment.length > 1000 && (
+                  <p className="text-[10px] font-bold text-red-600 mt-1">
+                    Review comment cannot exceed 1000 characters.
+                  </p>
+                )}
               </div>
 
               {/* Pros & Cons */}
@@ -1529,7 +1564,7 @@ export default function BookingDetail({ setActivePage }) {
 
       {/* STAY EXTENSION MODAL */}
       {isStayExtensionModalOpen && (
-        <div className="fixed inset-0 bg-slate-900 bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in font-['Montserrat']">
+        <div className="fixed inset-0 z-[5000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in font-['Montserrat']">
           <div className="bg-white border border-slate-200 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-slate-900 text-left">
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
@@ -1547,6 +1582,12 @@ export default function BookingDetail({ setActivePage }) {
             <div className="bg-amber-50 border border-amber-200 p-4 text-xs font-semibold leading-relaxed text-amber-800">
               💡 <strong>Thông tin hiện tại:</strong> Ngày trả phòng dự kiến là <strong>{booking.checkOutDate}</strong>. Yêu cầu gia hạn sẽ được quầy lễ tân kiểm tra và phản hồi sớm nhất.
             </div>
+
+            {stayExtensionError && (
+              <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs font-bold leading-relaxed">
+                ⚠️ {stayExtensionError}
+              </div>
+            )}
 
             <form onSubmit={handleStayExtensionSubmit} className="space-y-4">
               <div>
@@ -1595,7 +1636,7 @@ export default function BookingDetail({ setActivePage }) {
 
       {/* EARLY CHECKOUT MODAL */}
       {isEarlyCheckOutModalOpen && (
-        <div className="fixed inset-0 bg-slate-900 bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in font-['Montserrat']">
+        <div className="fixed inset-0 z-[5000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in font-['Montserrat']">
           <div className="bg-white border border-slate-200 max-w-md w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl animate-scale-in text-slate-900 text-left">
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
@@ -1662,7 +1703,7 @@ export default function BookingDetail({ setActivePage }) {
 
       {/* CUSTOM CANCEL CONFIRMATION DIALOG */}
       {isCancelConfirmOpen && (
-        <div className="fixed inset-0 bg-slate-900 bg-opacity-70 z-[6000] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in font-['Montserrat']">
+        <div className="fixed inset-0 z-[6000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in font-['Montserrat']">
           <div className="bg-white border border-slate-200 max-w-sm w-full p-6 flex flex-col gap-4 shadow-2xl animate-scale-in text-slate-950 text-left">
             <div className="flex items-center gap-2 text-rose-600">
               <span className="material-symbols-outlined text-lg">warning</span>
@@ -1707,7 +1748,7 @@ export default function BookingDetail({ setActivePage }) {
 
       {/* IN-STAY SERVICE REQUEST MODAL */}
       {isServiceModalOpen && (
-        <div className="fixed inset-0 bg-slate-900 bg-opacity-70 z-[5000] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in font-['Montserrat']">
+        <div className="fixed inset-0 z-[5000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in font-['Montserrat']">
           <div className="bg-white border border-slate-200 max-w-lg w-full p-6 flex flex-col gap-6 shadow-2xl animate-scale-in text-slate-950 text-left max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2 text-purple-700">
@@ -1733,9 +1774,16 @@ export default function BookingDetail({ setActivePage }) {
                   value={selectedServiceId}
                   onChange={(e) => setSelectedServiceId(e.target.value)}
                   className="w-full p-3 border border-slate-300 text-xs font-semibold focus:border-purple-600 focus:outline-none bg-slate-50 rounded-xl"
+                  disabled={isLoadingServices}
                   required
                 >
-                  <option value="">-- Chọn dịch vụ --</option>
+                  <option value="">
+                    {isLoadingServices
+                      ? '-- Đang tải danh sách dịch vụ... --'
+                      : availableServices.length === 0
+                      ? '-- Hiện chưa có dịch vụ nào khả dụng --'
+                      : '-- Chọn dịch vụ --'}
+                  </option>
                   {availableServices.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name} - {Number(s.price).toLocaleString()} VNĐ / {s.unit}

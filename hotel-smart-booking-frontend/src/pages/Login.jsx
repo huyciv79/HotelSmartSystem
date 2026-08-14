@@ -103,7 +103,7 @@ export default function Login({ setActivePage }) {
               {t('login_title', 'ĐĂNG NHẬP HỘI VIÊN')}
             </h2>
             <p className="text-secondary text-sm mt-2">
-              {t('login_subtitle', 'Đăng nhập để quản lý đặt phòng và tận hưởng ưu đãi dành riêng cho hội viên Elysian.')}
+              {t('login_subtitle', 'Đăng nhập để quản lý đặt phòng và tận hưởng ưu đãi dành riêng cho hội viên The Iris.')}
             </p>
           </div>
 

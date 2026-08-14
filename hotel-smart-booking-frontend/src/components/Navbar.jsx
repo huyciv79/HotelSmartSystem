@@ -71,7 +71,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
   }, [activePage]);
 
   const avatarUrl = currentUser?.avatar || currentUser?.avatarUrl || 'https://i.pravatar.cc/36?img=12';
-  const fullName = currentUser?.fullName || currentUser?.name || 'Hội viên Elysian';
+  const fullName = currentUser?.fullName || currentUser?.name || 'Hội viên The Iris';
 
   // Fetch fresh profile data from API on login/load and modal opening
   useEffect(() => {
@@ -225,7 +225,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
             onClick={() => handleNavClick('home')} 
             className="font-headline-lg text-lg font-black tracking-widest hover:text-primary transition-colors cursor-pointer bg-transparent border-none p-0 text-white leading-none"
           >
-            ELYSIAN
+            THE IRIS
           </button>
           <span className="text-[6.5px] tracking-[0.25em] opacity-60 uppercase font-semibold leading-none mt-0.5">HOTELS</span>
         </div>
@@ -521,7 +521,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
               >
                 <img 
                   src={selectedRoom?.primaryImageUrl || (roomTypes[0]?.primaryImageUrl) || 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=1000&q=80'} 
-                  alt={selectedRoom?.name || "Elysian Room"} 
+                  alt={selectedRoom?.name || "The Iris Room"} 
                   className="w-full h-full object-cover animate-room-zoom"
                 />
                 
@@ -531,7 +531,7 @@ export default function Navbar({ activePage, setActivePage, isMobileMenuOpen, se
                 {/* Room Name & Info Overlay (Bottom Left) */}
                 <div className="absolute bottom-8 left-8 text-left z-10 animate-room-text">
                   <span className="text-[10px] font-semibold text-white/80 uppercase tracking-widest block mb-1">
-                    {selectedRoom?.bedType || 'ELYSIAN HOTELS & RESORTS'}
+                    {selectedRoom?.bedType || 'THE IRIS HOTEL & RESORTS'}
                   </span>
                   <h3 className="text-2xl font-semibold text-white uppercase tracking-wider leading-tight">
                     {selectedRoom?.name || 'KỲ NGHỈ DƯỠNG THƯỢNG LƯU'}

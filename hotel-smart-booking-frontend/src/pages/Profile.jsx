@@ -217,7 +217,7 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
 
               {/* Member Name & Role */}
               <h3 className="text-base font-bold font-['Playfair_Display'] text-on-surface tracking-widest m-0 uppercase leading-normal">
-                {profile.fullName || t('profile_member_default', 'Hội viên Elysian')}
+                {profile.fullName || t('profile_member_default', 'Hội viên The Iris')}
               </h3>
               <div className="w-full h-px bg-outline-variant my-6" />
 
@@ -233,7 +233,7 @@ export default function Profile({ initialProfile, onProfileUpdate, showToast }) 
 
             {/* Card Footer */}
             <div className="bg-slate-50 px-8 py-3.5 border-t border-outline-variant flex justify-between items-center text-[9px]">
-              <span className="text-secondary tracking-widest font-black font-mono">ELYSIAN HOTELS & RESORTS</span>
+              <span className="text-secondary tracking-widest font-black font-mono">THE IRIS HOTEL & RESORTS</span>
               <Award size={14} className="text-secondary" />
             </div>
           </div>

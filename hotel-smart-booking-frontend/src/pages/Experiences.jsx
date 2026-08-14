@@ -73,7 +73,7 @@ export default function Experiences({ setActivePage }) {
               <div className="md:col-span-7 relative">
                 <div className="elysian-parallelogram overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
                   <img 
-                    alt="Elysian Experience Lobby" 
+                    alt="The Iris Experience Lobby" 
                     className="w-full h-[300px] md:h-[500px] object-cover" 
                     src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80"
                   />
@@ -145,7 +145,7 @@ export default function Experiences({ setActivePage }) {
           <section className="relative h-[400px] flex items-center justify-center overflow-hidden">
             <div className="absolute inset-0 bg-black/40 z-10"></div>
             <img 
-              alt="Elysian Rooftop" 
+              alt="The Iris Rooftop" 
               className="absolute inset-0 w-full h-full object-cover" 
               src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80"
             />

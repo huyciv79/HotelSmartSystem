@@ -50,7 +50,7 @@ public class PdfServiceImpl implements PdfService {
             Font smallFont = FontFactory.getFont(FontFactory.HELVETICA, 8, Color.GRAY);
 
             // Document Header
-            Paragraph title = new Paragraph("ELYSIAN HOTEL - INVOICE STATEMENT", mainTitleFont);
+            Paragraph title = new Paragraph("THE IRIS HOTEL - INVOICE STATEMENT", mainTitleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             title.setSpacingAfter(20);
             document.add(title);
@@ -63,10 +63,10 @@ public class PdfServiceImpl implements PdfService {
             // Left: Hotel info
             PdfPCell hotelCell = new PdfPCell();
             hotelCell.setBorder(PdfPCell.NO_BORDER);
-            hotelCell.addElement(new Paragraph("Elysian Kanther Hotel", subTitleFont));
+            hotelCell.addElement(new Paragraph("The Iris Hotel Can Tho", subTitleFont));
             hotelCell.addElement(new Paragraph("123 Vo Nguyen Giap St, Danang, Vietnam", regularFont));
             hotelCell.addElement(new Paragraph("Phone: +84 236 3999 999", regularFont));
-            hotelCell.addElement(new Paragraph("Email: contact@elysiankanther.com", regularFont));
+            hotelCell.addElement(new Paragraph("Email: contact@theirishotel.com", regularFont));
             infoTable.addCell(hotelCell);
 
             // Right: Invoice & Guest info
@@ -186,7 +186,7 @@ public class PdfServiceImpl implements PdfService {
             }
 
             // Footer / Thank You Note
-            Paragraph footer = new Paragraph("\nThank you for choosing Elysian Kanther Hotel. We hope you enjoyed your stay!\nFor any billing inquiries, please email contact@elysiankanther.com.", smallFont);
+            Paragraph footer = new Paragraph("\nThank you for choosing The Iris Hotel Can Tho. We hope you enjoyed your stay!\nFor any billing inquiries, please email contact@theirishotel.com.", smallFont);
             footer.setAlignment(Element.ALIGN_CENTER);
             document.add(footer);
 

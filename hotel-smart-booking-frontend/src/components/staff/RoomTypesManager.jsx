@@ -99,7 +99,9 @@ const RoomTypesManager = ({
           <form onSubmit={handleRoomSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tên loại phòng</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  Tên loại phòng <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={roomFormData.name}
@@ -110,7 +112,9 @@ const RoomTypesManager = ({
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Đơn giá cơ bản (VND / đêm)</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  Đơn giá cơ bản (VND / đêm) <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="number"
                   value={roomFormData.basePrice}
@@ -120,62 +124,24 @@ const RoomTypesManager = ({
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sức chứa người lớn / phòng</label>
-                <input
-                  type="number"
-                  value={roomFormData.adultCapacity}
-                  onChange={(e) => setRoomFormData(prev => ({ ...prev, adultCapacity: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sức chứa trẻ em / phòng</label>
-                <input
-                  type="number"
-                  value={roomFormData.childCapacity}
-                  onChange={(e) => setRoomFormData(prev => ({ ...prev, childCapacity: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Loại giường</label>
+              <div className="space-y-2 md:col-span-2">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tiện ích loại phòng</label>
                 <input
                   type="text"
-                  value={roomFormData.bedType}
-                  onChange={(e) => setRoomFormData(prev => ({ ...prev, bedType: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
+                  value={roomFormData.amenities || ''}
+                  onChange={(e) => setRoomFormData(prev => ({ ...prev, amenities: e.target.value }))}
+                  placeholder="Ví dụ: Wifi miễn phí, Điều hòa, Tivi 4K, Minibar, Bồn tắm, Ban công..."
+                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all placeholder:text-slate-400"
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Diện tích phòng (m²)</label>
-                <input
-                  type="number"
-                  value={roomFormData.roomSize}
-                  onChange={(e) => setRoomFormData(prev => ({ ...prev, roomSize: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Trạng thái hoạt động</label>
-                <select
-                  value={roomFormData.status}
-                  onChange={(e) => setRoomFormData(prev => ({ ...prev, status: e.target.value }))}
-                  className="w-full bg-slate-50 border border-slate-200/60 rounded-xl px-4 py-2.5 font-bold text-xs outline-none text-slate-800 focus:border-primary focus:bg-white transition-all [&>option]:bg-white [&>option]:text-slate-800"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hình ảnh phòng</label>
+              <div className="space-y-2 md:col-span-2">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  Hình ảnh phòng {!editingRoom && <span className="text-rose-500">*</span>}
+                </label>
                 <input
                   type="file"
+                  accept="image/*"
                   onChange={handleFileChange}
                   className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:border file:border-slate-200/60 file:rounded-lg file:text-[10px] file:font-black file:uppercase file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100 cursor-pointer"
                 />
@@ -213,28 +179,34 @@ const RoomTypesManager = ({
       ) : (
         /* Room Types Table */
         <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] overflow-hidden">
-          <table className="w-full border-collapse text-left text-xs text-slate-600">
-            <thead>
-              <tr className="border-b border-slate-100 text-[9px] font-black uppercase tracking-wider text-slate-400 bg-slate-50/50">
-                <th className="p-4">Hình ảnh</th>
-                <th className="p-4">Tên loại phòng</th>
-                <th className="p-4">Giá / đêm</th>
-                <th className="p-4">Giường / Diện tích</th>
-                <th className="p-4">Sức chứa tối đa</th>
-                <th className="p-4">Trạng thái</th>
-                <th className="p-4 text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {roomTypes.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="p-8 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px]">
-                    Không tìm thấy loại phòng nào phù hợp
-                  </td>
-                </tr>
-              ) : (
-                roomTypes.map((room) => (
-                  <tr key={room.id} className="hover:bg-slate-50/50 transition-colors">
+          {(() => {
+            const displayRoomTypes = roomTypes.filter(room => {
+              const status = String(room.status || '').toLowerCase().trim();
+              return status !== 'inactive' && status !== 'deleted' && status !== 'disabled';
+            });
+
+            return (
+              <table className="w-full border-collapse text-left text-xs text-slate-600">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[9px] font-black uppercase tracking-wider text-slate-400 bg-slate-50/50">
+                    <th className="p-4">Hình ảnh</th>
+                    <th className="p-4">Tên loại phòng</th>
+                    <th className="p-4">Giá / đêm</th>
+                    <th className="p-4">Giường / Diện tích</th>
+                    <th className="p-4">Tiện ích</th>
+                    <th className="p-4 text-right">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {displayRoomTypes.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="p-8 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+                        Không tìm thấy loại phòng nào phù hợp
+                      </td>
+                    </tr>
+                  ) : (
+                    displayRoomTypes.map((room) => (
+                      <tr key={room.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="p-4">
                       <img
                         src={room.primaryImageUrl || 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=100&q=80'}
@@ -253,17 +225,8 @@ const RoomTypesManager = ({
                       {room.bedType || 'King Bed'} <br />
                       <span className="text-slate-400">{room.area || room.roomSize || room.roomsize || 35} m²</span>
                     </td>
-                    <td className="p-4 font-semibold text-slate-500">
-                      {room.adultCapacity || room.adultcapacity || 2} NL • {room.childCapacity || room.childcapacity || 1} TE
-                    </td>
-                    <td className="p-4">
-                      <span className={`px-2.5 py-1 text-[8.5px] font-extrabold uppercase tracking-widest rounded-lg ${
-                        room.status === 'Active' || !room.status
-                          ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                          : 'bg-rose-50 text-rose-600 border border-rose-100'
-                      }`}>
-                        {room.status || 'Active'}
-                      </span>
+                    <td className="p-4 font-semibold text-slate-500 max-w-[200px] truncate" title={room.amenities || 'Wifi, Điều hòa, Tivi 4K, Minibar'}>
+                      {room.amenities || 'Wifi, Điều hòa, Tivi 4K, Minibar'}
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex justify-end gap-2">
@@ -286,7 +249,9 @@ const RoomTypesManager = ({
               )}
             </tbody>
           </table>
-        </div>
+        );
+      })()}
+    </div>
       )}
     </div>
   );

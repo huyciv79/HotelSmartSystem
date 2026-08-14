@@ -722,6 +722,24 @@ public class RoomChangeServiceImpl implements RoomChangeService {
             throw new RuntimeException("Ngày trả phòng mới phải sau ngày trả phòng hiện tại (" + currentCheckOut + ")");
         }
 
+        // 1. Kiểm tra gia hạn chính phòng vật lý hiện tại của khách (nếu đã có lịch đặt trùng thì báo lỗi cụ thể)
+        if (detail.getRoom() != null) {
+            boolean hasOverlap = bookingDetailRepository.existsOverlappingBookingForRoom(
+                    detail.getRoom().getId(),
+                    booking.getId(),
+                    detail.getExpectedCheckOut(),
+                    toInstant(newCheckOut)
+            );
+            if (hasOverlap) {
+                throw new RuntimeException("Phòng " + detail.getRoom().getRoomNumber()
+                        + " đã có khách hàng khác đặt trước từ ngày " + currentCheckOut + " đến " + newCheckOut
+                        + ". Rất tiếc không thể gia hạn thêm phòng này.");
+            }
+        }
+
+        // 2. Kiểm tra tính khả dụng của loại phòng trong thời gian gia hạn
+        assertAvailability(detail.getRoomType(), currentCheckOut, newCheckOut, detail.getQuantity());
+
         // Tạo request StayExtension
         CustomerRequest customerrequest = new CustomerRequest();
         customerrequest.setBooking(booking);
@@ -1118,7 +1136,7 @@ public class RoomChangeServiceImpl implements RoomChangeService {
 
         CustomerRequest customerRequest = new CustomerRequest();
         customerRequest.setBooking(booking);
-        customerRequest.setRequestType("SERVICE_REQUEST");
+        customerRequest.setRequestType("ServiceRequest");
         String noteStr = request.getNote() != null ? request.getNote().trim() : "";
         customerRequest.setDescription(String.format("Yêu cầu dịch vụ: %s (Số lượng: %d)%s",
                 service.getName(), request.getQuantity(), noteStr.isBlank() ? "" : " - Ghi chú: " + noteStr));
@@ -1151,7 +1169,7 @@ public class RoomChangeServiceImpl implements RoomChangeService {
     public List<CustomerRequestResponse> getPendingServiceRequests(String staffEmail) {
         validateStaffPermission(staffEmail);
         List<CustomerRequest> requests = customerRequestRepository
-                .findByRequestTypeAndStatusOrderByCreatedAtDesc("SERVICE_REQUEST", "Pending");
+                .findByRequestTypeInAndStatusOrderByCreatedAtDesc(List.of("ServiceRequest", "SERVICE_REQUEST"), "Pending");
         return requests.stream().map(this::mapToCustomerRequestResponse).toList();
     }
 
@@ -1174,7 +1192,7 @@ public class RoomChangeServiceImpl implements RoomChangeService {
 
         List<CustomerRequest> requests = customerRequestRepository.findByBooking_IdOrderByCreatedAtDesc(bookingId);
         return requests.stream()
-                .filter(r -> "SERVICE_REQUEST".equalsIgnoreCase(r.getRequestType()))
+                .filter(r -> "ServiceRequest".equalsIgnoreCase(r.getRequestType()) || "SERVICE_REQUEST".equalsIgnoreCase(r.getRequestType()))
                 .map(this::mapToCustomerRequestResponse)
                 .toList();
     }
@@ -1187,8 +1205,8 @@ public class RoomChangeServiceImpl implements RoomChangeService {
         CustomerRequest customerRequest = customerRequestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu dịch vụ"));
 
-        if (!"SERVICE_REQUEST".equalsIgnoreCase(customerRequest.getRequestType())) {
-            throw new RuntimeException("Yêu cầu này không phải là loại dịch vụ phòng (SERVICE_REQUEST).");
+        if (!"ServiceRequest".equalsIgnoreCase(customerRequest.getRequestType()) && !"SERVICE_REQUEST".equalsIgnoreCase(customerRequest.getRequestType())) {
+            throw new RuntimeException("Yêu cầu này không phải là loại dịch vụ phòng (ServiceRequest).");
         }
 
         if (!"Pending".equalsIgnoreCase(customerRequest.getStatus())) {
@@ -1220,6 +1238,25 @@ public class RoomChangeServiceImpl implements RoomChangeService {
         usage.setStatus("Active");
         bookingServiceRepository.save(usage);
 
+        // Cập nhật phụ thu dịch vụ, thuế VAT và tổng cộng cho Booking
+        BigDecimal currentServiceCharge = booking.getServiceChargeAmount() != null ? booking.getServiceChargeAmount() : BigDecimal.ZERO;
+        BigDecimal currentTax = booking.getTaxAmount() != null ? booking.getTaxAmount() : BigDecimal.ZERO;
+        BigDecimal currentFinal = booking.getFinalAmount() != null ? booking.getFinalAmount() : (booking.getTotalAmount() != null ? booking.getTotalAmount() : BigDecimal.ZERO);
+
+        BigDecimal serviceTax = totalPrice.multiply(new BigDecimal("0.10")).setScale(2, java.math.RoundingMode.HALF_UP);
+        booking.setServiceChargeAmount(currentServiceCharge.add(totalPrice));
+        booking.setTaxAmount(currentTax.add(serviceTax));
+        booking.setFinalAmount(currentFinal.add(totalPrice).add(serviceTax));
+
+        if (booking.getPaidAmount() != null && booking.getPaidAmount().compareTo(booking.getFinalAmount()) < 0) {
+            if (booking.getStatus() == BookingStatus.PAID) {
+                booking.setStatus(BookingStatus.PARTIALLY_PAID);
+            }
+        }
+
+        booking.setUpdatedAt(Instant.now());
+        bookingRepository.save(booking);
+
         customerRequest.setStatus("Approved");
         customerRequest.setResolvedAt(Instant.now());
         CustomerRequest saved = customerRequestRepository.save(customerRequest);
@@ -1243,7 +1280,7 @@ public class RoomChangeServiceImpl implements RoomChangeService {
         CustomerRequest customerRequest = customerRequestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu dịch vụ"));
 
-        if (!"SERVICE_REQUEST".equalsIgnoreCase(customerRequest.getRequestType())) {
+        if (!"ServiceRequest".equalsIgnoreCase(customerRequest.getRequestType()) && !"SERVICE_REQUEST".equalsIgnoreCase(customerRequest.getRequestType())) {
             throw new RuntimeException("Yêu cầu này không phải là loại dịch vụ phòng.");
         }
 

@@ -7,13 +7,13 @@ export default function HotelPolicy() {
   const content = {
     VN: {
       title: 'CHÍNH SÁCH BẢO MẬT',
-      subtitle: 'Cam kết bảo mật thông tin & quản lý dữ liệu sinh trắc học tại Elysian Smart Hotel Cần Thơ.',
+      subtitle: 'Cam kết bảo mật thông tin & quản lý dữ liệu sinh trắc học tại The Iris Smart Hotel Cần Thơ.',
       lastUpdated: 'Cập nhật lần cuối: 15 tháng 07, 2026',
       sections: [
         {
           icon: 'shield',
           heading: '1. Cam Kết Chung',
-          text: 'Tại Elysian Smart Hotel, chúng tôi đặt quyền riêng tư và an toàn thông tin của quý khách lên hàng đầu. Chính sách bảo mật này mô tả cách chúng tôi thu thập, sử dụng, bảo vệ và xử lý thông tin cá nhân của bạn khi bạn sử dụng hệ thống đặt phòng, trợ lý ảo AI và các dịch vụ lưu trú thông minh của chúng tôi.'
+          text: 'Tại The Iris Smart Hotel, chúng tôi đặt quyền riêng tư và an toàn thông tin của quý khách lên hàng đầu. Chính sách bảo mật này mô tả cách chúng tôi thu thập, sử dụng, bảo vệ và xử lý thông tin cá nhân của bạn khi bạn sử dụng hệ thống đặt phòng, trợ lý ảo AI và các dịch vụ lưu trú thông minh của chúng tôi.'
         },
         {
           icon: 'face',
@@ -29,7 +29,7 @@ export default function HotelPolicy() {
         {
           icon: 'chat',
           heading: '3. Nhật Ký Trò Chuyện Trợ Lý Ảo (AI Concierge Logs)',
-          text: 'Trợ lý ảo Elysian AI hỗ trợ bạn tìm phòng, đặt phòng và giải đáp thắc mắc 24/7. Thông tin trò chuyện được xử lý như sau:',
+          text: 'Trợ lý ảo The Iris AI hỗ trợ bạn tìm phòng, đặt phòng và giải đáp thắc mắc 24/7. Thông tin trò chuyện được xử lý như sau:',
           bullets: [
             'Nội dung tin nhắn trò chuyện được lưu trữ tạm thời trong bộ nhớ trình duyệt (localStorage) của bạn để duy trì mạch hội thoại.',
             'Bạn có thể xóa toàn bộ lịch sử trò chuyện và trạng thái đặt phòng bất cứ lúc nào bằng nút "Restart" ở trang trợ lý ảo hoặc bong bóng chat.',
@@ -42,7 +42,7 @@ export default function HotelPolicy() {
           text: 'Chúng tôi chỉ thu thập các thông tin cần thiết để hoàn tất việc đặt phòng (Tên, Email, SĐT, ngày nhận/trả phòng, số khách).',
           bullets: [
             'Hệ thống thanh toán của chúng tôi được kết nối trực tiếp với cổng thanh toán PayPal.',
-            'Elysian Smart Hotel KHÔNG lưu trữ và không truy cập vào thông tin thẻ tín dụng hay tài khoản ngân hàng của bạn. Mọi giao dịch được bảo mật theo tiêu chuẩn quốc tế của PayPal.'
+            'The Iris Smart Hotel KHÔNG lưu trữ và không truy cập vào thông tin thẻ tín dụng hay tài khoản ngân hàng của bạn. Mọi giao dịch được bảo mật theo tiêu chuẩn quốc tế của PayPal.'
           ]
         },
         {
@@ -59,13 +59,13 @@ export default function HotelPolicy() {
     },
     EN: {
       title: 'PRIVACY POLICY',
-      subtitle: 'Commitment to data security & biometric data management at Elysian Smart Hotel Can Tho.',
+      subtitle: 'Commitment to data security & biometric data management at The Iris Smart Hotel Can Tho.',
       lastUpdated: 'Last Updated: July 15, 2026',
       sections: [
         {
           icon: 'shield',
           heading: '1. General Commitment',
-          text: 'At Elysian Smart Hotel, we prioritize your privacy and data security. This privacy policy describes how we collect, use, protect, and process your personal information when you use our booking system, AI Concierge, and smart hospitality services.'
+          text: 'At The Iris Smart Hotel, we prioritize your privacy and data security. This privacy policy describes how we collect, use, protect, and process your personal information when you use our booking system, AI Concierge, and smart hospitality services.'
         },
         {
           icon: 'face',
@@ -81,7 +81,7 @@ export default function HotelPolicy() {
         {
           icon: 'chat',
           heading: '3. AI Concierge Conversation Logs',
-          text: 'The Elysian AI Concierge assists you with room search, bookings, and queries 24/7. Conversation data is processed as follows:',
+          text: 'The The Iris AI Concierge assists you with room search, bookings, and queries 24/7. Conversation data is processed as follows:',
           bullets: [
             'Message contents are stored temporarily in your browser storage (localStorage) to maintain chat context.',
             'You can clear your entire chat history and booking state at any time using the "Restart" button in the assistant page or floating chat bubble.',
@@ -94,7 +94,7 @@ export default function HotelPolicy() {
           text: 'We only collect essential details to complete your reservation (Name, Email, Phone, dates of stay, number of guests).',
           bullets: [
             'Our system connects directly to the secure PayPal payment gateway.',
-            'Elysian Smart Hotel DOES NOT store or access your credit card details or bank credentials. All transactions are protected under PayPal’s global security standards.'
+            'The Iris Smart Hotel DOES NOT store or access your credit card details or bank credentials. All transactions are protected under PayPal’s global security standards.'
           ]
         },
         {
@@ -133,7 +133,7 @@ export default function HotelPolicy() {
         {
           icon: 'chat',
           heading: '3. AIアシスタントのチャット履歴について',
-          text: 'Elysian AI アシスタントは、24時間年中無休でお客様の客室検索やご予約をサポートします。チャットデータは以下のように処理されます。',
+          text: 'The Iris AI アシスタントは、24時間年中無休でお客様の客室検索やご予約をサポートします。チャットデータは以下のように処理されます。',
           bullets: [
             '会話の流れを維持するため、メッセージ内容はブラウザのストレージ（localStorage）に一時的に保存されます。',
             'アシスタントページやチャットバブル内の「Restart（再起動）」ボタンを使用して、いつでもすべての履歴を消去できます。',
@@ -185,7 +185,7 @@ export default function HotelPolicy() {
         {
           icon: 'chat',
           heading: '3. AI 컨시어지 대화 로그 방침',
-          text: 'Elysian AI 비서는 객실 찾기, 예약 진행 및 문의 답변을 24/7 지원합니다. 대화 내용은 다음과 같이 관리됩니다.',
+          text: 'The Iris AI 비서는 객실 찾기, 예약 진행 및 문의 답변을 24/7 지원합니다. 대화 내용은 다음과 같이 관리됩니다.',
           bullets: [
             '자연스러운 대화 흐름을 위해 대화 내용은 고객님의 브라우저 저장소(localStorage)에 임시 저장됩니다.',
             '채팅방이나 비서 페이지 상단의 "Restart" 버튼을 눌러 언제든지 대화 내역 및 예약 상태를 초기화할 수 있습니다.',
@@ -276,7 +276,7 @@ export default function HotelPolicy() {
         <div className="absolute right-0 top-0 bottom-0 w-1/3 elysian-pattern opacity-15 hidden md:block" />
         <div className="max-w-7xl mx-auto relative z-10">
           <span className="text-[10px] font-black tracking-[0.25em] text-primary block mb-2 uppercase">
-            Elysian Hotels & Resorts
+            The Iris Hotel & Resorts
           </span>
           <h1 className="text-3xl font-black tracking-wider uppercase mb-2">
             {activeContent.title}

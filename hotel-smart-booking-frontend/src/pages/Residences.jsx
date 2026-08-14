@@ -7,7 +7,7 @@ export default function Residences() {
     <div className="w-full">
       <main className="pt-24 pb-stack-lg text-left">
         <header className="px-margin-mobile md:px-margin-desktop mb-stack-lg text-center">
-          <h1 className="font-headline-xl text-headline-xl md:text-headline-xl mb-stack-sm text-on-surface">Elysian Residences</h1>
+          <h1 className="font-headline-xl text-headline-xl md:text-headline-xl mb-stack-sm text-on-surface">The Iris Residences</h1>
           <div className="max-w-4xl mx-auto border-t border-outline-variant pt-8">
             <p className="font-body-lg text-body-lg text-secondary">
               {t('residences_desc')}
@@ -39,7 +39,7 @@ export default function Residences() {
             </div>
             <div className="elysian-parallelogram overflow-hidden shadow-2xl">
               <img 
-                alt="Elysian Residences Interior" 
+                alt="The Iris Residences Interior" 
                 className="w-full h-[400px] object-cover hover:scale-105 transition-transform duration-700" 
                 src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80"
               />

@@ -106,24 +106,29 @@ const StaffOverview = ({
   const areaD = `M 10 ${chartY[0]} L 125 ${chartY[1]} L 250 ${chartY[2]} L 375 ${chartY[3]} L 490 ${chartY[4]} L 490 120 L 10 120 Z`;
   const lineD = `M 10 ${chartY[0]} L 125 ${chartY[1]} L 250 ${chartY[2]} L 375 ${chartY[3]} L 490 ${chartY[4]}`;
 
+  // Filter active room types only
+  const activeRoomTypes = (roomTypes || []).filter(room => {
+    const status = String(room.status || '').toLowerCase().trim();
+    return status !== 'inactive' && status !== 'deleted' && status !== 'disabled';
+  });
+
+  // Curated Room Types carousel
   const nextCarousel = () => {
-    if (roomTypes.length > 0) {
-      setCarouselIndex((prev) => (prev + 1) % roomTypes.length);
-    }
+    if (activeRoomTypes.length <= 3) return;
+    setCarouselIndex((prev) => (prev + 1) % activeRoomTypes.length);
+  };
+  const prevCarousel = () => {
+    if (activeRoomTypes.length <= 3) return;
+    setCarouselIndex((prev) => (prev - 1 + activeRoomTypes.length) % activeRoomTypes.length);
   };
 
-  const prevCarousel = () => {
-    if (roomTypes.length > 0) {
-      setCarouselIndex((prev) => (prev - 1 + roomTypes.length) % roomTypes.length);
-    }
-  };
 
   return (
     <div className="space-y-8 animate-scale-in text-left">
       {/* Overview Top Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-5">
         <div>
-          <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest block">ELYSIAN HUB</span>
+          <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest block">THE IRIS HUB</span>
           <h1 className="text-2xl font-black text-slate-800 uppercase tracking-wide mt-1">Tổng Quan Vận Hành</h1>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -446,8 +451,7 @@ const StaffOverview = ({
         </div>
       </div>
 
-      {/* Curated Room Types carousel */}
-      {roomTypes.length > 0 && (
+      {activeRoomTypes.length > 0 && (
         <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.015)]">
           <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-6">
             <div>
@@ -471,9 +475,9 @@ const StaffOverview = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {roomTypes.slice(carouselIndex, carouselIndex + 3).concat(
-              roomTypes.slice(0, Math.max(0, 3 - (roomTypes.length - carouselIndex)))
-            ).slice(0, Math.min(3, roomTypes.length)).map((room) => (
+            {activeRoomTypes.slice(carouselIndex, carouselIndex + 3).concat(
+              activeRoomTypes.slice(0, Math.max(0, 3 - (activeRoomTypes.length - carouselIndex)))
+            ).slice(0, Math.min(3, activeRoomTypes.length)).map((room) => (
               <div key={room.id} className="bg-slate-50/60 border border-slate-150 rounded-2xl overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md transition-all">
                 <img
                   src={room.primaryImageUrl || 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=600&q=80'}
@@ -481,7 +485,7 @@ const StaffOverview = ({
                   className="w-full h-40 object-cover border-b border-slate-200/60 filter brightness-95"
                 />
                 <div className="p-4 space-y-2 text-left">
-                  <span className="text-[9px] text-primary font-extrabold uppercase tracking-widest">ELYSIAN SUITE</span>
+                  <span className="text-[9px] text-primary font-extrabold uppercase tracking-widest">THE IRIS SUITE</span>
                   <h5 className="text-sm font-bold text-slate-800 uppercase tracking-wider">{room.name}</h5>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                     {room.bedType || 'King Bed'} • {room.roomSize || room.roomsize || 35} m²

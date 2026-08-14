@@ -198,7 +198,7 @@ export default function Dashboard({ setActivePage }) {
                 {t('db_stays_title', 'LỊCH SỬ ĐẶT PHÒNG CỦA TÔI')}
               </h2>
               <p className="text-secondary text-[10px] font-bold uppercase tracking-widest border-b border-gray-100 pb-4 mb-6">
-                {t('db_stays_subtitle', 'Danh sách các phòng nghỉ bạn đã đăng ký lưu trú tại Elysian')}
+                {t('db_stays_subtitle', 'Danh sách các phòng nghỉ bạn đã đăng ký lưu trú tại The Iris')}
               </p>
 
               {realBookings.length === 0 ? (
@@ -282,7 +282,7 @@ export default function Dashboard({ setActivePage }) {
                     <div className="bg-white border border-outline-variant shadow-lg p-8 text-center font-['Montserrat'] flex flex-col items-center justify-center min-h-[220px]">
                       <span className="material-symbols-outlined text-4xl text-slate-300 mb-3">hotel</span>
                       <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-2">{t('db_no_upcoming_title', 'Bạn không có đặt phòng nào sắp tới')}</h3>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-5 max-w-md leading-relaxed">{t('db_no_upcoming_desc', 'Hãy khám phá các ưu đãi và đặt phòng nghỉ sang trọng tại Elysian ngay hôm nay.')}</p>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-5 max-w-md leading-relaxed">{t('db_no_upcoming_desc', 'Hãy khám phá các ưu đãi và đặt phòng nghỉ sang trọng tại The Iris ngay hôm nay.')}</p>
                       <button
                         onClick={() => setActivePage('home')}
                         className="bg-primary hover:bg-slate-950 text-white font-bold py-3 px-8 uppercase text-[10px] tracking-widest transition-all cursor-pointer border-none parallelogram-btn h-10"

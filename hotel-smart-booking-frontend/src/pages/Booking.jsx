@@ -232,7 +232,7 @@ export default function Booking({ setActivePage }) {
   return (
     <>
       <style>{`
-        /* Custom calendar styling to match Elysian dark/red theme */
+        /* Custom calendar styling to match The Iris dark/red theme */
         .react-datepicker-wrapper {
           width: 100%;
         }
@@ -464,7 +464,7 @@ export default function Booking({ setActivePage }) {
               {currentStep === 2 && (
                 <div className="space-y-6 animate-fade-in">
                   <h3 className="font-headline-lg text-lg text-primary uppercase italic tracking-wider m-0">{t('booking_step2_title', 'Bước 2: Chọn phương thức nhận phòng')}</h3>
-                  <p className="text-secondary text-xs font-bold uppercase tracking-widest">{t('booking_step2_subtitle', 'Lựa chọn 1 trong các hình thức nhận phòng tại Elysian Smart Hotel')}</p>
+                  <p className="text-secondary text-xs font-bold uppercase tracking-widest">{t('booking_step2_subtitle', 'Lựa chọn 1 trong các hình thức nhận phòng tại The Iris Smart Hotel')}</p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* QR Code Option */}
@@ -568,7 +568,7 @@ export default function Booking({ setActivePage }) {
                       onChange={(e) => setAgreedToTerms(e.target.checked)}
                       className="mt-1 accent-primary w-4 h-4 cursor-pointer"
                     />
-                    <span className="text-xs font-bold text-slate-700 leading-tight">{t('booking_tc_agree_text', 'Tôi đã đọc, hiểu và đồng ý với toàn bộ Điều khoản & Điều kiện đặt phòng của Elysian Hotels.')}</span>
+                    <span className="text-xs font-bold text-slate-700 leading-tight">{t('booking_tc_agree_text', 'Tôi đã đọc, hiểu và đồng ý với toàn bộ Điều khoản & Điều kiện đặt phòng của The Iris Hotels.')}</span>
                   </label>
 
                   <button

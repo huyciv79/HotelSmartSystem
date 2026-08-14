@@ -43,7 +43,7 @@ const RevenueReports = ({ stats }) => {
   const handleExportCSV = () => {
     if (!stats) return;
     let csvContent = '\uFEFF';
-    csvContent += 'BÁO CÁO THỐNG KÊ ELYSIAN HUB\n';
+    csvContent += 'BÁO CÁO THỐNG KÊ THE IRIS HUB\n';
     csvContent += `Thời gian xuất: ${new Date().toLocaleString('vi-VN')}\n\n`;
     csvContent += 'CHỈ SỐ TỔNG QUAN\n';
     csvContent += `Tổng số phòng,${stats.totalRooms}\n`;
@@ -230,7 +230,7 @@ const RevenueReports = ({ stats }) => {
         <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] p-6 flex flex-col justify-between">
           <div>
             <h4 className="text-xs font-black uppercase tracking-widest text-slate-800 border-b border-slate-100 pb-3 mb-4">Khách hàng thân thiết</h4>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">Tỷ lệ khách hàng quay lại lưu trú tại Elysian.</p>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-relaxed">Tỷ lệ khách hàng quay lại lưu trú tại The Iris.</p>
           </div>
 
           <div className="py-2">

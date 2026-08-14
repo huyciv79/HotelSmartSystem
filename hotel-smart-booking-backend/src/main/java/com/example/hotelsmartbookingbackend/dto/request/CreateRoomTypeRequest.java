@@ -15,29 +15,32 @@ import java.util.List;
 @Data
 public class CreateRoomTypeRequest {
 
-    @NotBlank(message = "Ten loai phong khong duoc de trong")
-    @Size(max = 100, message = "Ten loai phong khong duoc vuot qua 100 ky tu")
+    @NotBlank(message = "Tên loại phòng không được để trống")
+    @Size(max = 100, message = "Tên loại phòng không được vượt quá 100 ký tự")
     private String name;
 
     private String description;
 
-    @NotNull(message = "Gia co ban khong duoc de trong")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Gia co ban phai lon hon 0")
+    @NotNull(message = "Giá cơ bản không được để trống")
+    @DecimalMin(value = "0.0", inclusive = false, message = "Giá cơ bản phải lớn hơn 0")
     private BigDecimal basePrice;
 
+    @Min(value = 1, message = "Sức chứa người lớn phải từ 1 người trở lên")
     private Integer adultCapacity;
 
+    @Min(value = 0, message = "Sức chứa trẻ em không được là số âm")
     private Integer childCapacity;
 
+    @DecimalMin(value = "0.0", inclusive = false, message = "Diện tích phòng phải lớn hơn 0")
     private BigDecimal area;
 
     private String bedType;
 
     private String amenities;
 
-    @Size(max = 50, message = "Trang thai khong duoc vuot qua 50 ky tu")
+    @Size(max = 50, message = "Trạng thái không được vượt quá 50 ký tự")
     private String status;
 
-    @NotEmpty(message = "Vui long tai len it nhat mot anh loai phong")
+    @NotEmpty(message = "Vui lòng tải lên ít nhất một ảnh loại phòng")
     private List<MultipartFile> images;
 }

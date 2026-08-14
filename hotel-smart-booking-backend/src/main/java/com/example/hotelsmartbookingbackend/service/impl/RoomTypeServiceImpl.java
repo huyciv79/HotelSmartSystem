@@ -240,6 +240,7 @@ public class RoomTypeServiceImpl implements RoomTypeService {
                 .totalCapacity(getRepresentativeTotalCapacity(roomType))
                 .area(getRepresentativeArea(roomType))
                 .bedType(getRepresentativeBedType(roomType))
+                .amenities(roomType.getAmenities())
                 .primaryImageUrl(resolvePrimaryImageUrl(roomType))
                 .status(roomType.getStatus())
                 .build();

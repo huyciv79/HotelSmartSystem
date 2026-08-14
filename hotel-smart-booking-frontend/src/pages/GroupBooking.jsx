@@ -325,7 +325,7 @@ export default function GroupBooking({ setActivePage }) {
           const userObj = JSON.parse(localStorage.getItem('user') || '{}');
           const newBk = {
             ...response.data,
-            guestName: userObj.fullName || userObj.name || 'Khách hàng Elysian',
+            guestName: userObj.fullName || userObj.name || 'Khách hàng The Iris',
             guestEmail: userObj.email || ''
           };
           existing.push(newBk);
@@ -417,7 +417,7 @@ export default function GroupBooking({ setActivePage }) {
         <div className="max-w-4xl mx-auto relative z-10 animate-fade-in-up">
           <span className="text-[10px] font-black tracking-[0.4em] uppercase text-primary mb-2 block">{t('group_banner_sub', 'DÀNH CHO ĐOÀN & DOANH NGHIỆP')}</span>
           <h1 className="font-headline-xl text-3xl md:text-5xl font-black uppercase tracking-wider mb-4 leading-none">
-            {t('group_banner_title', 'ĐẶT PHÒNG NHÓM ELYSIAN')}
+            {t('group_banner_title', 'ĐẶT PHÒNG NHÓM THE IRIS')}
           </h1>
           <p className="text-xs md:text-sm text-slate-300 font-bold uppercase tracking-widest max-w-2xl mx-auto">
             {t('group_banner_desc', 'Trải nghiệm dịch vụ lưu trú thông minh, tiện nghi vượt trội và các chương trình ưu đãi dành riêng cho đoàn từ 2 phòng trở lên.')}
@@ -703,7 +703,7 @@ export default function GroupBooking({ setActivePage }) {
                 <div className="space-y-6 animate-scale-in">
                   <h3 className="font-headline-lg text-lg text-primary uppercase italic tracking-wider m-0">{t('group_step2_title', 'Bước 2: Phương thức nhận phòng đoàn')}</h3>
                   <p className="text-secondary text-xs font-bold uppercase tracking-widest">
-                    {t('group_step2_subtitle', 'Chọn cách thức làm thủ tục check-in nhanh nhất cho cả đoàn tại Elysian Hotels')}
+                    {t('group_step2_subtitle', 'Chọn cách thức làm thủ tục check-in nhanh nhất cho cả đoàn tại The Iris Hotels')}
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -798,7 +798,7 @@ export default function GroupBooking({ setActivePage }) {
                     </span>
                     <div className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider leading-relaxed max-h-48 overflow-y-auto pr-2">
                       <p className="mb-2">{t('group_tc_1', '1. QUY MÔ ĐOÀN: Chương trình áp dụng với đặt phòng từ 2 phòng trở lên cùng ngày lưu trú.')}</p>
-                      <p className="mb-2">{t('group_tc_2', '2. XÁC NHẬN ĐẶT PHÒNG: Thông tin đặt phòng sẽ được hệ thống Smart Hotel xử lý và nhân viên chăm sóc khách hàng Elysian sẽ gọi điện hỗ trợ trực tiếp điều phối phòng phù hợp nhất.')}</p>
+                      <p className="mb-2">{t('group_tc_2', '2. XÁC NHẬN ĐẶT PHÒNG: Thông tin đặt phòng sẽ được hệ thống Smart Hotel xử lý và nhân viên chăm sóc khách hàng The Iris sẽ gọi điện hỗ trợ trực tiếp điều phối phòng phù hợp nhất.')}</p>
                       <p className="mb-2">{t('group_tc_3', '3. HỦY / ĐỔI LỊCH: Yêu cầu hủy đặt phòng nhóm miễn phí cần được thông báo trước tối thiểu 7 ngày nhận phòng. Các thay đổi trễ hơn sẽ chịu phụ thu theo thỏa thuận.')}</p>
                       <p className="mb-2">{t('group_tc_4', '4. THANH TOÁN: Các điều khoản thanh toán chiết khấu sẽ được ghi rõ trong hợp đồng đoàn.')}</p>
                     </div>
@@ -813,7 +813,7 @@ export default function GroupBooking({ setActivePage }) {
                       className="mt-1 accent-primary w-4 h-4 cursor-pointer"
                     />
                     <span className="text-xs font-bold text-slate-700 leading-tight">
-                      {t('group_tc_agree_text', 'Tôi đại diện cho đoàn đã đọc, hiểu và đồng ý hoàn toàn với Chính sách đặt phòng nhóm của Elysian Hotels.')}
+                      {t('group_tc_agree_text', 'Tôi đại diện cho đoàn đã đọc, hiểu và đồng ý hoàn toàn với Chính sách đặt phòng nhóm của The Iris Hotels.')}
                     </span>
                   </label>
 
@@ -919,7 +919,7 @@ export default function GroupBooking({ setActivePage }) {
             </div>
 
             <div className="mt-8 bg-slate-50 border border-slate-100 p-4 text-[9px] text-slate-500 font-semibold leading-relaxed uppercase tracking-wider">
-              {t('group_notice_discount', 'Elysian hỗ trợ chiết khấu đặc biệt cho doanh nghiệp & sự kiện quy mô lớn. Vui lòng ghi chú trong yêu cầu đặc biệt.')}
+              {t('group_notice_discount', 'The Iris hỗ trợ chiết khấu đặc biệt cho doanh nghiệp & sự kiện quy mô lớn. Vui lòng ghi chú trong yêu cầu đặc biệt.')}
             </div>
           </div>
           

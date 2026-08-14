@@ -69,7 +69,7 @@ const DashboardSidebar = ({
         className="p-8 border-b border-neutral-900/40 cursor-pointer group"
       >
         <h1 className="text-white font-black text-2xl tracking-[0.2em] uppercase m-0 leading-none group-hover:text-primary transition-colors duration-300">
-          ELYSIAN
+          THE IRIS
         </h1>
         <span className="text-[7.5px] tracking-[0.35em] text-primary font-black uppercase leading-none mt-1.5 block">{t('nav_hotels_resorts_sub', 'HOTELS & RESORTS')}</span>
       </div>

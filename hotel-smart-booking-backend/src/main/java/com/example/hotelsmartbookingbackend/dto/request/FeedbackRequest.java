@@ -19,6 +19,7 @@ public class FeedbackRequest {
     @Max(value = 5, message = "Điểm đánh giá cao nhất là 5 sao")
     private Integer rating;
 
+    @Size(max = 1000, message = "Review comment cannot exceed 1000 characters.")
     private String comment;
 
     @Size(max = 500, message = "Ưu điểm không vượt quá 500 ký tự")

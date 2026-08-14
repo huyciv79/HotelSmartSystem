@@ -3,27 +3,16 @@ import {
   getServices,
   createService,
   updateService,
-  deleteService,
-  getPendingServiceRequests,
-  approveCustomerServiceRequest,
-  rejectCustomerServiceRequest
+  deleteService
 } from '../../services/serviceService';
 
-const ServicesManager = ({ showToast, triggerCustomConfirm }) => {
-  const [activeTab, setActiveTab] = useState('catalog'); // 'catalog' | 'requests'
+const ServicesManager = ({ showToast, triggerCustomConfirm, isManager = true }) => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingService, setEditingService] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Pending In-stay Service Request states
-  const [pendingRequests, setPendingRequests] = useState([]);
-  const [loadingRequests, setLoadingRequests] = useState(false);
-  const [rejectingReqId, setRejectingReqId] = useState(null);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [actionLoading, setActionLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -56,62 +45,9 @@ const ServicesManager = ({ showToast, triggerCustomConfirm }) => {
     }
   };
 
-  const fetchPendingRequests = async () => {
-    setLoadingRequests(true);
-    try {
-      const response = await getPendingServiceRequests();
-      if (response && response.success) {
-        setPendingRequests(response.data || []);
-      }
-    } catch (err) {
-      console.error('Lỗi khi tải yêu cầu dịch vụ phòng:', err);
-    } finally {
-      setLoadingRequests(false);
-    }
-  };
-
   useEffect(() => {
     fetchServices();
-    fetchPendingRequests();
-    const interval = setInterval(fetchPendingRequests, 15000);
-    return () => clearInterval(interval);
   }, []);
-
-  const handleApproveRequest = async (requestId) => {
-    setActionLoading(true);
-    try {
-      const res = await approveCustomerServiceRequest(requestId);
-      if (res && res.success) {
-        showToast('Đã duyệt dịch vụ phòng! Chi phí đã tự động cộng vào hóa đơn phòng.', 'success');
-        fetchPendingRequests();
-      }
-    } catch (err) {
-      console.error(err);
-      showToast(err.response?.data?.message || 'Không thể phê duyệt yêu cầu dịch vụ này.', 'error');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleRejectRequestSubmit = async (e) => {
-    e.preventDefault();
-    if (!rejectingReqId) return;
-    setActionLoading(true);
-    try {
-      const res = await rejectCustomerServiceRequest(rejectingReqId, rejectionReason);
-      if (res && res.success) {
-        showToast('Đã từ chối yêu cầu dịch vụ phòng.', 'info');
-        setRejectingReqId(null);
-        setRejectionReason('');
-        fetchPendingRequests();
-      }
-    } catch (err) {
-      console.error(err);
-      showToast(err.response?.data?.message || 'Không thể từ chối dịch vụ.', 'error');
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
   const handleOpenAdd = () => {
     setEditingService(null);
@@ -248,39 +184,6 @@ const ServicesManager = ({ showToast, triggerCustomConfirm }) => {
         </div>
       )}
 
-      {/* Subtabs Header */}
-      {!isFormOpen && (
-        <div className="flex border-b border-slate-200 gap-6 pt-2">
-          <button
-            onClick={() => setActiveTab('catalog')}
-            className={`pb-3 text-xs font-black uppercase tracking-wider cursor-pointer border-b-2 transition-all flex items-center gap-2 ${
-              activeTab === 'catalog'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-slate-400 hover:text-slate-700'
-            }`}
-          >
-            <span className="material-symbols-outlined text-base">inventory_2</span>
-            Danh mục dịch vụ ({services.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('requests')}
-            className={`pb-3 text-xs font-black uppercase tracking-wider cursor-pointer border-b-2 transition-all flex items-center gap-2 ${
-              activeTab === 'requests'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-slate-400 hover:text-slate-700'
-            }`}
-          >
-            <span className="material-symbols-outlined text-base">room_service</span>
-            Yêu cầu dịch vụ từ khách phòng ({pendingRequests.length})
-            {pendingRequests.length > 0 && (
-              <span className="bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-bounce">
-                {pendingRequests.length}
-              </span>
-            )}
-          </button>
-        </div>
-      )}
-
       {/* Main Content Area */}
       {isFormOpen ? (
         <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] p-6 md:p-8">
@@ -378,62 +281,6 @@ const ServicesManager = ({ showToast, triggerCustomConfirm }) => {
               </button>
             </div>
           </form>
-        </div>
-      ) : activeTab === 'requests' ? (
-        /* YÊU CẦU DỊCH VỤ PHÒNG TỪ KHÁCH */
-        <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.015)] overflow-hidden">
-          {loadingRequests ? (
-            <div className="p-8 text-center text-xs text-slate-500 font-bold">Đang tải danh sách yêu cầu...</div>
-          ) : pendingRequests.length === 0 ? (
-            <div className="p-12 text-center text-slate-400">
-              <span className="material-symbols-outlined text-4xl block mb-2 text-slate-300">task_alt</span>
-              <p className="text-xs font-bold uppercase tracking-wider m-0">Không có yêu cầu dịch vụ phòng nào đang chờ xử lý</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {pendingRequests.map((req) => (
-                <div key={req.requestId} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/50 transition-all">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-slate-900 tracking-wider">Mã đơn: #{req.bookingReference}</span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-100 text-amber-700">
-                        Chờ tiếp nhận
-                      </span>
-                    </div>
-                    <p className="text-xs font-bold text-purple-700 m-0">
-                      {req.description}
-                    </p>
-                    <p className="text-[10px] text-slate-400 font-medium m-0">
-                      Gửi lúc: {new Date(req.createdAt).toLocaleString('vi-VN')}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    <button
-                      onClick={() => handleApproveRequest(req.requestId)}
-                      disabled={actionLoading}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl border-none cursor-pointer shadow-sm transition-all flex items-center gap-1.5"
-                    >
-                      <span className="material-symbols-outlined text-base">check_circle</span>
-                      Phê duyệt & Cộng tiền
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setRejectingReqId(req.requestId);
-                        setRejectionReason('');
-                      }}
-                      disabled={actionLoading}
-                      className="bg-rose-50 hover:bg-rose-100 text-rose-600 font-black text-xs uppercase tracking-widest px-4 py-2.5 rounded-xl border border-rose-200 cursor-pointer transition-all flex items-center gap-1.5"
-                    >
-                      <span className="material-symbols-outlined text-base">cancel</span>
-                      Từ chối
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       ) : (
         /* DANH MỤC DỊCH VỤ */

@@ -9,8 +9,8 @@ import { useLanguage } from '../context/LanguageContext';
 
 // Welcome messages for AI Assistant
 const welcomeMsgs = {
-  VN: 'Xin chào! Tôi là Trợ lý Ảo Elysian Cần Thơ. Tôi có thể giúp bạn tìm kiếm phòng và đồng hành cùng bạn đặt phòng thông minh 24/7. Bạn muốn đặt phòng khi nào?',
-  EN: 'Hello! I am your Elysian Can Tho AI Concierge. I can help you search rooms and guide you through our smart booking flow 24/7. When would you like to book?',
+  VN: 'Xin chào! Tôi là Trợ lý Ảo The Iris Cần Thơ. Tôi có thể giúp bạn tìm kiếm phòng và đồng hành cùng bạn đặt phòng thông minh 24/7. Bạn muốn đặt phòng khi nào?',
+  EN: 'Hello! I am your The Iris Can Tho AI Concierge. I can help you search rooms and guide you through our smart booking flow 24/7. When would you like to book?',
   JP: 'こんにちは！エリシアンカントーAIコンシェルジュです。ホテルの客室検索、スマートな予約手続きを24時間年中無休でお手伝いいたします。いつ予約されますか？',
   KR: '안녕하세요! 엘리시안 끈터 AI 컨시어지입니다. 객실 검색, 스마트한 예약 절차를 24시간 언제든 도와드릴 수 있습니다. 언제 예약하시겠습니까?',
   CN: '您好！我是极乐芹苴AI智能助理。我可以帮您查找客房，并引导您完成24/7自助预订。您想什么时候预订客房？'
@@ -19,14 +19,14 @@ const welcomeMsgs = {
 // Suggested prompt chips
 const suggestionChips = {
   VN: [
-    'Các loại phòng tại Elysian Cần Thơ',
+    'Các loại phòng tại The Iris Cần Thơ',
     'Hướng dẫn check-in bằng khuôn mặt',
-    'Ưu đãi thành viên Elysian Rewards'
+    'Ưu đãi thành viên The Iris Rewards'
   ],
   EN: [
     'What room types are available?',
     'How does FaceID check-in work?',
-    'Elysian Rewards member benefits'
+    'The Iris Rewards member benefits'
   ],
   JP: [
     '客室タイプの一覧',
@@ -94,7 +94,7 @@ export default function AiAssistant({ setActivePage }) {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
   const getLanguageChips = () => {
     return suggestionChips[language] || suggestionChips.EN;
@@ -171,9 +171,14 @@ export default function AiAssistant({ setActivePage }) {
     };
   }, []);
 
-  // Scroll to bottom on new messages
+  // Smooth scroll inside chat container only (preventing full page jerking)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   }, [chatMessages, isLoading]);
 
   // Sync token when component loads or updates
@@ -453,13 +458,13 @@ export default function AiAssistant({ setActivePage }) {
     const messages = {
       VN: {
         title: 'YÊU CẦU ĐĂNG NHẬP',
-        desc: 'Trợ lý ảo Elysian AI là tính năng độc quyền dành riêng cho Hội viên đã đăng nhập. Vui lòng đăng nhập để trải nghiệm đặt phòng thông minh.',
+        desc: 'Trợ lý ảo The Iris AI là tính năng độc quyền dành riêng cho Hội viên đã đăng nhập. Vui lòng đăng nhập để trải nghiệm đặt phòng thông minh.',
         loginBtn: 'Đăng nhập ngay',
         homeBtn: 'Về trang chủ'
       },
       EN: {
         title: 'LOGIN REQUIRED',
-        desc: 'Elysian AI Assistant is an exclusive feature for registered members. Please login to experience smart room booking.',
+        desc: 'The Iris AI Assistant is an exclusive feature for registered members. Please login to experience smart room booking.',
         loginBtn: 'Login Now',
         homeBtn: 'Back to Home'
       },
@@ -495,10 +500,10 @@ export default function AiAssistant({ setActivePage }) {
           <div className="absolute right-0 top-0 bottom-0 w-1/3 elysian-pattern opacity-15 hidden md:block" />
           <div className="max-w-7xl mx-auto relative z-10">
             <span className="text-[10px] font-black tracking-[0.25em] text-primary block mb-2 uppercase">
-              Elysian Smart Hotel Concierge
+              The Iris Smart Hotel Concierge
             </span>
             <h1 className="text-3xl font-black tracking-wider uppercase mb-2">
-              {t('ai_title', 'TRỢ LÝ ẢO ELYSIAN')}
+              {t('ai_title', 'TRỢ LÝ ẢO THE IRIS')}
             </h1>
             <p className="text-xs text-neutral-400 font-bold uppercase tracking-wider">
               {t('ai_subtitle', 'Tư vấn hành trình nghỉ dưỡng & Đặt phòng thông minh 24/7')}
@@ -555,7 +560,7 @@ export default function AiAssistant({ setActivePage }) {
                <span className="material-symbols-outlined text-white text-[18px] font-light">support_agent</span>
              </div>
              <div>
-               <h1 className="text-[13px] font-bold text-slate-900 tracking-wide">Elysian AI Concierge</h1>
+               <h1 className="text-[13px] font-bold text-slate-900 tracking-wide">The Iris AI Concierge</h1>
                <p className="text-[10px] font-bold text-primary tracking-widest uppercase mt-0.5 flex items-center gap-1">
                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Active Session
                </p>
@@ -575,7 +580,7 @@ export default function AiAssistant({ setActivePage }) {
           <div className="lg:col-span-8 flex flex-col h-[650px] bg-white rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
             
             {/* Chat Messages Log */}
-            <div className="flex-grow overflow-y-auto p-6 space-y-6 bg-slate-50/50">
+            <div ref={chatContainerRef} className="flex-grow overflow-y-auto p-6 space-y-6 bg-slate-50/50">
               {chatMessages.map((msg, index) => {
                 const isBot = msg.role === 'assistant';
                 
@@ -623,8 +628,6 @@ export default function AiAssistant({ setActivePage }) {
                   </div>
                 </div>
               )}
-
-              <div ref={messagesEndRef} />
             </div>
 
             {/* Quick Actions Suggestions */}
@@ -758,7 +761,7 @@ export default function AiAssistant({ setActivePage }) {
                   {bookingState.booking_result && (
                     <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mt-2 shadow-sm">
                       <span className="text-[9px] font-black text-primary uppercase tracking-widest block mb-1">Mã Đặt Phòng</span>
-                      <span className="text-lg font-black block tracking-widest font-mono text-slate-900 mb-4">{bookingState.booking_result.bookingCode || bookingState.booking_result.bookingReference || 'ELYSIAN-SUCCESS'}</span>
+                      <span className="text-lg font-black block tracking-widest font-mono text-slate-900 mb-4">{bookingState.booking_result.bookingCode || bookingState.booking_result.bookingReference || 'THE IRIS-SUCCESS'}</span>
                       <button 
                         onClick={() => { handleClearChat(); setActivePage('dashboard'); }}
                         className="w-full py-3 bg-primary text-white rounded-xl font-bold text-[11px] uppercase tracking-wider hover:brightness-110 transition-all shadow-md cursor-pointer border-none"

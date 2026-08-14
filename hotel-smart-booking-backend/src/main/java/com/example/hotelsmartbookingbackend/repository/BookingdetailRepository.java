@@ -17,6 +17,8 @@ public interface BookingDetailRepository extends JpaRepository<BookingDetail, In
 
     Optional<BookingDetail> findByBooking_Id(Integer bookingId);
 
+    boolean existsByRoom_Id(Integer roomId);
+
     boolean existsByQrCodeValue(String qrCodeValue);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

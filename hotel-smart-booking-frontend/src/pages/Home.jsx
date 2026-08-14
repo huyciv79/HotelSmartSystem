@@ -4,7 +4,7 @@ import { useLanguage } from '../context/LanguageContext';
 
 export default function Home({ setActivePage }) {
   const { t } = useLanguage();
-  const [selectedHotel, setSelectedHotel] = useState('Elysian Hotel Can Tho');
+  const [selectedHotel, setSelectedHotel] = useState('The Iris Hotel Can Tho');
   const [bookingDate, setBookingDate] = useState('02/06/2026 - 03/06/2026');
   const [guests, setGuests] = useState('1 Người lớn, 0 Trẻ em');
   const [isRewardsShrunk, setIsRewardsShrunk] = useState(false);
@@ -86,7 +86,7 @@ export default function Home({ setActivePage }) {
         </div>
       </section>
 
-      {/* ── TRẢI NGHIỆM ELYSIAN ──────────────────────────────────────────── */}
+      {/* ── TRẢI NGHIỆM THE IRIS ──────────────────────────────────────────── */}
       <section className="bg-surface-container-low py-20 px-4 md:px-16">
         {/* Heading */}
         <div className="text-center max-w-2xl mx-auto mb-16 scroll-reveal">

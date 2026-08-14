@@ -44,6 +44,11 @@ public class FeedbackServiceImpl implements FeedbackService {
         Booking booking = bookingRepository.findById(request.getBookingId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin đặt phòng"));
 
+        // 1b. Kiểm tra giới hạn độ dài bình luận (tối đa 1000 ký tự)
+        if (request.getComment() != null && request.getComment().trim().length() > 1000) {
+            throw new RuntimeException("Review comment cannot exceed 1000 characters.");
+        }
+
         // 2. Kiểm tra quyền sở hữu booking
         if (!booking.getUser().getEmail().equalsIgnoreCase(customerEmail)) {
             throw new RuntimeException("Bạn không có quyền đánh giá đặt phòng này");
@@ -106,6 +111,11 @@ public class FeedbackServiceImpl implements FeedbackService {
         Booking booking = feedback.getBooking();
         if (!booking.getUser().getEmail().equalsIgnoreCase(customerEmail)) {
             throw new RuntimeException("Bạn không có quyền chỉnh sửa đánh giá này");
+        }
+
+        // Kiểm tra giới hạn độ dài bình luận (tối đa 1000 ký tự)
+        if (request.getComment() != null && request.getComment().trim().length() > 1000) {
+            throw new RuntimeException("Review comment cannot exceed 1000 characters.");
         }
 
         // Cập nhật thông tin chính
@@ -184,7 +194,7 @@ public class FeedbackServiceImpl implements FeedbackService {
                 .status(feedback.getStatus())
                 .createdAt(feedback.getCreatedAt())
                 .updatedAt(feedback.getUpdatedAt())
-                .customerName(user != null ? user.getFullName() : "Hội viên Elysian")
+                .customerName(user != null ? user.getFullName() : "Hội viên The Iris")
                 .customerEmail(user != null ? user.getEmail() : null)
                 .customerAvatar(user != null ? user.getAvatar() : null)
                 .images(images)

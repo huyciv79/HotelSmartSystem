@@ -35,11 +35,9 @@ public class CreateRoomRequest {
     @Size(max = 500, message = "Ghi chú không được vượt quá 500 ký tự")
     private String note;
 
-    @NotNull(message = "Sức chứa người lớn không được để trống")
     @Min(value = 1, message = "Sức chứa người lớn phải lớn hơn 0")
     private Integer adultCapacity;
 
-    @NotNull(message = "Sức chứa trẻ em không được để trống")
     @Min(value = 0, message = "Sức chứa trẻ em không được âm")
     private Integer childCapacity;
 

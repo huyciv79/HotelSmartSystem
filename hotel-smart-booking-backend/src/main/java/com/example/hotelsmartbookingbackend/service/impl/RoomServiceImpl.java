@@ -7,6 +7,7 @@ import com.example.hotelsmartbookingbackend.dto.response.PageResponse;
 import com.example.hotelsmartbookingbackend.dto.response.RoomDetailDTO;
 import com.example.hotelsmartbookingbackend.dto.response.RoomSummaryDTO;
 import com.example.hotelsmartbookingbackend.entity.Room;
+import com.example.hotelsmartbookingbackend.repository.BookingDetailRepository;
 import com.example.hotelsmartbookingbackend.repository.RoomRepository;
 import com.example.hotelsmartbookingbackend.repository.RoomTypeRepository;
 import com.example.hotelsmartbookingbackend.entity.RoomType;
@@ -31,6 +32,7 @@ public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
     private final RoomTypeRepository roomTypeRepository;
+    private final BookingDetailRepository bookingDetailRepository;
     private final WebSocketService webSocketService;
 
     private static final Set<String> ALLOWED_STATUSES = Set.of(
@@ -329,10 +331,16 @@ public class RoomServiceImpl implements RoomService {
             throw new RuntimeException("Không thể xóa phòng đang có khách ở (Occupied)");
         }
 
-        room.setStatus("Inactive");
-        room.setUpdatedAt(Instant.now());
-        Room savedRoom = roomRepository.save(room);
-
-        webSocketService.broadcastRoomStatus(savedRoom.getId(), savedRoom.getRoomNumber(), savedRoom.getStatus());
+        boolean hasBookings = bookingDetailRepository.existsByRoom_Id(id);
+        if (!hasBookings) {
+            roomRepository.delete(room);
+            webSocketService.broadcastRoomStatus(id, room.getRoomNumber(), "Inactive");
+        } else {
+            room.setStatus("Maintenance");
+            room.setNote("Đã ngưng vận hành (Xóa khỏi sơ đồ)");
+            room.setUpdatedAt(Instant.now());
+            Room savedRoom = roomRepository.save(room);
+            webSocketService.broadcastRoomStatus(savedRoom.getId(), savedRoom.getRoomNumber(), "Maintenance");
+        }
     }
 }

@@ -16,7 +16,7 @@ export const getReviews = async (roomTypeId) => {
       const content = response.data.data.content || [];
       return content.map(item => ({
         id: item.feedbackId,
-        authorName: item.customerName || 'Hội viên Elysian',
+        authorName: item.customerName || 'Hội viên The Iris',
         customerEmail: item.customerEmail,
         authorAvatar: item.customerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
         rating: item.rating,

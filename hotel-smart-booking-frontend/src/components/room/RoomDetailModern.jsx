@@ -106,7 +106,7 @@ export default function RoomDetailModern({ roomDetailData, onClose, onBookingPer
               <div className="h-0.5 w-16 bg-primary mb-5" />
 
               <p className="text-xs text-slate-500 font-medium leading-relaxed mb-6 whitespace-pre-line text-justify">
-                {roomDetailData.description || t('room_detail_default_desc', 'Hệ thống phòng nghỉ đẳng cấp với các chi tiết kiến trúc độc đáo, mang lại sự sang trọng tinh tế và kỳ nghỉ tuyệt hảo chuẩn Elysian.')}
+                {roomDetailData.description || t('room_detail_default_desc', 'Hệ thống phòng nghỉ đẳng cấp với các chi tiết kiến trúc độc đáo, mang lại sự sang trọng tinh tế và kỳ nghỉ tuyệt hảo chuẩn The Iris.')}
               </p>
 
               {/* Specs Grid */}

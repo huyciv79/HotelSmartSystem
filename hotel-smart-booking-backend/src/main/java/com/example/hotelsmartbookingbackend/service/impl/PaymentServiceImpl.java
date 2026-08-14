@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 import com.example.hotelsmartbookingbackend.dto.request.ManualPaymentRequest;
 import com.example.hotelsmartbookingbackend.entity.User;
@@ -35,6 +36,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaypalService paypalService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final UserRepository userRepository;
+    private final com.example.hotelsmartbookingbackend.repository.BookingServiceRepository bookingServiceRepository;
     private final com.example.hotelsmartbookingbackend.service.NotificationService notificationService;
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PaymentServiceImpl.class);
@@ -56,7 +58,7 @@ public class PaymentServiceImpl implements PaymentService {
             throw new RuntimeException("Booking has been cancelled");
         }
 
-        BigDecimal remainingBalance = booking.getFinalAmount().subtract(booking.getPaidAmount());
+        BigDecimal remainingBalance = getActualRemainingBalance(booking);
         BigDecimal chargeAmount = request.getAmount();
 
         String option = request.getPaymentOption();
@@ -217,7 +219,7 @@ public class PaymentServiceImpl implements PaymentService {
             throw new RuntimeException("Booking has been cancelled");
         }
 
-        BigDecimal remainingBalance = booking.getFinalAmount().subtract(booking.getPaidAmount());
+        BigDecimal remainingBalance = getActualRemainingBalance(booking);
         BigDecimal chargeAmount = request.getAmount();
 
         if (chargeAmount == null || chargeAmount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -269,6 +271,37 @@ public class PaymentServiceImpl implements PaymentService {
         } catch (Exception e) {
             log.error("Failed to send payment capture notification: ", e);
         }
+    }
+
+    private BigDecimal getActualRemainingBalance(Booking booking) {
+        List<com.example.hotelsmartbookingbackend.entity.BookingService> services = 
+            bookingServiceRepository.findByBooking_Id(booking.getId());
+        
+        BigDecimal serviceTotal = services.stream()
+            .map(com.example.hotelsmartbookingbackend.entity.BookingService::getTotalPrice)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal baseTotal = booking.getTotalAmount() != null ? booking.getTotalAmount() : BigDecimal.ZERO;
+        BigDecimal discountAmount = booking.getDiscountAmount() != null ? booking.getDiscountAmount() : BigDecimal.ZERO;
+
+        BigDecimal subtotalWithServices = baseTotal.add(serviceTotal);
+        BigDecimal expectedTax = subtotalWithServices.multiply(new BigDecimal("0.10")).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal expectedFinal = subtotalWithServices.add(expectedTax).subtract(discountAmount).setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal finalAmount = booking.getFinalAmount() != null && booking.getFinalAmount().compareTo(expectedFinal) >= 0
+                ? booking.getFinalAmount()
+                : expectedFinal;
+
+        // Synchronize booking entity totals if not updated before
+        if (booking.getFinalAmount() == null || booking.getFinalAmount().compareTo(finalAmount) < 0) {
+            booking.setServiceChargeAmount(serviceTotal);
+            booking.setTaxAmount(expectedTax);
+            booking.setFinalAmount(finalAmount);
+            bookingRepository.save(booking);
+        }
+
+        BigDecimal paid = booking.getPaidAmount() != null ? booking.getPaidAmount() : BigDecimal.ZERO;
+        return finalAmount.subtract(paid).max(BigDecimal.ZERO);
     }
 
     private String formatCurrency(BigDecimal amount) {

@@ -80,3 +80,12 @@ export const deleteRoom = async (id) => {
   const response = await axiosInstance.delete(`/rooms/${id}`);
   return response.data;
 };
+
+/**
+ * Fetch detail of an individual room by ID.
+ * GET /api/rooms/{id}
+ */
+export const getRoomDetail = async (id) => {
+  const response = await axiosInstance.get(`/rooms/${id}`);
+  return response.data;
+};

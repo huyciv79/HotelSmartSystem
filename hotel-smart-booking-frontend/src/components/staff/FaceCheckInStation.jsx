@@ -47,7 +47,7 @@ const mapBookingForStation = (booking = {}) => ({
     booking.bookingReference ||
     booking.bookingNumber ||
     (booking.bookingId ? `BK-${booking.bookingId}` : ''),
-  guestName: booking.guestName || 'Khách hàng Elysian',
+  guestName: booking.guestName || 'Khách hàng The Iris',
   email: booking.email || booking.guestEmail || '',
   roomType: booking.roomType || booking.roomTypeName || '',
   quantity: booking.quantity || 1,

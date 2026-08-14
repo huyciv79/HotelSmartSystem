@@ -21,6 +21,7 @@ public class RoomTypeSummaryResponse {
     private Integer totalCapacity;
     private BigDecimal area;
     private String bedType;
+    private String amenities;
     private String primaryImageUrl;
     private String status;
 }

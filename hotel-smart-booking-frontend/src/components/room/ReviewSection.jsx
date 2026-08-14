@@ -281,6 +281,10 @@ export default function ReviewSection({ roomId }) {
       setFeedbackErrorMessage('Vui lòng điền nội dung nhận xét của bạn.');
       return;
     }
+    if (feedbackComment.length > 1000) {
+      setFeedbackErrorMessage('Review comment cannot exceed 1000 characters.');
+      return;
+    }
     if (!selectedBookingId) {
       setFeedbackErrorMessage('Vui lòng chọn đơn đặt phòng tương ứng.');
       return;
@@ -776,17 +780,29 @@ export default function ReviewSection({ roomId }) {
 
               {/* Text comment */}
               <div>
-                <span className="block text-[10px] font-black uppercase tracking-widest text-slate-600 mb-1.5">
-                  Bình luận chi tiết:
-                </span>
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="block text-[10px] font-black uppercase tracking-widest text-slate-600">
+                    Bình luận chi tiết:
+                  </span>
+                  <span className={`text-[10px] font-bold ${feedbackComment.length > 1000 ? 'text-red-600 font-extrabold' : 'text-slate-400'}`}>
+                    {feedbackComment.length}/1000
+                  </span>
+                </div>
                 <textarea
                   rows="3"
                   value={feedbackComment}
                   onChange={(e) => setFeedbackComment(e.target.value)}
                   placeholder="Hãy chia sẻ cảm nhận thực tế của bạn về chất lượng phòng và dịch vụ..."
-                  className="w-full p-3 border border-slate-300 text-xs font-medium focus:border-primary focus:outline-none placeholder-slate-400 leading-relaxed resize-none rounded-none bg-slate-50"
+                  className={`w-full p-3 border text-xs font-medium focus:outline-none placeholder-slate-400 leading-relaxed resize-none rounded-none bg-slate-50 ${
+                    feedbackComment.length > 1000 ? 'border-red-500 focus:border-red-600' : 'border-slate-300 focus:border-primary'
+                  }`}
                   required
                 />
+                {feedbackComment.length > 1000 && (
+                  <p className="text-[10px] font-bold text-red-600 mt-1">
+                    Review comment cannot exceed 1000 characters.
+                  </p>
+                )}
               </div>
 
               {/* Pros & Cons */}

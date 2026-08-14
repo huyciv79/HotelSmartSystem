@@ -7,7 +7,7 @@ export default function HotelTerms() {
   const content = {
     VN: {
       title: 'ĐIỀU KHOẢN DỊCH VỤ',
-      subtitle: 'Quy định, chính sách đặt phòng và lưu trú tại Elysian Smart Hotel Cần Thơ.',
+      subtitle: 'Quy định, chính sách đặt phòng và lưu trú tại The Iris Smart Hotel Cần Thơ.',
       lastUpdated: 'Cập nhật lần cuối: 15 tháng 07, 2026',
       sections: [
         {
@@ -33,7 +33,7 @@ export default function HotelTerms() {
         {
           icon: 'published_with_changes',
           heading: '3. Thay Đổi, Gia Hạn & Hủy Phòng',
-          text: 'Elysian cung cấp sự linh hoạt tối đa cho kỳ nghỉ của bạn thông qua các tính năng tự phục vụ trên hệ thống:',
+          text: 'The Iris cung cấp sự linh hoạt tối đa cho kỳ nghỉ của bạn thông qua các tính năng tự phục vụ trên hệ thống:',
           bullets: [
             '**Hủy đặt phòng:** Quý khách có thể yêu cầu hủy phòng thông qua Trợ lý ảo AI. Số tiền hoàn lại (nếu có) sẽ phụ thuộc vào chính sách hủy của từng hạng phòng cụ thể.',
             '**Đổi hạng phòng:** Yêu cầu đổi phòng có thể được thực hiện khi đang lưu trú. Lệ phí phát sinh hoặc chênh lệch giá phòng sẽ được tính toán tự động và hiển thị cho quý khách xác nhận trước khi gửi lễ tân duyệt.',
@@ -55,7 +55,7 @@ export default function HotelTerms() {
           heading: '5. Miễn Trừ Trách Nhiệm & Tranh Chấp',
           text: 'Các điều khoản bổ sung về trách nhiệm pháp lý:',
           bullets: [
-            'Elysian Smart Hotel không chịu trách nhiệm đối với các mất mát tài sản cá nhân không được ký gửi trong két an toàn hoặc quầy lễ tân.',
+            'The Iris Smart Hotel không chịu trách nhiệm đối với các mất mát tài sản cá nhân không được ký gửi trong két an toàn hoặc quầy lễ tân.',
             'Mọi tranh chấp phát sinh từ hoặc liên quan đến thỏa thuận đặt phòng này trước hết sẽ được giải quyết thông qua thương lượng thiện chí giữa hai bên.'
           ]
         }
@@ -63,7 +63,7 @@ export default function HotelTerms() {
     },
     EN: {
       title: 'TERMS OF SERVICE',
-      subtitle: 'Rules, booking policies, and stay regulations at Elysian Smart Hotel Can Tho.',
+      subtitle: 'Rules, booking policies, and stay regulations at The Iris Smart Hotel Can Tho.',
       lastUpdated: 'Last Updated: July 15, 2026',
       sections: [
         {
@@ -89,7 +89,7 @@ export default function HotelTerms() {
         {
           icon: 'published_with_changes',
           heading: '3. Booking Changes, Extensions & Cancellations',
-          text: 'Elysian offers maximum flexibility for your stay through self-service options:',
+          text: 'The Iris offers maximum flexibility for your stay through self-service options:',
           bullets: [
             '**Cancellations:** Booking cancellations can be requested via the AI Concierge. Refund eligibility depends on the specific cancel policy of your selected room type.',
             '**Room Changes:** Room adjustment requests can be submitted during your stay. Extra charges or room price differences will be automatically calculated and displayed for your approval.',
@@ -111,7 +111,7 @@ export default function HotelTerms() {
           heading: '5. Disclaimer & Dispute Resolution',
           text: 'Additional terms regarding liability:',
           bullets: [
-            'Elysian Smart Hotel is not responsible for personal valuables that are not deposited in the in-room safe or at the front desk.',
+            'The Iris Smart Hotel is not responsible for personal valuables that are not deposited in the in-room safe or at the front desk.',
             'Any dispute arising out of or in connection with this booking agreement shall first be resolved through friendly negotiations.'
           ]
         }
@@ -296,7 +296,7 @@ export default function HotelTerms() {
         <div className="absolute right-0 top-0 bottom-0 w-1/3 elysian-pattern opacity-15 hidden md:block" />
         <div className="max-w-7xl mx-auto relative z-10">
           <span className="text-[10px] font-black tracking-[0.25em] text-primary block mb-2 uppercase">
-            Elysian Hotels & Resorts
+            The Iris Hotel & Resorts
           </span>
           <h1 className="text-3xl font-black tracking-wider uppercase mb-2">
             {activeContent.title}

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import RoomDetailModal from './RoomDetailModal';
 
 const getRoomTypeAbbr = (name) => {
   if (!name) return 'RM';
@@ -15,14 +16,79 @@ const getRoomTypeAbbr = (name) => {
 const RoomsManager = ({
   roomsList,
   roomTypes,
+  allBookings = [],
   handleOpenEditRoomItem,
   handleOpenCreateRoomModal,
+  handleDeleteRoomItem,
   fetchRealRooms,
   roomsSearchQuery,
   setRoomsSearchQuery
 }) => {
   const [selectedTypeFilter, setSelectedTypeFilter] = useState('ALL');
   const [selectedFloorFilter, setSelectedFloorFilter] = useState('ALL');
+  const [selectedRoomForDetail, setSelectedRoomForDetail] = useState(null);
+  const [selectedRoomAnchorRect, setSelectedRoomAnchorRect] = useState(null);
+
+  const handleOpenRoomDetail = (e, room) => {
+    e.stopPropagation();
+    const cardEl = e.currentTarget.closest('.room-card-box') || e.currentTarget;
+    if (cardEl && cardEl.getBoundingClientRect) {
+      const rect = cardEl.getBoundingClientRect();
+      setSelectedRoomAnchorRect({
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        bottom: rect.bottom,
+        right: rect.right
+      });
+    } else {
+      setSelectedRoomAnchorRect(null);
+    }
+    setSelectedRoomForDetail(room);
+  };
+
+  const findCurrentBooking = (targetRoom) => {
+    if (!targetRoom || !allBookings || !Array.isArray(allBookings) || allBookings.length === 0) return null;
+
+    const targetRoomNumStr = String(targetRoom.roomnumber || targetRoom.roomNumber || targetRoom.name || '');
+    const targetRoomNumDigits = targetRoomNumStr.replace(/\D/g, '');
+    const targetRoomIdStr = String(targetRoom.id || targetRoom.roomId || '');
+
+    const isRoomMatch = (b) => {
+      const bRoomNumStr = String(b.roomNumber || b.room_number || b.roomName || b.room || '');
+      const bRoomNumDigits = bRoomNumStr.replace(/\D/g, '');
+      const bRoomIdStr = String(b.roomId || b.room_id || (b.room && b.room.id) || '');
+
+      if (targetRoomNumDigits && bRoomNumDigits && bRoomNumDigits === targetRoomNumDigits) return true;
+      if (targetRoomNumStr && bRoomNumStr && bRoomNumStr.toLowerCase().trim() === targetRoomNumStr.toLowerCase().trim()) return true;
+      if (targetRoomIdStr && bRoomIdStr && bRoomIdStr === targetRoomIdStr) return true;
+      return false;
+    };
+
+    // Tier 1: Room matches AND Status is active check-in
+    const tier1 = allBookings.find(b => {
+      if (!isRoomMatch(b)) return false;
+      const s = String(b.status || '').toLowerCase().trim();
+      return ['checked in', 'checked-in', 'checked_in', 'checkedin', 'staying', 'occupied', 'in-house', 'in_house'].includes(s);
+    });
+    if (tier1) return tier1;
+
+    // Tier 2: Room matches AND Status is active non-cancelled
+    const tier2 = allBookings.find(b => {
+      if (!isRoomMatch(b)) return false;
+      const s = String(b.status || '').toLowerCase().trim();
+      return !['cancelled', 'completed', 'checked out', 'checked-out', 'checked_out'].includes(s);
+    });
+    if (tier2) return tier2;
+
+    // Tier 3: Any non-cancelled booking matching room number
+    return allBookings.find(b => {
+      if (!isRoomMatch(b)) return false;
+      const s = String(b.status || '').toLowerCase().trim();
+      return s !== 'cancelled';
+    }) || null;
+  };
 
   const defaultFloors = [1, 2, 3, 4, 5, 6];
   const dbFloors = Array.from(
@@ -32,6 +98,10 @@ const RoomsManager = ({
   const displayFloors = Array.from(new Set([...defaultFloors, ...dbFloors])).sort((a, b) => a - b);
 
   const filteredRooms = roomsList.filter(room => {
+    const status = String(room.status || '').toLowerCase().trim();
+    const note = String(room.note || '').toLowerCase();
+    if (status === 'inactive' || status === 'deleted' || status === 'disabled' || note.includes('ngưng vận hành') || note.includes('đã xóa')) return false;
+
     const roomNum = String(room.roomnumber || room.roomNumber || '');
     if (roomsSearchQuery && !roomNum.includes(roomsSearchQuery)) return false;
 
@@ -134,7 +204,7 @@ const RoomsManager = ({
         <div className="flex justify-between items-center border-b border-slate-100 pb-4">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">domain</span>
-            <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Elysian Building</span>
+            <span className="text-sm font-black text-slate-800 uppercase tracking-wider">The Iris Building</span>
           </div>
           <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest bg-slate-50 px-3 py-1 border border-slate-100 rounded-lg">
             Tòa nhà trung tâm
@@ -213,13 +283,13 @@ const RoomsManager = ({
             ) : (
               filteredRooms.map((room) => {
                 const styles = getStatusStyles(room.status);
-                const roomType = room.roomtypename || room.roomTypeName || (room.roomType && room.roomType.name) || 'Elysian Suite';
+                const roomType = room.roomtypename || room.roomTypeName || (room.roomType && room.roomType.name) || 'The Iris Suite';
                 const roomFloor = room.floornumber !== undefined ? room.floornumber : room.floorNumber;
 
                 return (
                   <div
                     key={room.roomId || room.id}
-                    className={`relative border ${styles.card} rounded-2xl p-4 flex flex-col justify-between items-center transition-all duration-300 group h-44 min-w-[120px] shadow-sm hover:shadow-md`}
+                    className={`room-card-box relative border ${styles.card} rounded-2xl p-4 flex flex-col justify-between items-center transition-all duration-300 group h-44 min-w-[120px] shadow-sm hover:shadow-md`}
                   >
                     {/* Status Badge + Floor */}
                     <div className="w-full flex justify-between items-center">
@@ -248,17 +318,33 @@ const RoomsManager = ({
                     </div>
 
                     {/* Hover overlay */}
-                    <div className="absolute inset-0 bg-white/95 rounded-2xl border border-slate-200 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 p-4">
+                    <div className="absolute inset-0 bg-white/95 rounded-2xl border border-slate-200 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 p-3">
                       <span className="text-[9px] font-black uppercase tracking-wider text-slate-700 text-center truncate w-full">
                         {roomType}
                       </span>
                       <button
+                        onClick={(e) => handleOpenRoomDetail(e, room)}
+                        className="w-full py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[8px] font-black uppercase tracking-widest transition-all cursor-pointer border-none flex items-center justify-center gap-1 rounded-lg shadow-sm"
+                      >
+                        <span className="material-symbols-outlined text-xs">visibility</span>
+                        Xem chi tiết
+                      </button>
+                      <button
                         onClick={() => handleOpenEditRoomItem(room)}
-                        className="w-full py-2 bg-primary hover:brightness-110 text-white text-[8px] font-black uppercase tracking-widest transition-all cursor-pointer border-none flex items-center justify-center gap-1 rounded-lg"
+                        className="w-full py-1 bg-primary hover:brightness-110 text-white text-[8px] font-black uppercase tracking-widest transition-all cursor-pointer border-none flex items-center justify-center gap-1 rounded-lg"
                       >
                         <span className="material-symbols-outlined text-xs">edit</span>
                         Cập nhật
                       </button>
+                      {handleDeleteRoomItem && (
+                        <button
+                          onClick={() => handleDeleteRoomItem(room)}
+                          className="w-full py-1 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white text-[8px] font-black uppercase tracking-widest transition-all cursor-pointer border border-rose-200/80 hover:border-rose-600 flex items-center justify-center gap-1 rounded-lg"
+                        >
+                          <span className="material-symbols-outlined text-xs">delete</span>
+                          Xóa phòng
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -267,6 +353,25 @@ const RoomsManager = ({
           </div>
         </div>
       </div>
+
+      {/* Room Detail Modal */}
+      {selectedRoomForDetail && (
+        <RoomDetailModal
+          room={selectedRoomForDetail}
+          anchorRect={selectedRoomAnchorRect}
+          roomType={roomTypes.find(t => String(t.id) === String(selectedRoomForDetail.roomtypeid || selectedRoomForDetail.roomTypeId || selectedRoomForDetail.roomType?.id))}
+          onClose={() => {
+            setSelectedRoomForDetail(null);
+            setSelectedRoomAnchorRect(null);
+          }}
+          onEditRoom={handleOpenEditRoomItem}
+          onDeleteRoom={(r) => {
+            setSelectedRoomForDetail(null);
+            setSelectedRoomAnchorRect(null);
+            if (handleDeleteRoomItem) handleDeleteRoomItem(r);
+          }}
+        />
+      )}
     </div>
   );
 };

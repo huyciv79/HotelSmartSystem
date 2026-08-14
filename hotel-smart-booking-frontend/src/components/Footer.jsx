@@ -16,9 +16,9 @@ export default function Footer({ activePage, setActivePage }) {
         <div className="lg:col-span-5 space-y-4">
           <div className="flex items-center gap-3">
             <h2 className="font-headline-md text-2xl font-black text-white tracking-wider uppercase m-0">
-              ELYSIAN
+              THE IRIS
             </h2>
-            <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase bg-amber-400/10 px-2.5 py-1 border border-amber-400/30 rounded-md">
+            <span className="text-[10px] font-black tracking-widest text-primary uppercase bg-primary/10 px-3 py-1 border border-primary/20 rounded-md">
               {t('footer_iris_signature', 'The IRIS Signature')}
             </span>
           </div>
@@ -31,7 +31,7 @@ export default function Footer({ activePage, setActivePage }) {
           <div className="pt-2">
             <button 
               onClick={() => handleNavClick('register')}
-              className="px-6 py-2.5 border border-amber-400/50 text-amber-300 font-black text-[11px] uppercase tracking-widest hover:bg-amber-400 hover:text-slate-950 transition-all duration-300 cursor-pointer rounded-lg shadow-sm"
+              className="px-6 py-2.5 bg-primary text-white font-black text-[11px] uppercase tracking-widest hover:bg-rose-700 transition-all duration-300 cursor-pointer rounded-lg shadow-sm shadow-primary/25 border-none"
             >
               {t('footer_register_now', 'Đăng ký ngay')}
             </button>
@@ -40,39 +40,35 @@ export default function Footer({ activePage, setActivePage }) {
 
         {/* Contact Information */}
         <div className="lg:col-span-4 space-y-4">
-          <h3 className="font-label-md text-xs font-black text-white tracking-widest uppercase mb-4 text-amber-400 border-b border-white/10 pb-2">
+          <h3 className="font-label-md text-xs font-black text-white tracking-widest uppercase mb-4 border-b border-white/10 pb-2">
             {t('footer_contact_info', 'THÔNG TIN LIÊN HỆ')}
           </h3>
           <ul className="space-y-3.5 p-0 m-0 list-none text-xs font-medium text-slate-300">
-            <li className="flex items-start gap-3">
-              <span className="material-symbols-outlined text-amber-400 text-base shrink-0 mt-0.5">call</span>
+            <li>
               <div>
                 <span className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">Số điện thoại</span>
-                <a href="tel:+842923686969" className="text-white hover:text-amber-300 font-bold transition-colors no-underline">
+                <a href="tel:+842923686969" className="text-white hover:text-rose-300 font-bold transition-colors no-underline">
                   (+84 292) 368 6969
                 </a>
               </div>
             </li>
-            <li className="flex items-start gap-3">
-              <span className="material-symbols-outlined text-amber-400 text-base shrink-0 mt-0.5">chat</span>
+            <li>
               <div>
                 <span className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">Zalo</span>
-                <a href="https://zalo.me/0839999521" target="_blank" rel="noopener noreferrer" className="text-white hover:text-amber-300 font-bold transition-colors no-underline">
+                <a href="https://zalo.me/0839999521" target="_blank" rel="noopener noreferrer" className="text-white hover:text-rose-300 font-bold transition-colors no-underline">
                   (+84) 83 9999 521
                 </a>
               </div>
             </li>
-            <li className="flex items-start gap-3">
-              <span className="material-symbols-outlined text-amber-400 text-base shrink-0 mt-0.5">mail</span>
+            <li>
               <div>
                 <span className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">Email</span>
-                <a href="mailto:info@irishotelcantho.vn" className="text-white hover:text-amber-300 font-bold transition-colors no-underline">
+                <a href="mailto:info@irishotelcantho.vn" className="text-white hover:text-rose-300 font-bold transition-colors no-underline">
                   info@irishotelcantho.vn
                 </a>
               </div>
             </li>
-            <li className="flex items-start gap-3">
-              <span className="material-symbols-outlined text-amber-400 text-base shrink-0 mt-0.5">location_on</span>
+            <li>
               <div>
                 <span className="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">Địa chỉ</span>
                 <span className="text-white font-medium leading-relaxed block">
@@ -87,15 +83,15 @@ export default function Footer({ activePage, setActivePage }) {
         <div className="lg:col-span-3 grid grid-cols-2 gap-4">
           {/* Explore */}
           <div className="flex flex-col gap-3">
-            <h3 className="font-label-md text-xs font-black text-white tracking-widest uppercase mb-2 text-amber-400 border-b border-white/10 pb-2">
+            <h3 className="font-label-md text-xs font-black text-white tracking-widest uppercase mb-2 border-b border-white/10 pb-2">
               {t('footer_explore', 'KHÁM PHÁ')}
             </h3>
             <button 
               onClick={() => handleNavClick('home')}
               className={`font-label-sm text-xs uppercase no-underline bg-transparent border-none p-0 cursor-pointer text-left w-fit transition-all pb-0.5 ${
                 activePage === 'home' 
-                  ? 'text-white border-b border-amber-400 font-bold' 
-                  : 'text-slate-300 hover:text-white border-b border-transparent'
+                  ? 'text-white border-b-2 border-primary font-bold' 
+                  : 'text-slate-300 hover:text-white border-b-2 border-transparent'
               }`}
             >
               {t('nav_hotels', 'KHÁCH SẠN')}
@@ -104,8 +100,8 @@ export default function Footer({ activePage, setActivePage }) {
               onClick={() => handleNavClick('residences')}
               className={`font-label-sm text-xs uppercase no-underline bg-transparent border-none p-0 cursor-pointer text-left w-fit transition-all pb-0.5 ${
                 activePage === 'residences' 
-                  ? 'text-white border-b border-amber-400 font-bold' 
-                  : 'text-slate-300 hover:text-white border-b border-transparent'
+                  ? 'text-white border-b-2 border-primary font-bold' 
+                  : 'text-slate-300 hover:text-white border-b-2 border-transparent'
               }`}
             >
               {t('nav_residences', 'RESIDENCES')}
@@ -114,8 +110,8 @@ export default function Footer({ activePage, setActivePage }) {
               onClick={() => handleNavClick('experiences')}
               className={`font-label-sm text-xs uppercase no-underline bg-transparent border-none p-0 cursor-pointer text-left w-fit transition-all pb-0.5 ${
                 activePage === 'experiences' 
-                  ? 'text-white border-b border-amber-400 font-bold' 
-                  : 'text-slate-300 hover:text-white border-b border-transparent'
+                  ? 'text-white border-b-2 border-primary font-bold' 
+                  : 'text-slate-300 hover:text-white border-b-2 border-transparent'
               }`}
             >
               {t('nav_experiences', 'TRẢI NGHIỆM')}
@@ -124,15 +120,15 @@ export default function Footer({ activePage, setActivePage }) {
 
           {/* Legal */}
           <div className="flex flex-col gap-3">
-            <h3 className="font-label-md text-xs font-black text-white tracking-widest uppercase mb-2 text-amber-400 border-b border-white/10 pb-2">
+            <h3 className="font-label-md text-xs font-black text-white tracking-widest uppercase mb-2 border-b border-white/10 pb-2">
               {t('footer_legal', 'PHÁP LÝ')}
             </h3>
             <button 
               onClick={() => handleNavClick('terms-of-service')}
               className={`font-label-sm text-xs uppercase no-underline bg-transparent border-none p-0 cursor-pointer text-left w-fit transition-all pb-0.5 ${
                 activePage === 'terms-of-service' 
-                  ? 'text-white border-b border-amber-400 font-bold' 
-                  : 'text-slate-300 hover:text-white border-b border-transparent'
+                  ? 'text-white border-b-2 border-primary font-bold' 
+                  : 'text-slate-300 hover:text-white border-b-2 border-transparent'
               }`}
             >
               {t('footer_terms', 'ĐIỀU KHOẢN')}
@@ -141,8 +137,8 @@ export default function Footer({ activePage, setActivePage }) {
               onClick={() => handleNavClick('privacy-policy')}
               className={`font-label-sm text-xs uppercase no-underline bg-transparent border-none p-0 cursor-pointer text-left w-fit transition-all pb-0.5 ${
                 activePage === 'privacy-policy' 
-                  ? 'text-white border-b border-amber-400 font-bold' 
-                  : 'text-slate-300 hover:text-white border-b border-transparent'
+                  ? 'text-white border-b-2 border-primary font-bold' 
+                  : 'text-slate-300 hover:text-white border-b-2 border-transparent'
               }`}
             >
               {t('footer_privacy', 'BẢO MẬT')}
@@ -153,9 +149,9 @@ export default function Footer({ activePage, setActivePage }) {
         {/* Sub-footer Copyright */}
         <div className="lg:col-span-12 border-t border-white/10 pt-6 mt-4 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="font-label-sm text-[11px] text-slate-400 uppercase tracking-widest m-0">
-            © Elysian Hotel Cần Thơ - 224 Đường 30/4, Phường Ninh Kiều, Thành phố Cần Thơ, Việt Nam.
+            © The Iris Hotel Cần Thơ - 224 Đường 30/4, Phường Ninh Kiều, Thành phố Cần Thơ, Việt Nam.
           </p>
-          <div className="flex gap-4 text-amber-400 text-xs font-black uppercase tracking-wider">
+          <div className="flex gap-4 text-slate-400 text-xs font-bold uppercase tracking-wider">
             <span>The IRIS Signature</span>
           </div>
         </div>

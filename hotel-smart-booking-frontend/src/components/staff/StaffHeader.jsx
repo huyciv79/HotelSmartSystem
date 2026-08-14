@@ -19,10 +19,10 @@ const StaffHeader = ({ currentUser, isManager, searchQuery, setSearchQuery }) =>
     <header className="sticky top-0 left-72 w-full h-20 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.01)] z-10 flex items-center justify-between px-10 text-left">
       <div>
         <h2 className="text-slate-800 font-extrabold text-base uppercase tracking-wider m-0 leading-tight">
-          Elysian Hub
+          The Iris Hub
         </h2>
         <p className="text-slate-400 text-[9px] uppercase tracking-widest font-bold mt-1">
-          {isManager ? "Hệ thống quản lý khách sạn thông minh" : "Bàn vận hành lễ tân Elysian"}
+          {isManager ? "Hệ thống quản lý khách sạn thông minh" : "Bàn vận hành lễ tân The Iris"}
         </p>
       </div>
 

@@ -125,7 +125,7 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
   useEffect(() => {
     try {
@@ -248,7 +248,12 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
 
   // Auto-scroll to bottom of widget chat
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   }, [chatMessages, isLoading]);
 
   // Hide bubble if not logged in, or on the dedicated AI Assistant page
@@ -411,7 +416,7 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
                 <span className="material-symbols-outlined text-[14px]">support_agent</span>
               </div>
               <div className="text-left">
-                <h5 className="text-[11.5px] font-black uppercase tracking-wider m-0">Elysian AI Concierge</h5>
+                <h5 className="text-[11.5px] font-black uppercase tracking-wider m-0">The Iris AI Concierge</h5>
                 <span className="text-[8.5px] text-emerald-400 font-extrabold uppercase tracking-widest">Online</span>
               </div>
             </div>
@@ -441,7 +446,7 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
           </div>
 
           {/* Messages Flow */}
-          <div className="flex-grow p-4 overflow-y-auto space-y-3 bg-[#f8fafc]">
+          <div ref={chatContainerRef} className="flex-grow p-4 overflow-y-auto space-y-3 bg-[#f8fafc]">
             {chatMessages.map((msg, index) => {
               const isBot = msg.role === 'assistant';
               return (
@@ -487,7 +492,6 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
                 </div>
               </div>
             )}
-            <div ref={messagesEndRef} />
           </div>
 
           {/* Booking Flow Redirect Tip */}

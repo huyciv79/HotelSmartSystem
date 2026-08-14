@@ -667,9 +667,9 @@ public class BookingServiceImpl implements BookingService {
                 .checkInDate(checkInDate)
                 .checkOutDate(checkOutDate)
                 .nights(ChronoUnit.DAYS.between(checkInDate, checkOutDate))
-                .totalAmount(booking.getFinalAmount())
+                .totalAmount(booking.getTotalAmount() != null ? booking.getTotalAmount() : booking.getFinalAmount())
                 .status(booking.getStatus())
-                .guestName(booking.getUser() != null ? booking.getUser().getFullName() : "Khách hàng Elysian")
+                .guestName(booking.getUser() != null ? booking.getUser().getFullName() : "Khách hàng The Iris")
                 .guestEmail(booking.getUser() != null
                         ? hideInternalWalkInContact(booking.getUser().getEmail())
                         : "")
@@ -1177,7 +1177,7 @@ public class BookingServiceImpl implements BookingService {
 
         try {
             String checkOutMsg = String.format(
-                    "Bạn đã trả phòng thành công cho đơn đặt phòng %s! Cảm ơn bạn đã lựa chọn Elysian Hotel. Chúc bạn một ngày tốt lành!",
+                    "Bạn đã trả phòng thành công cho đơn đặt phòng %s! Cảm ơn bạn đã lựa chọn The Iris Hotel. Chúc bạn một ngày tốt lành!",
                     booking.getBookingReference());
             notificationService.sendNotification(booking.getUser(), "Trả phòng thành công", checkOutMsg, "CheckOut",
                     booking.getId());
@@ -2221,7 +2221,7 @@ public class BookingServiceImpl implements BookingService {
                 .ekycIdentity(isFaceIdMethod(booking.getCheckInMethod())
                         ? mapEkycIdentitySummary(booking.getUser())
                         : null)
-                .guestName(booking.getUser() != null ? booking.getUser().getFullName() : "Khách hàng Elysian")
+                .guestName(booking.getUser() != null ? booking.getUser().getFullName() : "Khách hàng The Iris")
                 .guestEmail(booking.getUser() != null
                         ? hideInternalWalkInContact(booking.getUser().getEmail())
                         : "");

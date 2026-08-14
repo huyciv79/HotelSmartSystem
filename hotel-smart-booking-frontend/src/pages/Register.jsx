@@ -212,9 +212,9 @@ export default function Register({ setActivePage }) {
             {step === 3 && t('register_success_title', 'ĐĂNG KÝ THÀNH CÔNG')}
           </h2>
           <p className="text-secondary text-sm mt-2">
-            {step === 1 && t('register_subtitle', 'Gia nhập cộng đồng Elysian Rewards để nhận ngay các ưu đãi đặc quyền.')}
+            {step === 1 && t('register_subtitle', 'Gia nhập cộng đồng The Iris Rewards để nhận ngay các ưu đãi đặc quyền.')}
             {step === 2 && t('register_otp_subtitle', 'Mã xác thực OTP đã được gửi tới số điện thoại/email của bạn.')}
-            {step === 3 && t('register_success_subtitle', 'Chúc mừng! Bạn đã chính thức trở thành thành viên Elysian VIP.')}
+            {step === 3 && t('register_success_subtitle', 'Chúc mừng! Bạn đã chính thức trở thành thành viên The Iris VIP.')}
           </p>
         </div>
 
@@ -383,7 +383,7 @@ export default function Register({ setActivePage }) {
             <div className="space-y-2">
               <h3 className="font-bold text-xl text-on-surface uppercase">{t('register_success_box_title', 'Đăng ký tài khoản thành công')}</h3>
               <p className="text-sm text-secondary max-w-sm mx-auto leading-relaxed">
-                {t('register_success_box_desc', 'Tài khoản hội viên của bạn đã được kích hoạt. Hãy trải nghiệm kỳ nghỉ dưỡng trọn vẹn tại các khách sạn của Elysian Hotels.')}
+                {t('register_success_box_desc', 'Tài khoản hội viên của bạn đã được kích hoạt. Hãy trải nghiệm kỳ nghỉ dưỡng trọn vẹn tại các khách sạn của The Iris Hotels.')}
               </p>
             </div>
 
@@ -391,7 +391,7 @@ export default function Register({ setActivePage }) {
               <div className="flex gap-3">
                 <span className="material-symbols-outlined text-primary text-2xl">card_membership</span>
                 <div>
-                  <h4 className="font-bold text-sm text-on-surface m-0 uppercase">{t('register_success_vip_label', 'Hội viên VIP Elysian')}</h4>
+                  <h4 className="font-bold text-sm text-on-surface m-0 uppercase">{t('register_success_vip_label', 'Hội viên VIP The Iris')}</h4>
                   <p className="text-xs text-secondary mt-1 m-0">{t('register_success_vip_desc', 'Thẻ thành viên điện tử đã được liên kết với số điện thoại của bạn.')}</p>
                 </div>
               </div>

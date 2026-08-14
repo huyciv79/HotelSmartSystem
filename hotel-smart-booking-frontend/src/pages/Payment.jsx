@@ -155,7 +155,7 @@ export default function Payment({ setActivePage }) {
       case 'QR Code':
         return t('payment_instruction_qrcode', 'Bạn đã chọn nhận phòng bằng QR Code. Mã nhận phòng QR Code đã được tạo và lưu trong Dashboard. Vui lòng xuất trình mã QR Code tại ki-ốt tự động khi nhận phòng.');
       default:
-        return t('payment_instruction_manual', 'Vui lòng xuất trình giấy tờ tùy thân tại quầy lễ tân Elysian Hotels để làm thủ tục nhận phòng trực tiếp.');
+        return t('payment_instruction_manual', 'Vui lòng xuất trình giấy tờ tùy thân tại quầy lễ tân The Iris Hotels để làm thủ tục nhận phòng trực tiếp.');
     }
   };
 
@@ -185,7 +185,7 @@ export default function Payment({ setActivePage }) {
               {t('payment_success_receipt_title', 'THANH TOÁN THÀNH CÔNG!')}
             </h2>
             <p className="text-secondary text-[11px] font-bold uppercase tracking-widest border-b border-gray-100 pb-6 mb-8">
-              {t('payment_success_receipt_desc', 'Cảm ơn bạn đã lựa chọn Elysian Hotels làm điểm đến của hành trình')}
+              {t('payment_success_receipt_desc', 'Cảm ơn bạn đã lựa chọn The Iris Hotels làm điểm đến của hành trình')}
             </p>
 
             {/* Receipt Box */}
