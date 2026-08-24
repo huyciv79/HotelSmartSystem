@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { chatWithAi, createInitialBookingState } from '../services/aiService';
 import { useLanguage } from '../context/LanguageContext';
+import { useAiChat } from '../context/AiChatContext';
+import AiChatConversation from './AiChatConversation';
 
 const bubbleCopy = {
   VN: {
@@ -82,7 +84,7 @@ const bubbleCopy = {
 
 const getBubbleCopy = (language) => bubbleCopy[language] || bubbleCopy.EN;
 
-export default function AiFloatingBubble({ setActivePage, activePage }) {
+function LegacyAiFloatingBubble({ setActivePage, activePage }) {
   const { language } = useLanguage();
   const copy = getBubbleCopy(language);
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -555,6 +557,39 @@ export default function AiFloatingBubble({ setActivePage, activePage }) {
         )}
       </button>
 
+    </div>
+  );
+}
+
+// Shares the exact message renderer, booking form and context state with AiAssistant.
+export default function AiFloatingBubble({ setActivePage, activePage }) {
+  const { clearChat } = useAiChat();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => Boolean(localStorage.getItem('accessToken')));
+
+  useEffect(() => {
+    setIsLoggedIn(Boolean(localStorage.getItem('accessToken')));
+  }, [activePage]);
+
+  if (!isLoggedIn || activePage === 'ai-assistant') return null;
+
+  const openPage = () => {
+    setIsOpen(false);
+    setActivePage('ai-assistant');
+  };
+
+  return (
+    <div className="fixed bottom-6 right-6 z-[9999] select-none font-['Montserrat'] text-left text-slate-800">
+      {isOpen && (
+        <div className="absolute bottom-16 right-0 flex h-[560px] w-[340px] flex-col overflow-hidden rounded-2xl bg-transparent shadow-[0_8px_30px_rgb(0,0,0,0.12)] sm:w-[370px]">
+          <header className="flex items-center justify-between border-b border-white/10 bg-black/60 px-4 py-3 text-white backdrop-blur-lg">
+            <div className="flex items-center gap-2"><div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary"><span className="material-symbols-outlined text-sm">support_agent</span></div><div><h2 className="m-0 text-[11px] font-black uppercase tracking-wider">The Iris AI Concierge</h2><span className="text-[8px] font-bold uppercase tracking-widest text-emerald-400">Online</span></div></div>
+            <div className="flex gap-1"><button onClick={clearChat} title="Bắt đầu lại" className="border-0 bg-transparent p-1 text-white"><span className="material-symbols-outlined text-base">refresh</span></button><button onClick={openPage} title="Mở trang AI" className="border-0 bg-transparent p-1 text-white"><span className="material-symbols-outlined text-base">open_in_full</span></button><button onClick={() => setIsOpen(false)} className="border-0 bg-transparent p-1 text-white"><span className="material-symbols-outlined text-base">close</span></button></div>
+          </header>
+          <AiChatConversation compact />
+        </div>
+      )}
+      <button onClick={() => setIsOpen((value) => !value)} className="group relative flex h-14 w-14 items-center justify-center rounded-full border-0 bg-primary text-white shadow-2xl transition-transform hover:scale-110"><span className="material-symbols-outlined text-2xl">{isOpen ? 'close' : 'chat_bubble'}</span>{!isOpen && <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-primary/30" />}</button>
     </div>
   );
 }

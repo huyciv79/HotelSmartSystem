@@ -182,6 +182,19 @@ public class FeedbackServiceImpl implements FeedbackService {
         return mapToResponse(feedback, feedback.getBooking(), feedback.getBooking().getUser(), imageUrls);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<FeedbackResponse> getMyFeedbacks(String customerEmail) {
+        return feedbackRepository.findActiveByCustomerEmail(customerEmail).stream()
+                .map(feedback -> {
+                    List<String> images = feedbackImageRepository.findByFeedback_Id(feedback.getId()).stream()
+                            .map(FeedbackImage::getImageUrl)
+                            .toList();
+                    return mapToResponse(feedback, feedback.getBooking(), feedback.getBooking().getUser(), images);
+                })
+                .toList();
+    }
+
     private FeedbackResponse mapToResponse(Feedback feedback, Booking booking, User user, List<String> images) {
         return FeedbackResponse.builder()
                 .feedbackId(feedback.getId())

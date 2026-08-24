@@ -171,7 +171,11 @@ export default function BookingDetail({ setActivePage }) {
       }
     } catch (err) {
       console.error(err);
-      showToast(t(err.response?.data?.message, t('Lỗi khi gửi yêu cầu hoàn tiền.')), 'error');
+      const errorMessage = err.response?.data?.message
+        || (err.response?.status === 422
+          ? 'Đơn đặt phòng này không đủ điều kiện hoàn tiền do hủy sát ngày Check-in theo chính sách của khách sạn.'
+          : 'Lỗi khi gửi yêu cầu hoàn tiền.');
+      showToast(t(errorMessage, errorMessage), 'error');
     } finally {
       setIsSubmittingRefund(false);
     }
@@ -613,6 +617,53 @@ export default function BookingDetail({ setActivePage }) {
   };
 
   const finalAmount = booking.finalAmount || booking.totalAmount || 0;
+  const formatCurrency = (amount) => new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND'
+  }).format(Number(amount || 0));
+  const dateToLocal = (value) => value ? new Date(`${value}T00:00:00`) : null;
+  const nightsBetween = (start, end) => {
+    const startDate = dateToLocal(start);
+    const endDate = dateToLocal(end);
+    if (!startDate || !endDate) return 0;
+    return Math.max(0, Math.round((endDate - startDate) / 86400000));
+  };
+  const roomQuantity = Number(booking.quantity || 1);
+  const currentRoomRate = Number(
+    booking.priceAtBooking
+    ?? booking.priceatbooking
+    ?? (Number(booking.totalAmount || 0) / Math.max(1, Number(booking.nights || 1) * roomQuantity))
+  );
+  const localToday = new Date();
+  localToday.setHours(0, 0, 0, 0);
+  const todayLocalString = [localToday.getFullYear(), String(localToday.getMonth() + 1).padStart(2, '0'), String(localToday.getDate()).padStart(2, '0')].join('-');
+  const remainingNights = nightsBetween(
+    todayLocalString > booking.checkInDate ? todayLocalString : booking.checkInDate,
+    booking.checkOutDate
+  );
+  const roomChangeEstimate = selectedRoomType ? (() => {
+    const targetRate = Number(selectedRoomType.basePrice ?? selectedRoomType.baseprice ?? 0);
+    const roomDifference = (targetRate - currentRoomRate) * roomQuantity * remainingNights;
+    const totalDifference = roomDifference * 1.1;
+    return {
+      targetRate,
+      roomDifference,
+      totalDifference,
+      estimatedTotal: Number(finalAmount) + totalDifference
+    };
+  })() : null;
+  const extensionEstimate = newCheckOutDate && newCheckOutDate > booking.checkOutDate ? (() => {
+    const extraNights = nightsBetween(booking.checkOutDate, newCheckOutDate);
+    const roomCharge = currentRoomRate * roomQuantity * extraNights;
+    const totalCharge = roomCharge * 1.1;
+    return {
+      extraNights,
+      roomCharge,
+      tax: roomCharge * 0.1,
+      totalCharge,
+      estimatedTotal: Number(finalAmount) + totalCharge
+    };
+  })() : null;
   const todayStr = new Date().toISOString().split('T')[0];
   const isFutureCheckIn = booking.checkInDate >= todayStr;
   const hasPaid = (booking.paidAmount > 0) || (booking.depositAmount > 0) || ['paid', 'partially paid', 'partially-paid'].includes(String(booking.status || '').toLowerCase());
@@ -1525,6 +1576,32 @@ export default function BookingDetail({ setActivePage }) {
                     )}
                   </div>
                 )}
+
+                {roomChangeEstimate && (
+                  <div className="mt-4 border border-primary/20 bg-primary/5 p-4 text-xs space-y-2">
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-500 font-bold">Số đêm còn lại để tính giá:</span>
+                      <span className="font-black text-slate-800">{remainingNights} đêm</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-500 font-bold">Chênh lệch tiền phòng:</span>
+                      <span className={roomChangeEstimate.roomDifference >= 0 ? 'font-black text-rose-600' : 'font-black text-emerald-700'}>
+                        {roomChangeEstimate.roomDifference >= 0 ? '+' : '-'}{formatCurrency(Math.abs(roomChangeEstimate.roomDifference))}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-4 border-t border-primary/15 pt-2">
+                      <span className="font-black text-slate-800">{roomChangeEstimate.totalDifference >= 0 ? 'Phụ thu dự kiến (đã gồm VAT):' : 'Khoản giảm dự kiến (đã gồm VAT):'}</span>
+                      <span className={roomChangeEstimate.totalDifference >= 0 ? 'font-black text-rose-600' : 'font-black text-emerald-700'}>
+                        {roomChangeEstimate.totalDifference >= 0 ? '+' : '-'}{formatCurrency(Math.abs(roomChangeEstimate.totalDifference))}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-4 text-[10px] text-slate-500">
+                      <span>Tổng hóa đơn ước tính sau điều chỉnh:</span>
+                      <span className="font-bold text-slate-700">{formatCurrency(Math.max(0, roomChangeEstimate.estimatedTotal))}</span>
+                    </div>
+                    <p className="m-0 text-[10px] leading-relaxed text-slate-500">Đây là ước tính theo giá hiện tại; số tiền chính thức được cập nhật khi lễ tân phê duyệt.</p>
+                  </div>
+                )}
               </div>
 
               {roomChangeError && (
@@ -1601,6 +1678,32 @@ export default function BookingDetail({ setActivePage }) {
                   required
                 />
               </div>
+
+              {extensionEstimate && (
+                <div className="border border-emerald-200 bg-emerald-50 p-4 text-xs space-y-2">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-slate-600 font-bold">Số đêm gia hạn:</span>
+                    <span className="font-black text-slate-800">{extensionEstimate.extraNights} đêm</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-slate-600 font-bold">Tiền phòng phát sinh:</span>
+                    <span className="font-bold text-slate-800">{formatCurrency(extensionEstimate.roomCharge)}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-slate-600 font-bold">VAT dự kiến:</span>
+                    <span className="font-bold text-slate-800">{formatCurrency(extensionEstimate.tax)}</span>
+                  </div>
+                  <div className="flex justify-between gap-4 border-t border-emerald-200 pt-2">
+                    <span className="font-black text-emerald-800">Cần thanh toán thêm dự kiến:</span>
+                    <span className="font-black text-rose-600">+{formatCurrency(extensionEstimate.totalCharge)}</span>
+                  </div>
+                  <div className="flex justify-between gap-4 text-[10px] text-slate-600">
+                    <span>Tổng hóa đơn ước tính:</span>
+                    <span className="font-bold">{formatCurrency(extensionEstimate.estimatedTotal)}</span>
+                  </div>
+                  <p className="m-0 text-[10px] leading-relaxed text-slate-500">Số tiền chính thức sẽ được cập nhật sau khi lễ tân kiểm tra phòng trống và phê duyệt.</p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Lý do gia hạn (tùy chọn):</label>

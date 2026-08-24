@@ -3,7 +3,11 @@ package com.example.hotelsmartbookingbackend.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
+
+import java.net.http.HttpClient;
+import java.time.Duration;
 
 @Configuration
 public class PaypalConfig {
@@ -52,8 +56,15 @@ public class PaypalConfig {
 
     @Bean(name = "paypalRestClient")
     public RestClient paypalRestClient() {
+        // Use the JDK HTTP client so PayPal hostname resolution follows the
+        // operating system DNS configuration instead of Reactor Netty's resolver.
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(15))
+                .build();
+
         return RestClient.builder()
                 .baseUrl(apiUrl)
+                .requestFactory(new JdkClientHttpRequestFactory(httpClient))
                 .build();
     }
 }

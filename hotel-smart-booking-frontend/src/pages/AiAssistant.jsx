@@ -6,6 +6,8 @@ import {
   createInitialBookingState 
 } from '../services/aiService';
 import { useLanguage } from '../context/LanguageContext';
+import { useAiChat } from '../context/AiChatContext';
+import AiChatConversation from '../components/AiChatConversation';
 
 // Welcome messages for AI Assistant
 const welcomeMsgs = {
@@ -20,8 +22,7 @@ const welcomeMsgs = {
 const suggestionChips = {
   VN: [
     'Các loại phòng tại The Iris Cần Thơ',
-    'Hướng dẫn check-in bằng khuôn mặt',
-    'Ưu đãi thành viên The Iris Rewards'
+    'Hướng dẫn check-in bằng khuôn mặt'
   ],
   EN: [
     'What room types are available?',
@@ -54,7 +55,7 @@ const getHotelPlaceholderImage = (hotel) => {
   return 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=600&q=80';
 };
 
-export default function AiAssistant({ setActivePage }) {
+function LegacyAiAssistant({ setActivePage }) {
   const { language, t } = useLanguage();
   const [bookingState, setBookingState] = useState(() => {
     try {
@@ -93,6 +94,16 @@ export default function AiAssistant({ setActivePage }) {
   });
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
+  const [bookingFormError, setBookingFormError] = useState('');
+  const [bookingForm, setBookingForm] = useState({
+    checkIn: '',
+    checkOut: '',
+    adults: 1,
+    children: 0,
+    quantity: 1,
+    checkInMethod: 'Manual',
+  });
 
   const chatContainerRef = useRef(null);
 
@@ -179,7 +190,7 @@ export default function AiAssistant({ setActivePage }) {
         behavior: 'smooth'
       });
     }
-  }, [chatMessages, isLoading]);
+  }, [chatMessages, isLoading, isBookingFormOpen]);
 
   // Sync token when component loads or updates
   useEffect(() => {
@@ -192,8 +203,9 @@ export default function AiAssistant({ setActivePage }) {
   }, []);
 
   // Format message text with basic markdown
-  const formatMessageText = (content, onSendMessage) => {
+  const formatMessageText = (content, onSendMessage, onSelectRoom, suppressActions = false) => {
     if (!content) return '';
+    const hasRoomCards = content.includes('[ROOM_CARD:');
     
     // Bold parser **text** -> <strong>text</strong>
     let formatted = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
@@ -204,7 +216,7 @@ export default function AiAssistant({ setActivePage }) {
     const lines = formatted.split('\n');
     return lines.map((line, idx) => {
       const trimmed = line.trim();
-      
+
       // Parse Custom Generative UI Room Card: [ROOM_CARD: name | price | capacity | url]
       if (trimmed.startsWith('[ROOM_CARD:')) {
         const match = trimmed.match(/\[ROOM_CARD:\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\]/);
@@ -222,7 +234,13 @@ export default function AiAssistant({ setActivePage }) {
                   <span className="text-primary font-bold">{price}</span>
                 </div>
                 <button 
-                  onClick={() => onSendMessage && onSendMessage(`Tôi chọn phòng ${name}`)}
+                  onClick={() => {
+                    if (onSelectRoom) {
+                      onSelectRoom(name);
+                    } else if (onSendMessage) {
+                      onSendMessage(`Tôi chọn phòng ${name}`);
+                    }
+                  }}
                   className="mt-2 w-full py-2.5 bg-slate-50 hover:bg-primary hover:text-white border border-slate-200 hover:border-primary rounded-lg text-[13px] font-bold transition-colors cursor-pointer"
                 >
                   Chọn phòng này
@@ -235,6 +253,7 @@ export default function AiAssistant({ setActivePage }) {
 
       // Parse Custom Generative UI Actions (Quick Replies): [ACTIONS: Option 1 | Option 2]
       if (trimmed.startsWith('[ACTIONS:')) {
+        if (suppressActions || hasRoomCards) return null;
         const match = trimmed.match(/\[ACTIONS:\s*(.*?)\]/);
         if (match) {
           const actions = match[1].split('|').map(a => a.trim());
@@ -286,7 +305,8 @@ export default function AiAssistant({ setActivePage }) {
   };
 
   // Handle message send
-  const handleSendMessage = async (textToSend) => {
+  const handleSendMessage = async (textToSend, options = {}) => {
+    const { openBookingFormAfterResponse = false, bookingUpdates = null } = options;
     const message = textToSend || inputText;
     if (!message.trim() || isLoading) return;
 
@@ -297,10 +317,32 @@ export default function AiAssistant({ setActivePage }) {
     setChatMessages(prev => [...prev, { role: 'user', content: message }]);
 
     try {
-      const data = await chatWithAi(message, bookingState);
+      const stateForRequest = bookingUpdates ? { ...bookingState, ...bookingUpdates } : bookingState;
+      const data = await chatWithAi(message, stateForRequest);
       
       // Update state returned from AI
       setBookingState(data.state);
+
+      // A booking validation error keeps the request in the confirmation step.
+      // Reopen the embedded form with the submitted values so the guest can correct it immediately.
+      if (data.state?.step === 'confirm' && data.state?.error) {
+        setBookingForm((previous) => ({
+          ...previous,
+          checkIn: data.state.check_in || previous.checkIn,
+          checkOut: data.state.check_out || previous.checkOut,
+          adults: data.state.adults ?? previous.adults,
+          children: data.state.children ?? previous.children,
+          quantity: data.state.quantity ?? previous.quantity,
+          checkInMethod: data.state.check_in_method || previous.checkInMethod,
+        }));
+        setBookingFormError(data.state.error);
+        setIsBookingFormOpen(true);
+      }
+
+      if (openBookingFormAfterResponse) {
+        setBookingFormError('');
+        setIsBookingFormOpen(true);
+      }
 
       // Append AI response
       setChatMessages(prev => [...prev, {
@@ -310,16 +352,114 @@ export default function AiAssistant({ setActivePage }) {
       }]);
     } catch (err) {
       console.error(err);
+      const isTimeout = err?.code === 'ECONNABORTED' || err?.message?.toLowerCase().includes('timeout');
       setChatMessages(prev => [...prev, {
         role: 'assistant',
-        content: language === 'VN' 
-          ? '⚠️ Hệ thống Trợ lý ảo hiện đang bận hoặc đang bảo trì. Vui lòng thử lại sau ít phút!'
-          : '⚠️ The AI Assistant is temporarily busy or undergoing maintenance. Please try again in a few moments.',
+        content: isTimeout
+          ? (language === 'VN'
+            ? '⌛ Trợ lý AI đang phản hồi chậm hơn bình thường. Vui lòng thử lại sau ít phút.'
+            : '⌛ The AI Assistant is taking longer than usual to respond. Please try again in a moment.')
+          : (language === 'VN'
+            ? '⚠️ Không thể kết nối đến Trợ lý AI lúc này. Vui lòng thử lại sau ít phút!'
+            : '⚠️ We could not connect to the AI Assistant. Please try again in a moment.'),
         searchResults: null
       }]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSelectRoom = (roomName) => {
+    handleSendMessage(`Tôi chọn phòng ${roomName}`, { openBookingFormAfterResponse: true });
+  };
+
+  const handleUsePersonalizedSuggestion = () => {
+    const profile = bookingState.preference_profile || {};
+    if (!profile.favoriteRoomType) return;
+
+    setBookingForm((previous) => ({
+      ...previous,
+      adults: profile.usualAdults ?? previous.adults,
+      children: profile.usualChildren ?? previous.children,
+      checkInMethod: profile.preferredCheckIn || previous.checkInMethod,
+    }));
+    handleSelectRoom(profile.favoriteRoomType);
+  };
+
+  const renderPersonalizedSuggestion = () => {
+    const profile = bookingState.preference_profile || {};
+    if (!profile.hasHistory || !profile.favoriteRoomType) return null;
+
+    const details = [
+      profile.usualAdults ? `${profile.usualAdults} người lớn` : null,
+      profile.usualChildren ? `${profile.usualChildren} trẻ em` : null,
+      profile.preferredCheckIn ? profile.preferredCheckIn : null,
+    ].filter(Boolean);
+
+    return (
+      <div className="mb-3 rounded-xl border border-primary/20 bg-red-50/50 px-3 py-2.5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="m-0 text-[11px] font-bold uppercase tracking-wider text-primary">Gợi ý dành cho bạn</p>
+            <p className="m-0 mt-1 text-xs font-semibold text-slate-800">{profile.favoriteRoomType}</p>
+            {details.length > 0 && <p className="m-0 mt-0.5 text-[11px] text-slate-600">{details.join(' · ')}</p>}
+          </div>
+          <button
+            type="button"
+            onClick={handleUsePersonalizedSuggestion}
+            className="shrink-0 rounded-lg bg-primary px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-white hover:brightness-110"
+          >
+            Dùng gợi ý
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const changeGuestCount = (field, change, minimum = 0) => {
+    setBookingForm((previous) => ({
+      ...previous,
+      [field]: Math.max(minimum, previous[field] + change),
+    }));
+  };
+
+  const handleBookingFormSubmit = (event) => {
+    event.preventDefault();
+
+    if (isLoading) {
+      setBookingFormError('AI đang ghi nhận lựa chọn trước đó. Vui lòng thử lại sau giây lát.');
+      return;
+    }
+
+    if (!bookingForm.checkIn || !bookingForm.checkOut) {
+      setBookingFormError('Vui lòng chọn ngày nhận và ngày trả phòng.');
+      return;
+    }
+
+    if (bookingForm.checkOut <= bookingForm.checkIn) {
+      setBookingFormError('Ngày trả phòng phải sau ngày nhận phòng.');
+      return;
+    }
+
+    setBookingFormError('');
+    setIsBookingFormOpen(false);
+    const bookingUpdates = {
+      step: 'idle',
+      check_in: bookingForm.checkIn,
+      check_out: bookingForm.checkOut,
+      adults: bookingForm.adults,
+      children: bookingForm.children,
+      quantity: bookingForm.quantity,
+      check_in_method: bookingForm.checkInMethod,
+      error: '',
+    };
+    setBookingState((previous) => ({ ...previous, ...bookingUpdates }));
+    handleSendMessage(
+      `Thông tin đặt phòng: nhận phòng ${bookingForm.checkIn}, trả phòng ${bookingForm.checkOut}; ` +
+      `${bookingForm.adults} người lớn, ${bookingForm.children} trẻ em; ${bookingForm.quantity} phòng; ` +
+      `check-in bằng ${bookingForm.checkInMethod}.`,
+      { bookingUpdates }
+    );
   };
 
   // Directly start booking from a hotel search card
@@ -388,6 +528,16 @@ export default function AiAssistant({ setActivePage }) {
       }
     ]);
     setBookingState(createInitialBookingState());
+    setIsBookingFormOpen(false);
+    setBookingFormError('');
+    setBookingForm({
+      checkIn: '',
+      checkOut: '',
+      adults: 1,
+      children: 0,
+      quantity: 1,
+      checkInMethod: 'Manual',
+    });
   };
 
   const renderQuickActions = () => {
@@ -452,6 +602,117 @@ export default function AiAssistant({ setActivePage }) {
     }
 
     return null;
+  };
+
+  const renderBookingForm = () => {
+    const today = new Date().toLocaleDateString('en-CA');
+    return (
+      <form onSubmit={handleBookingFormSubmit} className="rounded-2xl border border-primary/20 bg-red-50/40 p-4 space-y-4 animate-fade-in">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="m-0 text-sm font-bold text-slate-800">Thông tin lưu trú</p>
+            <p className="m-0 mt-0.5 text-xs text-slate-500">Chọn trực tiếp, không cần nhập vào khung chat.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsBookingFormOpen(false)}
+            className="w-8 h-8 rounded-lg text-slate-500 hover:bg-white hover:text-slate-800 transition-colors"
+            aria-label="Đóng biểu mẫu đặt phòng"
+          >
+            <span className="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1.5 text-xs font-bold text-slate-600">
+            Ngày nhận phòng
+            <input
+              type="date"
+              min={today}
+              value={bookingForm.checkIn}
+              onChange={(event) => setBookingForm((previous) => ({ ...previous, checkIn: event.target.value }))}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-primary"
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs font-bold text-slate-600">
+            Ngày trả phòng
+            <input
+              type="date"
+              min={bookingForm.checkIn || today}
+              value={bookingForm.checkOut}
+              onChange={(event) => setBookingForm((previous) => ({ ...previous, checkOut: event.target.value }))}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-primary"
+            />
+          </label>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {[
+            ['adults', 'Người lớn', 1],
+            ['children', 'Trẻ em', 0],
+            ['quantity', 'Số phòng', 1],
+          ].map(([field, label, minimum]) => (
+            <div key={field} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+              <p className="m-0 text-xs font-bold text-slate-600">{label}</p>
+              <div className="mt-2 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => changeGuestCount(field, -1, minimum)}
+                  disabled={bookingForm[field] <= minimum}
+                  className="w-7 h-7 rounded-md border border-slate-200 text-slate-700 hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label={`Giảm ${label.toLowerCase()}`}
+                >−</button>
+                <span className="text-sm font-bold text-slate-800">{bookingForm[field]}</span>
+                <button
+                  type="button"
+                  onClick={() => changeGuestCount(field, 1, minimum)}
+                  className="w-7 h-7 rounded-md border border-slate-200 text-slate-700 hover:border-primary hover:text-primary"
+                  aria-label={`Tăng ${label.toLowerCase()}`}
+                >+</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <p className="m-0 mb-2 text-xs font-bold text-slate-600">Hình thức check-in</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {[
+              ['FaceID', 'face', 'FaceID'],
+              ['QR Code', 'qr_code', 'QR Code'],
+              ['Tại quầy', 'room_service', 'Manual'],
+            ].map(([label, icon, value]) => {
+              const isSelected = bookingForm.checkInMethod === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setBookingForm((previous) => ({ ...previous, checkInMethod: value }))}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2.5 text-xs font-bold transition-colors ${
+                    isSelected
+                      ? 'border-primary bg-primary text-white'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-primary hover:text-primary'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-base">{icon}</span>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {bookingFormError && <p className="m-0 text-xs font-semibold text-primary">{bookingFormError}</p>}
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full rounded-xl bg-primary px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Tiếp tục với AI
+        </button>
+      </form>
+    );
   };
 
   const getLockMessages = () => {
@@ -583,6 +844,7 @@ export default function AiAssistant({ setActivePage }) {
             <div ref={chatContainerRef} className="flex-grow overflow-y-auto p-6 space-y-6 bg-slate-50/50">
               {chatMessages.map((msg, index) => {
                 const isBot = msg.role === 'assistant';
+                const isLatestAssistantMessage = isBot && !chatMessages.slice(index + 1).some((message) => message.role === 'assistant');
                 
                 return (
                   <div key={index} className={`flex flex-col ${isBot ? 'items-start' : 'items-end'} animate-fade-in-up`}>
@@ -604,10 +866,20 @@ export default function AiAssistant({ setActivePage }) {
                       }`}>
                         {isBot ? (
                           <div className="space-y-1.5 text-left text-[14px] font-medium leading-relaxed">
-                            {formatMessageText(msg.content, handleSendMessage)}
+                            {formatMessageText(
+                              msg.content,
+                              handleSendMessage,
+                              handleSelectRoom,
+                              isBookingFormOpen && isLatestAssistantMessage
+                            )}
                           </div>
                         ) : (
                           <p className="text-[14px] tracking-wide font-medium text-left m-0">{msg.content}</p>
+                        )}
+                        {isBot && isBookingFormOpen && isLatestAssistantMessage && (
+                          <div className="mt-4 pt-4 border-t border-slate-100">
+                            {renderBookingForm()}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -631,21 +903,26 @@ export default function AiAssistant({ setActivePage }) {
             </div>
 
             {/* Quick Actions Suggestions */}
-            <div className="px-5 py-3 bg-white border-t border-slate-100 text-left">
-              {bookingState.step !== 'idle' ? renderQuickActions() : (
-                <div className="flex flex-wrap gap-2">
-                  {getLanguageChips().map((chip, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSendMessage(chip)}
-                      className="px-3 py-1.5 bg-slate-50 hover:bg-red-50 text-[11px] font-bold tracking-wider text-slate-600 hover:text-primary border border-slate-200 hover:border-primary/50 transition-colors cursor-pointer rounded-lg uppercase"
-                    >
-                      {chip}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            {!isBookingFormOpen && (
+              <div className="px-5 py-3 bg-white border-t border-slate-100 text-left">
+                {bookingState.step !== 'idle' ? renderQuickActions() : (
+                  <>
+                    {renderPersonalizedSuggestion()}
+                    <div className="flex flex-wrap gap-2">
+                      {getLanguageChips().map((chip, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleSendMessage(chip)}
+                          className="px-3 py-1.5 bg-slate-50 hover:bg-red-50 text-[11px] font-bold tracking-wider text-slate-600 hover:text-primary border border-slate-200 hover:border-primary/50 transition-colors cursor-pointer rounded-lg uppercase"
+                        >
+                          {chip}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Chat Form Input (Active State) */}
             <div className="p-4 bg-white border-t border-slate-100">
@@ -783,4 +1060,57 @@ export default function AiAssistant({ setActivePage }) {
       </div>
     </div>
   );
+}
+
+// The dedicated page deliberately uses the same conversation component and session
+// provider as the floating widget.  It is kept separate only for this page's layout.
+export default function AiAssistant({ setActivePage }) {
+  const { bookingState, clearChat } = useAiChat();
+  const [isLoggedIn, setIsLoggedIn] = useState(() => Boolean(localStorage.getItem('accessToken')));
+
+  useEffect(() => {
+    setIsLoggedIn(Boolean(localStorage.getItem('accessToken')));
+  }, []);
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-slate-50 pt-24 font-['Montserrat']">
+        <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center px-4 text-center">
+          <span className="material-symbols-outlined mb-4 rounded-full border border-amber-200 bg-amber-50 p-4 text-3xl text-amber-500">lock</span>
+          <h1 className="text-lg font-black tracking-widest text-slate-900">YÊU CẦU ĐĂNG NHẬP</h1>
+          <p className="mt-3 text-sm text-slate-500">Vui lòng đăng nhập để sử dụng Trợ lý Ảo The Iris.</p>
+          <button onClick={() => setActivePage('login')} className="mt-6 rounded-xl bg-primary px-6 py-3 text-xs font-bold uppercase tracking-wider text-white">Đăng nhập ngay</button>
+        </div>
+      </div>
+    );
+  }
+
+  const steps = [
+    ['idle', 'Tư vấn hành trình'], ['select_room', 'Chọn hạng phòng'], ['select_dates', 'Ngày & số khách'], ['confirm', 'Xác nhận'], ['done', 'Hoàn tất'],
+  ];
+  const currentStep = Math.max(0, steps.findIndex(([step]) => step === bookingState.step));
+  const profile = bookingState.preference_profile || {};
+
+  return (
+    <div className="min-h-screen overflow-hidden bg-slate-50 pt-24 font-['Montserrat']">
+      <div className="border-b border-slate-100 bg-white px-6 py-4 shadow-sm">
+        <div className="mx-auto flex max-w-7xl items-center justify-between">
+          <div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white"><span className="material-symbols-outlined text-lg">support_agent</span></div><div><h1 className="m-0 text-[13px] font-bold text-slate-900">The Iris AI Concierge</h1><p className="m-0 mt-0.5 text-[10px] font-bold uppercase tracking-widest text-primary">Phiên trò chuyện đồng bộ</p></div></div>
+          <button onClick={clearChat} className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-[11px] font-bold text-slate-700"><span className="material-symbols-outlined text-base">refresh</span> Restart</button>
+        </div>
+      </div>
+      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 px-4 py-8 lg:grid-cols-12 lg:px-6">
+        <section className="flex h-[650px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm lg:col-span-8"><AiChatConversation /></section>
+        <aside className="flex flex-col gap-6 lg:col-span-4">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="m-0 border-b border-slate-100 pb-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-800"><span className="material-symbols-outlined mr-2 align-middle text-primary">route</span>Tiến trình</h2><div className="mt-5 space-y-5 border-l-2 border-slate-100 pl-5">{steps.map(([id, label], index) => <div key={id} className="relative"><i className={`absolute -left-[30px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full ring-4 ring-white ${index === currentStep ? 'bg-primary' : index < currentStep || bookingState.step === 'done' ? 'bg-emerald-400' : 'bg-slate-200'}`} /><span className={`text-[13px] ${index === currentStep ? 'font-bold text-slate-900' : 'font-medium text-slate-400'}`}>{label}</span></div>)}</div></div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="m-0 border-b border-slate-100 pb-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-800"><span className="material-symbols-outlined mr-2 align-middle text-primary">analytics</span>Tóm tắt yêu cầu</h2>{bookingState.room_type_name ? <div className="mt-4 grid grid-cols-2 gap-3 text-xs"><AiSummary label="Hạng phòng" value={bookingState.room_type_name} /><AiSummary label="Nhận phòng" value={bookingState.check_in || '--'} /><AiSummary label="Trả phòng" value={bookingState.check_out || '--'} /><AiSummary label="Check-in" value={bookingState.check_in_method || '--'} /></div> : <p className="py-8 text-center text-xs leading-relaxed text-slate-400">Chưa có thông tin. Hãy bắt đầu trò chuyện để chọn phòng.</p>}</div>
+          {profile.hasHistory && profile.favoriteRoomType && <div className="rounded-3xl border border-primary/20 bg-red-50 p-5"><p className="m-0 text-[10px] font-black uppercase tracking-widest text-primary">Cá nhân hóa</p><p className="mb-0 mt-2 text-sm font-bold text-slate-800">Gợi ý: {profile.favoriteRoomType}</p><p className="mb-0 mt-1 text-xs text-slate-600">Đề xuất dựa trên lịch sử lưu trú và phản hồi của bạn.</p></div>}
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function AiSummary({ label, value }) {
+  return <div className="rounded-xl border border-slate-100 bg-slate-50 p-3"><p className="m-0 text-[9px] font-black uppercase tracking-wider text-slate-400">{label}</p><p className="m-0 mt-1 font-bold text-slate-800">{value}</p></div>;
 }

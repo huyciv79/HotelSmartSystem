@@ -64,6 +64,7 @@ class BookingStateSchema(BaseModel):
     chat_history: List[dict] = []
     cached_bookings: List[dict] = []  # Cache danh sách booking để tránh gọi lại API
     quantity: int = 1
+    preference_profile: dict = {}
     language: str = "VN"
 
 class ChatRequest(BaseModel):
@@ -132,6 +133,7 @@ def schema_to_state(s: BookingStateSchema) -> BookingState:
         chat_history=s.chat_history,
         cached_bookings=s.cached_bookings,
         quantity=s.quantity,
+        preference_profile=s.preference_profile,
         language=s.language
     )
 
@@ -155,6 +157,7 @@ def state_to_schema(st: BookingState) -> BookingStateSchema:
         chat_history=st.chat_history,
         cached_bookings=st.cached_bookings,
         quantity=st.quantity,
+        preference_profile=st.preference_profile,
         language=st.language
     )
 

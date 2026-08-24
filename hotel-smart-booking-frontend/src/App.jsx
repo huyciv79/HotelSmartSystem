@@ -23,6 +23,7 @@ import GroupBooking from './pages/GroupBooking';
 import StaffDashboard from './pages/StaffDashboard';
 import AiAssistant from './pages/AiAssistant';
 import AiFloatingBubble from './components/AiFloatingBubble';
+import { AiChatProvider } from './context/AiChatContext';
 import HotelPolicy from './pages/HotelPolicy';
 import HotelTerms from './pages/HotelTerms';
 import EkycHub from './pages/ekyc/EkycHub';
@@ -166,6 +167,7 @@ function MainSite() {
 function App() {
   return (
     <ErrorBoundary>
+      <AiChatProvider>
       <Routes>
         <Route path="/dashborad" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardRoute />} />
@@ -174,6 +176,7 @@ function App() {
         <Route path="/ekyc-register" element={<Navigate to="/dashboard" state={{ tab: 'ekyc' }} replace />} />
         <Route path="*" element={<MainSite />} />
       </Routes>
+      </AiChatProvider>
     </ErrorBoundary>
   );
 }

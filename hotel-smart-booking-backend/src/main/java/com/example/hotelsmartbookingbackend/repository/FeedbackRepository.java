@@ -19,6 +19,17 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Integer> {
             from Feedback f
             join fetch f.booking b
             join fetch b.user u
+            where lower(u.email) = lower(:customerEmail)
+              and f.status = 'Active'
+            order by f.createdAt desc
+            """)
+    List<Feedback> findActiveByCustomerEmail(@Param("customerEmail") String customerEmail);
+
+    @Query("""
+            select f
+            from Feedback f
+            join fetch f.booking b
+            join fetch b.user u
             where f.id = :feedbackId
             """)
     Optional<Feedback> findByIdWithDetails(@Param("feedbackId") Integer feedbackId);

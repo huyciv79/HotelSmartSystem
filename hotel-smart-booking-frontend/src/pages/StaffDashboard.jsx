@@ -80,6 +80,24 @@ const formatLocalDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+const formatCurrency = (amount) => new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND'
+}).format(Number(amount || 0));
+
+const nightsBetween = (start, end) => {
+  if (!start || !end) return 0;
+  const startDate = new Date(`${start}T00:00:00`);
+  const endDate = new Date(`${end}T00:00:00`);
+  return Math.max(0, Math.round((endDate - startDate) / 86400000));
+};
+
+const getBookingRoomRate = (booking) => {
+  const quantity = Number(booking?.quantity || 1);
+  const nights = Math.max(1, Number(booking?.nights || nightsBetween(booking?.checkInDate, booking?.checkOutDate) || 1));
+  return Number(booking?.priceAtBooking ?? booking?.priceatbooking ?? (Number(booking?.totalAmount || 0) / (quantity * nights)));
+};
+
 const getNextDate = (dateString) => {
   const [year, month, day] = dateString.split('-').map(Number);
   return formatLocalDate(new Date(year, month - 1, day + 1));
@@ -1183,7 +1201,15 @@ export default function StaffDashboard({ setActivePage }) {
     try {
       const response = await approveRoomChangeRequest(req.requestId, selectedPhysicalRoomId);
       if (response && response.success) {
-        showToast('Phê duyệt yêu cầu chuyển phòng thành công!', 'success');
+        const invoiceResponse = await getInvoiceDetails(req.bookingId);
+        const invoice = invoiceResponse?.success ? invoiceResponse.data : null;
+        if (invoice) setSelectedBookingInvoice(invoice);
+        showToast(
+          invoice
+            ? `Phê duyệt chuyển phòng thành công. Còn cần thu: ${formatCurrency(invoice.dueAmount)}`
+            : 'Phê duyệt yêu cầu chuyển phòng thành công!',
+          'success'
+        );
         // Reload dữ liệu
         fetchPendingRoomChanges();
         fetchRealBookings();
@@ -1225,7 +1251,15 @@ export default function StaffDashboard({ setActivePage }) {
     try {
       const response = await approveStayExtensionRequest(req.requestId);
       if (response && response.success) {
-        showToast('Phê duyệt yêu cầu gia hạn lưu trú thành công!', 'success');
+        const invoiceResponse = await getInvoiceDetails(req.bookingId);
+        const invoice = invoiceResponse?.success ? invoiceResponse.data : null;
+        if (invoice) setSelectedBookingInvoice(invoice);
+        showToast(
+          invoice
+            ? `Phê duyệt gia hạn thành công. Còn cần thu: ${formatCurrency(invoice.dueAmount)}`
+            : 'Phê duyệt yêu cầu gia hạn lưu trú thành công!',
+          'success'
+        );
         fetchPendingStayExtensions();
         fetchRealBookings();
       }
@@ -2133,6 +2167,13 @@ export default function StaffDashboard({ setActivePage }) {
                       {(() => {
                         const associatedRoomChange = pendingRoomChanges.find(req => req.bookingId === selectedBooking.bookingId || req.bookingReference === selectedBooking.bookingReference);
                         if (!associatedRoomChange) return null;
+                        const targetRoomType = roomTypes.find(type => String(type.id) === String(associatedRoomChange.newValue));
+                        const roomQuantity = Number(selectedBooking.quantity || 1);
+                        const today = formatLocalDate(new Date());
+                        const remainingNights = nightsBetween(today > selectedBooking.checkInDate ? today : selectedBooking.checkInDate, selectedBooking.checkOutDate);
+                        const roomChangeDifference = targetRoomType
+                          ? (Number(targetRoomType.basePrice ?? targetRoomType.baseprice ?? 0) - getBookingRoomRate(selectedBooking)) * roomQuantity * remainingNights * 1.1
+                          : null;
                         return (
                           <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-6 flex flex-col gap-4 animate-scale-in">
                             <div className="flex items-center gap-2 border-b border-blue-100 pb-3">
@@ -2178,6 +2219,20 @@ export default function StaffDashboard({ setActivePage }) {
                                     </select>
                                   )}
                                 </div>
+                                {roomChangeDifference !== null && (
+                                  <div className="border-t border-blue-100 pt-2 space-y-1.5 text-[11px]">
+                                    <div className="flex justify-between text-slate-500">
+                                      <span>Đêm còn lại:</span>
+                                      <span className="font-bold text-slate-700">{remainingNights} đêm</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-slate-500">{roomChangeDifference >= 0 ? 'Phụ thu dự kiến (VAT):' : 'Khoản giảm dự kiến (VAT):'}</span>
+                                      <span className={roomChangeDifference >= 0 ? 'font-black text-rose-600' : 'font-black text-emerald-700'}>
+                                        {roomChangeDifference >= 0 ? '+' : '-'}{formatCurrency(Math.abs(roomChangeDifference))}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -2209,6 +2264,8 @@ export default function StaffDashboard({ setActivePage }) {
                       {(() => {
                         const associatedStayExtension = pendingStayExtensions.find(req => req.bookingId === selectedBooking.bookingId || req.bookingReference === selectedBooking.bookingReference);
                         if (!associatedStayExtension) return null;
+                        const extraNights = nightsBetween(associatedStayExtension.oldValue, associatedStayExtension.newValue);
+                        const extensionCharge = getBookingRoomRate(selectedBooking) * Number(selectedBooking.quantity || 1) * extraNights * 1.1;
                         return (
                           <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-6 flex flex-col gap-4 animate-scale-in">
                             <div className="flex items-center gap-2 border-b border-emerald-100 pb-3">
@@ -2237,6 +2294,14 @@ export default function StaffDashboard({ setActivePage }) {
                                 <div className="flex justify-between text-[11px] border-t border-emerald-100/50 pt-1.5">
                                   <span className="text-emerald-600">Ngày check-out mong muốn:</span>
                                   <strong className="text-emerald-600 font-mono">{associatedStayExtension.newValue}</strong>
+                                </div>
+                                <div className="flex justify-between text-[11px] border-t border-emerald-100/50 pt-1.5">
+                                  <span className="text-slate-500">Gia hạn:</span>
+                                  <strong className="text-slate-800">{extraNights} đêm</strong>
+                                </div>
+                                <div className="flex justify-between text-[11px]">
+                                  <span className="text-slate-500">Cần thu thêm dự kiến (VAT):</span>
+                                  <strong className="text-rose-600">+{formatCurrency(extensionCharge)}</strong>
                                 </div>
                               </div>
                             </div>

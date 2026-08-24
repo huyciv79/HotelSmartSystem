@@ -7,7 +7,9 @@ const aiAxios = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 25000, // LLM requests might take slightly longer
+  // Room search and booking requests can require an external LLM call.
+  // 25 seconds is close to the normal response time and causes false failures.
+  timeout: 60000,
 });
 
 /**
@@ -31,6 +33,7 @@ export const createInitialBookingState = () => {
     booking_result: null,
     error: '',
     chat_history: [],
+    preference_profile: {},
     language: localStorage.getItem('language') || 'VN'
   };
 };

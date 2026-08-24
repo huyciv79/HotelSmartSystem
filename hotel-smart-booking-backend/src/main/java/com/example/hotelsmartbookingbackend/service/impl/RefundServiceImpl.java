@@ -11,6 +11,7 @@ import com.example.hotelsmartbookingbackend.entity.CancellationPolicy;
 import com.example.hotelsmartbookingbackend.entity.CustomerRequest;
 import com.example.hotelsmartbookingbackend.entity.Payment;
 import com.example.hotelsmartbookingbackend.entity.User;
+import com.example.hotelsmartbookingbackend.exception.RefundNotEligibleException;
 import com.example.hotelsmartbookingbackend.repository.BookingRepository;
 import com.example.hotelsmartbookingbackend.repository.BookingDetailRepository;
 import com.example.hotelsmartbookingbackend.repository.CancellationPolicyRepository;
@@ -111,7 +112,8 @@ public class RefundServiceImpl implements RefundService {
                 .setScale(2, RoundingMode.HALF_UP);
 
         if (estimatedRefund.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Đơn đặt phòng này không đủ điều kiện hoàn tiền do hủy sát ngày Check-in theo chính sách của khách sạn.");
+            throw new RefundNotEligibleException(
+                    "Đơn đặt phòng này không đủ điều kiện hoàn tiền do hủy sát ngày Check-in theo chính sách của khách sạn.");
         }
 
         CustomerRequest customerRequest = new CustomerRequest();

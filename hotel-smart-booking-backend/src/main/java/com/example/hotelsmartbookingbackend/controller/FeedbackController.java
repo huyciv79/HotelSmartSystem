@@ -47,6 +47,12 @@ public class FeedbackController {
         return ResponseEntity.ok(ApiResponse.success("Xóa đánh giá thành công", null));
     }
 
+    @GetMapping("/mine")
+    public ResponseEntity<ApiResponse<java.util.List<FeedbackResponse>>> getMyFeedbacks(Principal principal) {
+        java.util.List<FeedbackResponse> response = feedbackService.getMyFeedbacks(principal.getName());
+        return ResponseEntity.ok(ApiResponse.success("Lấy đánh giá của bạn thành công", response));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<FeedbackResponse>> getFeedbackById(
             @PathVariable Integer id) {

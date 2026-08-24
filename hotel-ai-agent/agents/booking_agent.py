@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from enum import Enum
@@ -53,6 +54,72 @@ class BookingStep(str, Enum):
     CANCELLED     = "cancelled"
 
 
+def _is_positive_booking_confirmation(user_input: str) -> bool:
+    """Recognize explicit booking approval without relying on an LLM tool call."""
+    text = user_input.lower().strip()
+    if not text:
+        return False
+
+    # A negative answer must always win over a phrase such as "đồng ý" in the same message.
+    if re.search(r"\b(không|khong|chưa|chua|hủy|huy|cancel|no|not)\b", text):
+        return False
+
+    return bool(re.search(
+        r"\b(đồng\s*ý|dong\s*y|xác\s*nhận|xac\s*nhan|ok(?:ay)?|yes|"
+        r"chấp\s*nhận|chap\s*nhan|chốt(?:\s*đơn|\s*phòng)?|"
+        r"đặt\s*ngay|dat\s*ngay)\b",
+        text,
+    ))
+
+
+def _friendly_booking_error(message: str, language: str) -> str:
+    """Turn booking API validation errors into clear, actionable copy."""
+    normalized = (message or "").lower()
+    is_vietnamese = _normalize_language(language) == "VN"
+
+    if "trẻ em" in normalized and ("sức chứa" in normalized or "capacity" in normalized):
+        return (
+            "Số trẻ em đã vượt mức cho phép của hạng phòng này. "
+            "Bạn có thể giảm số trẻ em, tăng số phòng hoặc chọn hạng phòng rộng hơn."
+            if is_vietnamese else
+            "The number of children exceeds this room type's capacity. "
+            "Please reduce the number of children, add rooms, or choose a larger room."
+        )
+
+    if "sức chứa" in normalized or "capacity" in normalized or "vượt quá" in normalized:
+        return (
+            "Số khách đã vượt sức chứa của hạng phòng đã chọn. "
+            "Bạn có thể điều chỉnh số khách, tăng số phòng hoặc chọn hạng phòng rộng hơn."
+            if is_vietnamese else
+            "The guest count exceeds this room type's capacity. "
+            "Please adjust the guest count, add rooms, or choose a larger room."
+        )
+
+    return (
+        "Chưa thể hoàn tất đặt phòng. Vui lòng kiểm tra lại thông tin và thử lại."
+        if is_vietnamese else
+        "We could not complete the booking. Please review the details and try again."
+    )
+
+
+def _record_selected_room(user_input: str, state: "BookingState") -> None:
+    """Persist a room-card selection before asking the LLM for the next booking details."""
+    selection = user_input.casefold()
+    if not any(marker in selection for marker in ("chọn phòng", "chọn loại phòng", "choose room", "select room")):
+        return
+
+    for room in _get_backend_room_types():
+        room_name = str(room.get("name", ""))
+        if room_name and room_name.casefold() in selection:
+            state.room_type_id = room.get("id")
+            state.room_type_name = room_name
+            state.hotel = {
+                "name": "Elysian Smart Hotel Cần Thơ",
+                "price_per_night_vnd": int(room.get("basePrice", 0)),
+            }
+            return
+
+
 @dataclass
 class BookingState:
     step: BookingStep              = BookingStep.IDLE
@@ -74,6 +141,8 @@ class BookingState:
     cached_bookings: list          = field(default_factory=list)
     # Số lượng phòng muốn đặt (mặc định là 1 phòng, >=2 là đặt phòng nhóm)
     quantity: int                  = 1
+    # Tóm tắt sở thích được suy ra từ lịch sử của chính khách hàng.
+    preference_profile: dict       = field(default_factory=dict)
     # Locale hiện tại của giao diện khách hàng: VN, EN, JP, KR, CN
     language: str                  = "VN"
 
@@ -123,7 +192,7 @@ Nhiệm vụ:
    - Số lượng phòng muốn đặt (Mặc định là 1 phòng nếu khách không đề cập. Đặt >= 2 phòng là đặt phòng nhóm)
    - Số lượng khách (Người lớn và Trẻ em cho tổng số phòng)
    - Hình thức Check-in mong muốn (FaceID, QR Code, hoặc Manual)
-3. Hãy chủ động đặt câu hỏi cho những thông tin còn thiếu. Riêng đối với Hình thức check-in, BẮT BUỘC gợi ý các tùy chọn cho khách bằng cú pháp thẻ hành động sau (mỗi thẻ cách nhau bởi dấu gạch đứng, phải nằm riêng trên một dòng): `[ACTIONS: Tùy chọn 1 | Tùy chọn 2 | ...]`. Ví dụ: `[ACTIONS: FaceID | QR Code | Tại quầy]`. Tuyệt đối KHÔNG dùng cú pháp `[ACTIONS]` cho Ngày tháng hay Số lượng người/phòng.
+3. Hãy chủ động hỏi những thông tin còn thiếu. Nếu Ngữ cảnh đặt phòng cho biết khách đã chọn loại phòng, TUYỆT ĐỐI không hỏi lại loại phòng hoặc hiển thị lại danh sách phòng; chỉ xác nhận ngắn gọn lựa chọn đó và yêu cầu thông tin còn thiếu. Không dùng cú pháp `[ACTIONS]` cho các thông tin đặt phòng vì giao diện biểu mẫu sẽ xử lý.
 4. Khi giới thiệu các loại phòng, bạn BẮT BUỘC sử dụng ĐÚNG định dạng thẻ giao diện sau để khách dễ chọn (chỉ thay thế thông tin, tuyệt đối không sửa ngoặc vuông): `[ROOM_CARD: Tên phòng | Giá | Sức chứa | URL_ảnh]`. Không dùng gạch đầu dòng cho danh sách phòng.
 5. KHI VÀ CHỈ KHI ĐÃ CÓ ĐỦ CÁC THÔNG TIN TRÊN, bạn BẮT BUỘC PHẢI GỌI HÀM (Function Call) `create_booking_summary` để tạo tóm tắt đặt phòng. KHÔNG tự trả lời bằng văn bản khi đã đủ thông tin.
 6. SAU KHI ĐÃ TẠO TÓM TẮT ĐẶT Phòng, hãy chờ khách hàng xác nhận. NẾU khách hàng đồng ý (ví dụ: "ok", "xác nhận"), BẮT BUỘC GỌI HÀM `submit_final_booking` để chốt đơn. NẾU khách hàng từ chối hoặc muốn hủy, BẮT BUỘC GỌI HÀM `cancel_booking`.
@@ -408,20 +477,124 @@ def _get_user_bookings(access_token: str, max_retries: int = 2, timeout: int = 1
     logger.error("[BOOKINGS] Không thể lấy danh sách booking sau %d lần thử.", max_retries)
     return []
 
-def _get_user_context(access_token: str) -> tuple[str, list]:
+def _get_user_feedbacks(access_token: str, timeout: int = 5) -> list[dict]:
+    """Fetch only the authenticated customer's feedback for AI personalization."""
+    if not access_token:
+        return []
+    try:
+        resp = requests.get(
+            f"{_BACKEND_URL}/feedbacks/mine",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=timeout,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("data", [])
+        logger.warning("[FEEDBACKS] Backend returned HTTP %s", resp.status_code)
+    except Exception as e:
+        logger.warning("[FEEDBACKS] Could not load customer feedback: %s", e)
+    return []
+
+
+def _most_common(values: list[Any]) -> Optional[Any]:
+    usable = [value for value in values if value not in (None, "", 0)]
+    return Counter(usable).most_common(1)[0][0] if usable else None
+
+
+def _feedback_preference_tags(feedbacks: list[dict]) -> list[str]:
+    """Extract a small allow-list of useful themes; raw review text never enters the prompt."""
+    text = " ".join(
+        str(feedback.get(field, ""))
+        for feedback in feedbacks[:5]
+        for field in ("comment", "pros", "cons")
+    ).casefold()
+    themes = [
+        ("yên tĩnh", "phòng yên tĩnh"),
+        ("ồn", "tránh khu vực ồn"),
+        ("view", "có view"),
+        ("sông", "view sông"),
+        ("sạch", "vệ sinh tốt"),
+        ("ban công", "có ban công"),
+        ("rộng", "không gian rộng"),
+    ]
+    return [label for keyword, label in themes if keyword in text][:3]
+
+
+def _build_preference_profile(bookings: list[dict], feedbacks: list[dict]) -> dict:
+    recent_bookings = bookings[:10]
+    favorite_room = _most_common([booking.get("roomType") for booking in recent_bookings])
+    preferred_checkin = _most_common([booking.get("checkInMethod") for booking in recent_bookings])
+    adults = [booking.get("numberOfAdults") for booking in recent_bookings if booking.get("numberOfAdults")]
+    children = [booking.get("numberOfChildren") for booking in recent_bookings if booking.get("numberOfChildren") is not None]
+    ratings = [feedback.get("rating") for feedback in feedbacks if feedback.get("rating")]
+
+    return {
+        "hasHistory": bool(recent_bookings or feedbacks),
+        "favoriteRoomType": favorite_room,
+        "usualAdults": round(sum(adults) / len(adults)) if adults else None,
+        "usualChildren": round(sum(children) / len(children)) if children else None,
+        "preferredCheckIn": preferred_checkin,
+        "feedbackThemes": _feedback_preference_tags(feedbacks),
+        "averageRating": round(sum(ratings) / len(ratings), 1) if ratings else None,
+    }
+
+
+def _build_personalization_context(bookings: list[dict], feedbacks: list[dict], language: str) -> str:
+    """Produce a privacy-minimised preference profile for the model, not a raw customer record."""
+    recent_bookings = bookings[:10]
+    if not recent_bookings and not feedbacks:
+        return "Hồ sơ sở thích: chưa có dữ liệu lịch sử."
+
+    favorite_room = _most_common([booking.get("roomType") for booking in recent_bookings])
+    preferred_checkin = _most_common([booking.get("checkInMethod") for booking in recent_bookings])
+    adults = [booking.get("numberOfAdults") for booking in recent_bookings if booking.get("numberOfAdults")]
+    children = [booking.get("numberOfChildren") for booking in recent_bookings if booking.get("numberOfChildren") is not None]
+    average_rating = [feedback.get("rating") for feedback in feedbacks if feedback.get("rating")]
+    feedback_tags = _feedback_preference_tags(feedbacks)
+
+    facts = []
+    if favorite_room:
+        facts.append(f"hạng phòng thường chọn: {favorite_room}")
+    if adults:
+        facts.append(f"thường đi cùng khoảng {round(sum(adults) / len(adults))} người lớn")
+    if children:
+        facts.append(f"khoảng {round(sum(children) / len(children))} trẻ em")
+    if preferred_checkin:
+        facts.append(f"ưu tiên check-in: {preferred_checkin}")
+    if feedback_tags:
+        facts.append("ưu tiên từ feedback: " + ", ".join(feedback_tags))
+    if average_rating:
+        facts.append(f"đánh giá trung bình trước đây: {sum(average_rating) / len(average_rating):.1f}/5")
+
+    profile = "; ".join(facts) if facts else "có lịch sử lưu trú nhưng chưa đủ dữ liệu tạo gợi ý"
+    if _normalize_language(language) == "VN":
+        return (
+            "HỒ SƠ SỞ THÍCH CÁ NHÂN HÓA (chỉ dùng để gợi ý, không tự quyết định): "
+            f"{profile}. Chỉ đề xuất lại các lựa chọn này và luôn để khách xác nhận hoặc thay đổi."
+        )
+    return (
+        "PERSONALIZATION PROFILE (suggestions only; never decide for the guest): "
+        f"{profile}. Offer these preferences as optional choices and let the guest confirm or change them."
+    )
+
+
+def _get_user_context(access_token: str, language: str = "VN") -> tuple[str, list, dict]:
     """Lấy thông tin và lịch sử đặt phòng của user từ backend.
     
     Returns:
         (context_str, bookings_list) – cả chuỗi context cho AI lẫn raw list để cache.
     """
     if not access_token:
-        return "Thông tin người dùng: Khách chưa đăng nhập.", []
+        return "Thông tin người dùng: Khách chưa đăng nhập.", [], {}
     
     bookings = _get_user_bookings(access_token)
+    feedbacks = _get_user_feedbacks(access_token)
+    preference_profile = _build_preference_profile(bookings, feedbacks)
+    personalization_context = _build_personalization_context(bookings, feedbacks, language)
     if not bookings:
-        return "Thông tin người dùng: Đã đăng nhập nhưng hiện tại chưa có booking nào (hoặc lỗi lấy dữ liệu).", []
+        return "Thông tin người dùng: Đã đăng nhập nhưng hiện tại chưa có booking nào (hoặc lỗi lấy dữ liệu).", [], preference_profile
     
     context_str = "Thông tin người dùng: Khách đã đăng nhập.\nDanh sách các Booking của khách (Ngữ Cảnh Hệ Thống):\n"
+    context_str += personalization_context + "\n"
     for b in bookings:
         ref = b.get('bookingNumber', 'N/A')
         status = b.get('status', 'N/A')
@@ -444,7 +617,7 @@ def _get_user_context(access_token: str) -> tuple[str, list]:
             f"- Mã Booking: {ref} | Trạng thái: {status} | Phòng: {room}"
             f" | Check-in dự kiến: {ci} | Check-out dự kiến: {co}{actual_info} | Tổng tiền: {price_str} | Phương thức: {method}\n"
         )
-    return context_str, bookings
+    return context_str, bookings, preference_profile
 
 
 class BookingAgent:
@@ -459,8 +632,13 @@ class BookingAgent:
         """Xử lý input người dùng và cập nhật state."""
         state.language = _normalize_language(language or state.language)
 
+        _record_selected_room(user_input, state)
+
         if state.step == BookingStep.DONE:
             return _localized_static(state.language, "done"), state
+
+        if state.step == BookingStep.CONFIRM and _is_positive_booking_confirmation(user_input):
+            return self._submit_booking(state, state.language)
 
         # Không reset step về IDLE nếu đang ở CONFIRM
         if state.step not in (BookingStep.CONFIRM, BookingStep.DONE):
@@ -476,6 +654,11 @@ class BookingAgent:
 
         if state.step == BookingStep.DONE:
             yield _localized_static(state.language, "done")
+            return
+
+        if state.step == BookingStep.CONFIRM and _is_positive_booking_confirmation(user_input):
+            response, _ = self._submit_booking(state, state.language)
+            yield response
             return
 
         if state.step not in (BookingStep.CONFIRM, BookingStep.DONE):
@@ -624,6 +807,7 @@ class BookingAgent:
     def _submit_booking(self, state: BookingState, language: Optional[str] = None) -> tuple[str, BookingState]:
         lang = _normalize_language(language or state.language)
         state.language = lang
+        state.error = ""
         state.check_in_method = _normalize_check_in_method(state.check_in_method)
         if not state.access_token:
             # Mô phỏng khi chưa đăng nhập
@@ -811,17 +995,26 @@ class BookingAgent:
             )
 
         except requests.exceptions.ConnectionError:
-            state.error = "Không kết nối được với server. Hãy đảm bảo backend đang chạy tại port 8080."
+            state.error = (
+                "Không thể kết nối đến hệ thống đặt phòng. Vui lòng thử lại sau ít phút."
+                if lang == "VN" else
+                "We could not reach the booking system. Please try again in a moment."
+            )
         except requests.exceptions.HTTPError as e:
             try:
                 msg = e.response.json().get("message", str(e))
             except Exception:
                 msg = str(e)
-            state.error = f"Lỗi từ server: {msg}"
+            state.error = _friendly_booking_error(msg, lang)
         except Exception as e:
-            state.error = f"Lỗi: {str(e)}"
+            logger.exception("Unexpected booking submission error: %s", e)
+            state.error = (
+                "Đã xảy ra sự cố khi đặt phòng. Vui lòng thử lại sau ít phút."
+                if lang == "VN" else
+                "Something went wrong while creating the booking. Please try again shortly."
+            )
 
-        return f"❌ {state.error}", state
+        return f"⚠️ {state.error}", state
 
     # ── Chat fallback ────────────────────────────────────────────────────────
 
@@ -832,7 +1025,12 @@ class BookingAgent:
         try:
             # Query backend room types database dynamically
             rooms = _get_backend_room_types()
-            if rooms:
+            if state.room_type_name:
+                rooms_info = (
+                    f"Khách đã chọn loại phòng: {state.room_type_name}. "
+                    "Không hiển thị lại danh sách hoặc thẻ loại phòng."
+                )
+            elif rooms:
                 rooms_info = "Các loại phòng có sẵn tại Elysian Smart Hotel:\n"
                 for r in rooms:
                     img = r.get('primaryImageUrl', '')
@@ -848,10 +1046,16 @@ class BookingAgent:
             from google.genai import types
             
             # Tiêm ngữ cảnh người dùng vào prompt và cache bookings vào state
-            user_context, fetched_bookings = _get_user_context(state.access_token)
+            user_context, fetched_bookings, preference_profile = _get_user_context(state.access_token, state.language)
+            state.preference_profile = preference_profile
             if fetched_bookings:
                 state.cached_bookings = fetched_bookings  # Cập nhật cache
-            system_instruction = f"{_BOOKING_SYSTEM}\n\n{_language_instruction(state.language)}\n\n{rooms_info}\n\n{user_context}"
+            booking_context = (
+                f"Ngữ cảnh đặt phòng hiện tại: loại phòng đã chọn là {state.room_type_name}."
+                if state.room_type_name else
+                "Ngữ cảnh đặt phòng hiện tại: khách chưa chọn loại phòng."
+            )
+            system_instruction = f"{_BOOKING_SYSTEM}\n\n{_language_instruction(state.language)}\n\n{booking_context}\n\n{rooms_info}\n\n{user_context}"
             
             contents = _build_contents_with_history(user_input, state.chat_history, max_history_len=6)
             
